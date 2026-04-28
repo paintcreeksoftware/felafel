@@ -1,22 +1,38 @@
 {
   "name": "felafel",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": false,
+  "description": "Next.js application bootstrapped from the Turborepo non-monorepo starter.",
+  "keywords": [],
+  "license": "MIT",
+  "author": "Paint Creek Software",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
     "test": "echo \"no tests yet\"",
+    "check-types": "next typegen && tsc --noEmit",
     "prepare": "husky"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.32.1",
   "dependencies": {
+    "next": "16.2.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.0",
     "turbo": "^2.9.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",
-    "husky": "^9.1.7"
-  }
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.0.1",
+    "husky": "^9.1.7",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8"
 }
