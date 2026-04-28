@@ -64,6 +64,7 @@ app.whenReady().then(async () => {
     const url = await startPocketBase();
     broadcastStatus({ kind: "ready", url });
   } catch (err) {
+    console.error("[main] startPocketBase failed:", err);
     broadcastStatus({
       kind: "error",
       message: err instanceof Error ? err.message : String(err),
