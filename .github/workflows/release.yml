@@ -1,0 +1,41 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        # postinstall fetches the host (linux-x64) PocketBase binary;
+        # `pnpm package` triggers the prepackage script which fetches the
+        # full matrix needed by electron-builder.
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the Electron app
+        run: pnpm build
+
+      - name: Package as AppImage
+        run: pnpm package
+
+      - name: Upload AppImage to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: apps/desktop/release/*.AppImage
+          fail_on_unmatched_files: true
