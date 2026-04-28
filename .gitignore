@@ -9,6 +9,9 @@ node_modules
 
 # testing
 coverage
+apps/desktop/test-results/
+apps/desktop/playwright-report/
+apps/desktop/playwright/.cache/
 
 # electron
 out/
