@@ -17,7 +17,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { userInfo } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { app } from "electron";
 import getPort, { portNumbers } from "get-port";
 import type { SuperuserCredentials } from "@felafel/shared";
@@ -26,23 +26,30 @@ let pbProcess: ChildProcess | null = null;
 let cachedCredentials: SuperuserCredentials | null = null;
 
 // Maps Node's process.platform/arch onto the directory layout the download
-// script writes into resources/pocketbase/.
-function platformDir(): string {
-  const platform =
-    process.platform === "win32" ? "win" : process.platform === "darwin" ? "darwin" : "linux";
-  return `${platform}-${process.arch}`;
+// script writes into resources/pocketbase/. Pure: takes platform/arch as
+// args so tests can call it directly without stubbing process globals.
+export function platformDir(platform: NodeJS.Platform, arch: string): string {
+  const p = platform === "win32" ? "win" : platform === "darwin" ? "darwin" : "linux";
+  return `${p}-${arch}`;
 }
 
-function binaryName(): string {
-  return process.platform === "win32" ? "pocketbase.exe" : "pocketbase";
+export function binaryName(platform: NodeJS.Platform): string {
+  return platform === "win32" ? "pocketbase.exe" : "pocketbase";
+}
+
+// Strip non-email-safe characters from an OS username and fall back to "admin"
+// if nothing valid remains. Pure helper — testable without filesystem access.
+export function sanitizeUsername(raw: string): string {
+  const sanitized = raw.toLowerCase().replace(/[^a-z0-9._-]/g, "");
+  return sanitized || "admin";
 }
 
 // In dev: read from the repo's resources/ dir. In a packaged build:
 // process.resourcesPath/pocketbase/ — that's where electron-builder's
 // extraResources puts it.
 function resolveBinaryPath(): string {
-  const dir = platformDir();
-  const name = binaryName();
+  const dir = platformDir(process.platform, process.arch);
+  const name = binaryName(process.platform);
   if (app.isPackaged) {
     return join(process.resourcesPath, "pocketbase", name);
   }
@@ -58,16 +65,17 @@ function resolveDataDir(): string {
   return join(app.getAppPath(), ".dev-pb_data");
 }
 
-function resolveCredentialsPath(): string {
-  return join(app.getPath("userData"), "admin.json");
-}
-
-// On first run: derive a sanitized email from the OS username, generate a
-// cryptographically random password, persist with mode 0600 so other users on
-// the same machine can't read it. On subsequent runs: load and reuse —
-// `superuser upsert` makes that idempotent against the DB.
-async function loadOrGenerateCredentials(): Promise<SuperuserCredentials> {
-  const credsPath = resolveCredentialsPath();
+// On first run: invoke the fallback to build new creds (production: derive
+// from the OS username + cryptographic random password), persist with mode
+// 0600 so other users on the same machine can't read it. On subsequent runs:
+// load and reuse — `superuser upsert` makes that idempotent against the DB.
+//
+// Pure-ish: takes the credentials path and a fallback factory as arguments,
+// so tests can point it at a tmp dir and pass a known credential generator.
+export async function loadOrGenerateCredentials(
+  credsPath: string,
+  fallback: () => SuperuserCredentials,
+): Promise<SuperuserCredentials> {
   if (existsSync(credsPath)) {
     try {
       const raw = await readFile(credsPath, "utf8");
@@ -79,16 +87,21 @@ async function loadOrGenerateCredentials(): Promise<SuperuserCredentials> {
       // corrupted — fall through and regenerate
     }
   }
-  const username = userInfo().username || "admin";
-  const sanitized = username.toLowerCase().replace(/[^a-z0-9._-]/g, "");
-  const creds: SuperuserCredentials = {
-    email: `${sanitized || "admin"}@felafel.local`,
-    password: randomBytes(24).toString("base64url"),
-  };
-  await mkdir(app.getPath("userData"), { recursive: true });
+  const creds = fallback();
+  await mkdir(dirname(credsPath), { recursive: true });
   await writeFile(credsPath, JSON.stringify(creds, null, 2));
   await chmod(credsPath, 0o600);
   return creds;
+}
+
+// Production fallback factory — derives the email from the OS username and
+// generates a fresh random password.
+function defaultCredentialsFactory(): SuperuserCredentials {
+  const username = userInfo().username || "admin";
+  return {
+    email: `${sanitizeUsername(username)}@felafel.local`,
+    password: randomBytes(24).toString("base64url"),
+  };
 }
 
 // Synchronous CLI invocation — `superuser upsert` exits when done. We run this
@@ -134,7 +147,8 @@ export async function startPocketBase(): Promise<string> {
   const dataDir = resolveDataDir();
   await mkdir(dataDir, { recursive: true });
 
-  cachedCredentials = await loadOrGenerateCredentials();
+  const credsPath = join(app.getPath("userData"), "admin.json");
+  cachedCredentials = await loadOrGenerateCredentials(credsPath, defaultCredentialsFactory);
   upsertSuperuser(binary, dataDir, cachedCredentials);
 
   // Bind to a random port in the 8090 range to avoid clashing with another
