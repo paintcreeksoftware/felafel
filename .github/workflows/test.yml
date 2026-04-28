@@ -1,0 +1,40 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        # postinstall fetches the PocketBase binary into
+        # apps/desktop/resources/pocketbase/linux-x64/, which the integration
+        # tests need.
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests with coverage
+        run: pnpm --filter @felafel/desktop test --coverage
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: apps/desktop/coverage/
+          retention-days: 14
+          if-no-files-found: ignore
