@@ -1,34 +1,13 @@
+// Thin root config — uses TypeScript "project references" instead of compiling
+// the whole repo as one project. Each entry below points at a per-package
+// tsconfig that tsc builds in dependency order. Splitting like this lets the
+// renderer have DOM types while main/preload have Node types without leaking
+// either into the wrong process.
 {
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
+  "files": [],
+  "references": [
+    { "path": "./apps/desktop/tsconfig.node.json" },
+    { "path": "./apps/desktop/tsconfig.web.json" },
+    { "path": "./packages/shared" }
+  ]
 }
