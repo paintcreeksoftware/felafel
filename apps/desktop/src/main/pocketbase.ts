@@ -18,9 +18,17 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { app } from "electron";
 import getPort, { portNumbers } from "get-port";
 import type { SuperuserCredentials } from "@felafel/shared";
+
+// Anchor dev-mode paths at this file's location (out/main/index.js after
+// build) rather than app.getAppPath(), because the latter resolves
+// inconsistently — `electron-vite dev` and `electron .` give the package
+// root, but `electron out/main/index.js` gives the entry script's directory.
+// __dirname-relative paths are stable across all three.
+const moduleDir = dirname(fileURLToPath(import.meta.url));
 
 let pbProcess: ChildProcess | null = null;
 let cachedCredentials: SuperuserCredentials | null = null;
@@ -44,7 +52,9 @@ export function sanitizeUsername(raw: string): string {
   return sanitized || "admin";
 }
 
-// In dev: read from the repo's resources/ dir. In a packaged build:
+// In dev: read from the repo's resources/ dir, anchored at this file's
+// location (apps/desktop/out/main/) so `electron out/main/index.js` and
+// `electron-vite dev` both resolve the same paths. In a packaged build:
 // process.resourcesPath/pocketbase/ — that's where electron-builder's
 // extraResources puts it.
 function resolveBinaryPath(): string {
@@ -53,7 +63,7 @@ function resolveBinaryPath(): string {
   if (app.isPackaged) {
     return join(process.resourcesPath, "pocketbase", name);
   }
-  return join(app.getAppPath(), "resources", "pocketbase", dir, name);
+  return join(moduleDir, "..", "..", "resources", "pocketbase", dir, name);
 }
 
 // pb_data lives in the OS's userData dir for the packaged app (so it survives
@@ -62,7 +72,7 @@ function resolveDataDir(): string {
   if (app.isPackaged) {
     return join(app.getPath("userData"), "pb_data");
   }
-  return join(app.getAppPath(), ".dev-pb_data");
+  return join(moduleDir, "..", "..", ".dev-pb_data");
 }
 
 // On first run: invoke the fallback to build new creds (production: derive
