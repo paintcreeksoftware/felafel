@@ -13,7 +13,10 @@
     "package": "electron-builder --config electron-builder.yml",
     "lint": "oxlint",
     "format": "oxfmt",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --exclude '**/*.integration.test.ts'",
+    "test:integration": "vitest run integration.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@felafel/shared": "workspace:*",
@@ -21,6 +24,7 @@
     "pocketbase": "^0.26.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

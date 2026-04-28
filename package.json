@@ -13,18 +13,25 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "check-types": "turbo run check-types",
-    "test": "echo \"no tests yet\"",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "turbo run test:e2e",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#out\" \"#release\" \"#dist\" \"#.dev-pb_data\" \"#apps/desktop/resources\"",
+    "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg",
     "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.2",
     "@commitlint/config-conventional": "^20.5.0",
     "@types/node": "^24.12.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "husky": "^9.1.7",
+    "markdownlint-cli2": "^0.22.1",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
     "turbo": "^2.9.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
   },
   "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8",
   "pnpm": {
