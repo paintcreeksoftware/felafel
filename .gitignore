@@ -10,10 +10,13 @@ node_modules
 # testing
 coverage
 
-# next.js
-.next/
+# electron
 out/
-next-env.d.ts
+dist/
+dist-electron/
+release/
+apps/desktop/resources/pocketbase/
+apps/desktop/.dev-pb_data/
 
 # production
 build
@@ -30,9 +33,6 @@ yarn-error.log*
 
 # local env files
 .env*.local
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo
