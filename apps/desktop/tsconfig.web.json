@@ -1,0 +1,13 @@
+// Renderer-side TypeScript: React UI in src/renderer/. DOM lib for browser
+// APIs; `react-jsx` so we don't have to import React in every file; Vite's
+// client types for `import.meta.env`/`?url` import suffixes etc.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"]
+}

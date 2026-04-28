@@ -1,0 +1,11 @@
+// Hub config for the desktop app — splits TS compilation in two because main/
+// preload run in Node (no DOM) while the renderer runs in Chromium (DOM, JSX).
+// Splitting prevents `document.getElementById` from typechecking inside the
+// main process and `fs.readFile` from typechecking inside the renderer.
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.web.json" }
+  ]
+}

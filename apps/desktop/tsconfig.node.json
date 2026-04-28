@@ -1,0 +1,17 @@
+// Node-side TypeScript: main process, preload script, and the postinstall
+// scripts. `@types/node` for the Node API; `electron-vite/node` for the
+// `import.meta.env` types electron-vite injects at build time.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2022"],
+    "types": ["node", "electron-vite/node"]
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "scripts/**/*.mjs",
+    "electron.vite.config.ts"
+  ]
+}
