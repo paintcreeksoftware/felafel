@@ -1,16 +1,37 @@
+// Turborepo task pipeline. Turbo orchestrates scripts ACROSS workspace packages
+// — pnpm installs deps, Turbo runs your scripts. When you `pnpm build` from the
+// root, Turbo:
+//
+//   1. reads each package's `build` script
+//   2. figures out the dependency graph (apps/desktop depends on shared)
+//   3. runs them in topological order, in parallel where possible
+//   4. caches outputs so unchanged packages skip work next time
+//
+// `dependsOn: ["^build"]` means "build this package's workspace deps first."
+// `persistent: true` tells Turbo a task is long-lived (so it doesn't try to
+// move on while it's still running) — needed for `dev`.
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "tasks": {
     "build": {
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "out/**"]
     },
-    "lint": {},
-    "check-types": {},
+    "package": {
+      "dependsOn": ["build"],
+      "outputs": ["release/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "lint": {},
+    "format": {
+      "cache": false
+    },
+    "check-types": {
+      "dependsOn": ["^build"]
     }
   }
 }
