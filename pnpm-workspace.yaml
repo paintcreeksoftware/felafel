@@ -1,0 +1,12 @@
+# Declares this repo as a pnpm workspace — multiple npm packages living in one
+# git repo, sharing a single node_modules and a single `pnpm install`.
+#
+# Without this file, pnpm treats the repo as a single package and ignores apps/*
+# and packages/*.
+#
+# `apps/*`     runnable applications (currently the Electron desktop app).
+# `packages/*` shared libraries imported by the apps (currently the IPC
+# contract).
+packages:
+  - apps/*
+  - packages/*
