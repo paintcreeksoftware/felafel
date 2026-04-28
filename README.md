@@ -1,54 +1,198 @@
-# Turborepo non-monorepo starter
+# Felafel
 
-This Turborepo starter is maintained by the Turborepo core team.
+Electron desktop application built on a Turborepo workspace, with an embedded
+PocketBase backend and a Vite + React + Tailwind renderer.
 
-## Using this example
+## Layout
 
-Run the following command:
+```text
+apps/
+  desktop/        Electron app (main + preload + renderer + PocketBase sidecar)
+packages/
+  shared/         IPC channel names and types shared across processes
+```
+
+## Development workflow
+
+The repo ships two configs that work **together** day-to-day, not as
+alternatives:
+
+| Environment | Where it runs | What you do in it |
+| --- | --- | --- |
+| **Dev Container** ([`.devcontainer/`](.devcontainer/)) | VS Code reopens the workspace inside it. Cross-platform. | Edit code, run Claude Code, lint, typecheck, build, package, git |
+| **Distrobox** ([`distrobox.ini`](distrobox.ini)) | A separate shell on the host (Linux only). Has display + audio access. | Run `pnpm dev` to actually launch the Electron window |
+
+They share `$HOME`, so the repo, `node_modules`, and PocketBase data are visible
+to both — `pnpm install` in either env satisfies the other. You'd typically have
+a VS Code window (Dev Container) open for editing and a side-by-side host
+terminal (Distrobox) running `pnpm dev`.
+
+### Prerequisites on the host
+
+- git
+- Linux with X11 or Wayland — for the Distrobox path
+- [Distrobox](https://distrobox.it) (preinstalled on Bluefin DX and most
+  ublue-os atomic distros)
+- VS Code + [Dev Containers
+  extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers),
+  or GitHub Codespaces (which ships its own)
+- A container runtime for local Dev Containers (Docker Desktop, Podman,
+  OrbStack); not needed in Codespaces
+
+## First-time setup
+
+Each step calls out which environment you run it in. Don't skip ahead — step 4
+needs the Distrobox to exist, step 5 needs VS Code in the container, etc.
+
+### Step 1 — Clone the repo (on the host)
+
+In a host terminal:
 
 ```sh
-npx create-turbo@latest -e non-monorepo
+git clone git@github.com:paintcreeksoftware/felafel.git
+cd felafel
 ```
 
-## What's inside?
+Clone into a directory under your `$HOME`. Distrobox bind-mounts `$HOME` into
+the container, so anything outside it (`/opt`, `/srv`) won't be visible inside
+the box. Same advice on macOS/Windows: keep the repo in your home directory.
 
-This Turborepo uses a single, non-monorepo project (in this case, a single Next.js application).
+### Step 2 — Create the Distrobox (on the host)
 
-### Tasks
+Still in the host terminal, from the repo root:
 
-There are several Turborepo tasks already set up for you to use.
-
-#### Build the application
-
-```
-pnpm turbo build
+```sh
+distrobox-assemble create --file ./distrobox.ini
 ```
 
-#### Lint source code
+This builds a Fedora 41 toolbox containing Electron's runtime libraries (GTK,
+X11, NSS, ALSA), Node.js 22, npm, and pnpm. The first run downloads the base
+image (~400 MB) and installs packages — a couple of minutes. Subsequent
+invocations are no-ops.
 
-```
-pnpm turbo lint
-```
+You'll see `Container felafel created` when it's done. Verify with:
 
-#### Type check source code
-
-```
-pnpm turbo check-types
-```
-
-#### Run the application's development server
-
-```
-pnpm turbo dev
+```sh
+distrobox list
 ```
 
-## Useful Links
+You should see a row for `felafel`. Skip this step entirely if you're on
+macOS/Windows or in Codespaces (see "Other host setups" below).
 
-Learn more about the power of Turborepo:
+### Step 3 — Open VS Code and reopen in the Dev Container (on the host)
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Launch VS Code on your host:
+
+```sh
+code .
+```
+
+VS Code should detect the [`.devcontainer/`](.devcontainer/) config and prompt
+"Reopen in Container" in the bottom-right. Click it. If you miss the prompt, run
+`Dev Containers: Reopen in Container` from the Command Palette (`Ctrl+Shift+P`).
+
+The first build of the Dev Container takes a few minutes — it has to pull the
+base image and install the configured features (Docker-in-Docker, Python, Claude
+Code). Subsequent reopens are fast (cached).
+
+When the container is up, the bottom-left status bar reads **Dev Container:
+Felafel**.
+
+### Step 4 — Install dependencies (in the Dev Container terminal)
+
+Open a terminal inside VS Code (`` Ctrl+` ``). You're now inside the Dev
+Container — the prompt reflects the container's filesystem.
+
+```sh
+pnpm install
+```
+
+This:
+
+- Resolves the workspace dependency graph (`apps/desktop`, `packages/shared`)
+- Installs every package's deps into a shared `node_modules` at the repo root
+- Runs `apps/desktop`'s postinstall, which downloads the PocketBase binary for
+  Linux x64 into `apps/desktop/resources/pocketbase/linux-x64/` and verifies its
+  SHA-256
+
+You only need to run `pnpm install` once across both environments —
+`node_modules` lives at `~/felafel/node_modules`, which both the Dev Container
+and the Distrobox can see.
+
+### Step 5 — Open a Distrobox shell (on the host)
+
+In a **separate** host terminal (don't close the VS Code one — you'll keep using
+it):
+
+```sh
+distrobox enter felafel
+cd ~/felafel    # or wherever you cloned
+```
+
+Your prompt changes to reflect you're inside the box. On Bluefin DX it gets a 📦
+prefix; otherwise `hostname` reads `felafel`.
+
+### Step 6 — Run the app (in the Distrobox shell)
+
+```sh
+pnpm dev
+```
+
+Watch the logs. You should see, in order:
+
+1. `dev server running for the electron renderer process at:
+   http://localhost:5173/`
+2. `Server started at http://127.0.0.1:8090` (PocketBase)
+3. `starting electron app...`
+4. The Electron window opens on your host display, showing "To get started, edit
+   src/renderer/src/App.tsx" and "Signed in as `<your-username>@felafel.local`"
+
+Edit `apps/desktop/src/renderer/src/App.tsx` in VS Code and the renderer
+hot-reloads in the Electron window. Edit `apps/desktop/src/main/index.ts` and
+electron-vite restarts the main process. Stop everything with `Ctrl+C` in the
+Distrobox shell.
+
+## Daily commands
+
+| Command | Where to run | What it does |
+| --- | --- | --- |
+| `pnpm dev` | **Distrobox shell** (needs display) | electron-vite dev mode; opens the Electron window on your host |
+| `pnpm lint` | Dev Container or Distrobox | oxlint across every workspace package |
+| `pnpm check-types` | Dev Container or Distrobox | `tsc --noEmit` across every workspace package |
+| `pnpm build` | Dev Container or Distrobox | Bundle main + preload + renderer into `apps/desktop/out/` |
+| `pnpm package` | Dev Container or Distrobox | Run electron-builder; produces installer in `apps/desktop/release/` |
+
+`pnpm dev` is the only command that *requires* the Distrobox shell — everything
+else works in either environment, but the Dev Container is the natural home for
+editor-driven workflows (Claude Code, lint, typecheck) since that's where VS
+Code's terminal lives.
+
+In dev, PocketBase data lives at `apps/desktop/.dev-pb_data/`. In a packaged
+build it moves to the OS-standard userData dir.
+
+## Tearing down and rebuilding
+
+```sh
+# host: rebuild the Distrobox from scratch
+distrobox rm -f felafel
+distrobox-assemble create --file ./distrobox.ini
+
+# VS Code: rebuild the Dev Container
+# Command Palette → "Dev Containers: Rebuild Container"
+```
+
+## Other host setups
+
+- **Codespaces** — Dev Container is automatic; the Distrobox path doesn't apply
+  (no host display). `pnpm dev` won't open a window. Useful for editing,
+  lint/typecheck, build, and package.
+- **macOS / Windows** — Dev Container works as above for non-GUI tasks. For
+  `pnpm dev` you'd install Node 22 + pnpm directly on the host (Distrobox is
+  Linux-only). Or use a Linux VM.
+
+## IPC contract
+
+Channel names and payload types live in
+[`packages/shared/src/index.ts`](packages/shared/src/index.ts). Main exposes
+them via `ipcMain.handle`, preload re-exposes a typed surface to the renderer
+through `contextBridge`, and `window.api` is typed against `DesktopApi`.
