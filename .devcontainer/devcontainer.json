@@ -20,7 +20,7 @@
         "bbenoist.nix",
         "dannysteenman.cloudformation-yaml-snippets",
         "davidanson.vscode-markdownlint",
-        "dbaeumer.vscode-eslint",
+        "oxc.oxc-vscode",
         "donjayamanne.githistory",
         "dnut.rewrap-revived",
         "dsznajder.es7-react-js-snippets",
