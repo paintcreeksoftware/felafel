@@ -1,0 +1,21 @@
+// Strict TypeScript baseline that every workspace package extends. Centralizes
+// compiler options here so settings don't drift between apps/desktop and
+// packages/shared (and any future workspaces). Per-package tsconfigs add their
+// own `lib`, `jsx`, `types`, and `include` on top.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noEmit": true,
+    "incremental": true
+  }
+}
