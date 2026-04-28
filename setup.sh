@@ -21,4 +21,9 @@ echo "Updating sysctl configuration..."
 sudo sysctl fs.inotify.max_user_watches=524288
 sudo sysctl fs.inotify.max_user_instances=8192
 
+echo "Installing shellcheck for the husky pre-commit hook..."
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends shellcheck
+sudo rm -rf /var/lib/apt/lists/*
+
 popd || exit 1
