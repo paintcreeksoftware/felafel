@@ -32,7 +32,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between bg-white px-16 py-32 dark:bg-black sm:items-start">
-        <img src="/next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />
+        <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
           <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
             To get started, edit src/renderer/src/App.tsx.
