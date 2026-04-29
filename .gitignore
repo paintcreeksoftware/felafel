@@ -45,7 +45,9 @@ yarn-error.log*
 
 # ide
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .zed
 
 # ts-node cache
