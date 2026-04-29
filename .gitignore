@@ -23,6 +23,9 @@ apps/desktop/.dev-pb_data/
 
 # production
 build
+# ...except electron-builder's buildResources dir, which holds the app icon
+# and other packaging assets that ARE meant to be tracked.
+!apps/desktop/build/
 
 # misc
 .DS_Store
