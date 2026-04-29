@@ -30,17 +30,17 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between bg-white px-16 py-32 dark:bg-black sm:items-start">
+    <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
+      <main className="bg-background flex min-h-screen w-full max-w-3xl flex-col items-center justify-between px-16 py-32 sm:items-start">
         <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
+          <h1 className="text-foreground max-w-xs text-3xl font-semibold leading-10 tracking-tight">
             To get started, edit src/renderer/src/App.tsx.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+          <p className="text-muted-foreground max-w-md text-lg leading-8">
             PocketBase status:{" "}
             {pbError ? (
-              <span className="text-red-600 dark:text-red-400">{pbError}</span>
+              <span className="text-destructive">{pbError}</span>
             ) : pbUrl ? (
               <span className="font-mono">{pbUrl}</span>
             ) : (
@@ -48,7 +48,7 @@ export default function App() {
             )}
           </p>
           {pbEmail ? (
-            <p className="max-w-md text-base leading-7 text-zinc-600 dark:text-zinc-400">
+            <p className="text-muted-foreground max-w-md text-base leading-7">
               Signed in as <span className="font-mono">{pbEmail}</span>
             </p>
           ) : null}
