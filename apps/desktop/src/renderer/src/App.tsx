@@ -7,6 +7,7 @@
 // resolves, we render the URL and the signed-in email.
 import { useEffect, useState } from "react";
 import { pb, ensurePocketBase } from "./pb";
+import { TailscalePill } from "./components/TailscalePill";
 
 export default function App() {
   const [pbUrl, setPbUrl] = useState<string | null>(null);
@@ -31,6 +32,9 @@ export default function App() {
 
   return (
     <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
+      <header className="absolute right-4 top-4 z-10">
+        <TailscalePill />
+      </header>
       <main className="bg-background flex min-h-screen w-full max-w-3xl flex-col items-center justify-between px-16 py-32 sm:items-start">
         <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
