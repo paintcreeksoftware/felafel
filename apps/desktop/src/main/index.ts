@@ -6,11 +6,16 @@
 // Lifecycle: app.whenReady → register IPC handlers → start PocketBase sidecar →
 // create BrowserWindow with preload attached. On `before-quit` we shut
 // PocketBase down cleanly so it doesn't leak as an orphan process.
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { Channels, type PocketBaseStatus } from "@felafel/shared";
+import { Channels, type PocketBaseStatus, type TailscaleStatus } from "@felafel/shared";
 import { getCredentials, startPocketBase, stopPocketBase } from "./pocketbase.js";
+import {
+  getCachedStatus as getCachedTailscaleStatus,
+  probeStatus as probeTailscaleStatus,
+  runUp as runTailscaleUp,
+} from "./tailscale.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +33,16 @@ function broadcastStatus(status: PocketBaseStatus) {
   }
 }
 
+// Tailscale status broadcast — same pattern as broadcastStatus, returns the
+// status it received so it composes cleanly with .then() chains in the
+// IPC handlers below.
+function broadcastTailscale(status: TailscaleStatus): TailscaleStatus {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(Channels.TailscaleStatus, status);
+  }
+  return status;
+}
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -41,6 +56,17 @@ async function createWindow() {
       sandbox: false,
       contextIsolation: true,
     },
+  });
+
+  // Open external links (e.g. the Tailscale install tooltip's
+  // <a target="_blank">) in the user's default browser instead of a new
+  // Electron window. Allow-list https only so a malicious renderer can't open
+  // file:// or javascript: URLs.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://")) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
   });
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -59,6 +85,20 @@ app.whenReady().then(async () => {
   ipcMain.handle(Channels.PocketBaseUrl, () => pocketBaseUrl);
   ipcMain.handle(Channels.PocketBaseCredentials, () => getCredentials());
 
+  // Tailscale handlers. ts:status returns the cached value (instant); ts:refresh
+  // forces a re-probe and broadcasts. ts:connect runs `tailscale up` and kicks
+  // off a fire-and-forget re-probe so the steady-state status arrives via
+  // broadcast even though the Promise resolves with the immediate `up` outcome.
+  ipcMain.handle(Channels.TailscaleStatus, () => getCachedTailscaleStatus());
+  ipcMain.handle(Channels.TailscaleRefresh, () =>
+    probeTailscaleStatus().then(broadcastTailscale),
+  );
+  ipcMain.handle(Channels.TailscaleConnect, async (_event, key?: string) => {
+    const result = await runTailscaleUp(key);
+    void probeTailscaleStatus().then(broadcastTailscale);
+    return result;
+  });
+
   broadcastStatus({ kind: "starting" });
   try {
     const url = await startPocketBase();
@@ -70,6 +110,11 @@ app.whenReady().then(async () => {
       message: err instanceof Error ? err.message : String(err),
     });
   }
+
+  // Best-effort initial Tailscale probe. Fire-and-forget — Tailscale is
+  // optional and we don't want a missing binary or unreachable daemon to
+  // delay the window opening.
+  void probeTailscaleStatus().then(broadcastTailscale);
 
   await createWindow();
 
