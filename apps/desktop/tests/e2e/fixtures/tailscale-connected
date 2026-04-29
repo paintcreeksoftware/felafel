@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Fake `tailscale` CLI that always reports a Running tailnet membership.
+# Used by tests/e2e/tailscale.spec.ts via the FELAFEL_TAILSCALE_FAKE env var
+# so the Playwright run doesn't need a real tailscaled on the host.
+#
+# Only `status --json` is implemented because that's the only subcommand the
+# renderer's mount-time probe invokes. Other args exit non-zero.
+set -eu
+case "${1:-}" in
+  status)
+    cat <<'JSON'
+{
+  "BackendState": "Running",
+  "MagicDNSSuffix": "test-tailnet.ts.net",
+  "Self": { "HostName": "felafel-test", "Online": true }
+}
+JSON
+    ;;
+  *)
+    echo "fake tailscale (connected): command not implemented: $*" >&2
+    exit 1
+    ;;
+esac

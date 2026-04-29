@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Fake `tailscale` CLI that reports a NeedsLogin state and exits non-zero
+# (matching the real CLI's behavior — it emits valid JSON on stdout but
+# returns a non-zero exit code when the daemon is up but not logged in).
+set -eu
+case "${1:-}" in
+  status)
+    cat <<'JSON'
+{
+  "BackendState": "NeedsLogin"
+}
+JSON
+    exit 1
+    ;;
+  *)
+    echo "fake tailscale (disconnected): command not implemented: $*" >&2
+    exit 1
+    ;;
+esac
