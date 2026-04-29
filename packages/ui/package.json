@@ -1,0 +1,25 @@
+{
+  "name": "@felafel/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared UI components for Felafel apps. shadcn/ui primitives wired up as a workspace package; consumers import like `@felafel/ui/components/ui/badge`.",
+  "type": "module",
+  "exports": {
+    "./components/ui/*": "./src/components/ui/*.tsx",
+    "./lib/*": "./src/lib/*.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./styles/globals.css": "./src/styles/globals.css"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "typescript": "^5.9.3"
+  }
+}
