@@ -1,5 +1,6 @@
 {
   "name": "@felafel/desktop",
+  "productName": "Felafel",
   "version": "0.0.0",
   "private": true,
   "description": "The Electron desktop app — main, preload, and renderer in one package, plus an embedded PocketBase sidecar. electron-vite handles dev/build; electron-builder packages it.",
