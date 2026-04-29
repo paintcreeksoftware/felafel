@@ -29,6 +29,9 @@ test("home screen visual snapshot", async () => {
       window.locator("text=/http:\\/\\/127\\.0\\.0\\.1:8\\d{3}/"),
       // OS-derived email — different per machine / CI runner.
       window.locator("text=/Signed in as/").locator(".."),
+      // Tailscale pill state varies per environment (CI has no tailscale
+      // binary, dev boxes might be connected to different tailnets).
+      window.locator('[data-testid="ts-pill"]'),
     ],
   });
 
