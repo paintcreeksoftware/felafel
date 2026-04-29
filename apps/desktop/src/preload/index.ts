@@ -12,6 +12,8 @@ import {
   type DesktopApi,
   type PocketBaseStatus,
   type SuperuserCredentials,
+  type TailscaleConnectResult,
+  type TailscaleStatus,
 } from "@felafel/shared";
 
 const api: DesktopApi = {
@@ -24,6 +26,16 @@ const api: DesktopApi = {
     const listener = (_event: unknown, status: PocketBaseStatus) => handler(status);
     ipcRenderer.on(Channels.PocketBaseStatus, listener);
     return () => ipcRenderer.removeListener(Channels.PocketBaseStatus, listener);
+  },
+  tailscaleStatus: () => ipcRenderer.invoke(Channels.TailscaleStatus) as Promise<TailscaleStatus>,
+  tailscaleRefresh: () =>
+    ipcRenderer.invoke(Channels.TailscaleRefresh) as Promise<TailscaleStatus>,
+  tailscaleConnect: (authkey) =>
+    ipcRenderer.invoke(Channels.TailscaleConnect, authkey) as Promise<TailscaleConnectResult>,
+  onTailscaleStatus: (handler) => {
+    const listener = (_event: unknown, status: TailscaleStatus) => handler(status);
+    ipcRenderer.on(Channels.TailscaleStatus, listener);
+    return () => ipcRenderer.removeListener(Channels.TailscaleStatus, listener);
   },
 };
 
