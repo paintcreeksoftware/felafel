@@ -8,6 +8,9 @@
 // must see in node_modules at packaging time. We `exclude: ["@felafel/shared"]`
 // because that workspace package is pure TS source and Node can't load .ts at
 // runtime; bundling it inlines `Channels` directly into main/preload output.
+// `@felafel/ui` is renderer-only and the renderer section below doesn't use
+// externalizeDepsPlugin (Vite bundles everything for the browser), so it
+// doesn't need to be listed.
 import { resolve } from "node:path";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import react from "@vitejs/plugin-react";
