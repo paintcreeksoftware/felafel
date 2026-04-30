@@ -6,6 +6,29 @@
 // Anything mentioning the wire format goes here, NOT in main/, preload/, or
 // renderer/ — otherwise the three processes drift out of sync silently.
 
+import { z } from "zod";
+
+// Orchestrator worker schemas — consumed by both the orchestrator service
+// (route validation, OpenAPI generation) and the desktop renderer (typed RPC
+// client via hc<AppType>). Defined here so the wire contract has one source
+// of truth.
+export const WorkerRegistrationSchema = z.object({
+  id: z.string().uuid(),
+  hostname: z.string().min(1),
+  tailscaleName: z.string().optional(),
+  os: z.enum(["linux", "darwin", "win32"]).optional(),
+  arch: z.enum(["x64", "arm64"]).optional(),
+  version: z.string().optional(),
+  labels: z.record(z.string(), z.string()).optional(),
+});
+export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
+
+export const WorkerSchema = WorkerRegistrationSchema.extend({
+  registeredAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime(),
+});
+export type Worker = z.infer<typeof WorkerSchema>;
+
 export const Channels = {
   PocketBaseStatus: "pb:status",
   PocketBaseUrl: "pb:url",
