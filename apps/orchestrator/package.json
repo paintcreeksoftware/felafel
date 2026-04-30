@@ -1,0 +1,27 @@
+{
+  "name": "@felafel/orchestrator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Hono service that registers workers and exposes them over a typed REST API. Spawned by the desktop main process in embedded mode; shipped as a Docker image in container mode.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format cjs --target node24 --out-dir dist --clean",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.18.0",
+    "hono": "^4.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  }
+}
