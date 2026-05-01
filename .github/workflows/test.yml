@@ -25,7 +25,10 @@ jobs:
         # Integration tests spawn apps/orchestrator/dist/index.mjs.
         run: pnpm --filter @felafel/orchestrator build
 
-      - name: Unit tests with coverage
+      - name: Orchestrator unit tests
+        run: pnpm --filter @felafel/orchestrator test
+
+      - name: Desktop unit tests with coverage
         run: pnpm --filter @felafel/desktop test --coverage
 
       - name: Integration tests
