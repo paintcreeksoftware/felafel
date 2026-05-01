@@ -6,7 +6,7 @@
 // Coverage gate is set to 1 (any positive coverage passes). Bump these
 // numbers as the test suite grows; the gate is wired so the bump is a
 // one-line change rather than new infrastructure.
-import { resolve } from "node:path";
+import { resolve } from "pathe";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({

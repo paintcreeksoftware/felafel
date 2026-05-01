@@ -6,7 +6,7 @@
 // from inside the Distrobox shell where the host display is available.
 import { _electron as electron, expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { join } from "pathe";
 
 const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");

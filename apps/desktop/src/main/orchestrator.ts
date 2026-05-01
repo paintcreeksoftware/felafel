@@ -4,7 +4,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join } from "pathe";
 import { app } from "electron";
 import getPort, { portNumbers } from "get-port";
 

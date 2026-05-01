@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join } from "pathe";
 import { type Worker, type WorkerRegistration, WorkerSchema } from "@felafel/shared";
 import { migrations } from "./migrations";
 

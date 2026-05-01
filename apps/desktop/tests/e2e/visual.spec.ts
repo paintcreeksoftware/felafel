@@ -11,7 +11,7 @@
 // committed to the repo. Re-baseline by running --update-snapshots after
 // intentional UI changes.
 import { _electron as electron, expect, test } from "@playwright/test";
-import { join } from "node:path";
+import { join } from "pathe";
 
 const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");

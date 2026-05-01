@@ -6,7 +6,7 @@
 // Two specs (connected + disconnected) instead of one with state-flipping
 // because the FELAFEL_TAILSCALE_FAKE env var is fixed at launch.
 import { _electron as electron, expect, test } from "@playwright/test";
-import { join } from "node:path";
+import { join } from "pathe";
 
 const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");

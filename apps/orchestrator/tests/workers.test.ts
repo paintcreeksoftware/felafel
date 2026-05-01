@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join } from "pathe";
 import { randomUUID } from "node:crypto";
 import { buildApp } from "@felafel/orchestrator/app";
 import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";

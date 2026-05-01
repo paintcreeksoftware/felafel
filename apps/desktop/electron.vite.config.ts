@@ -11,7 +11,7 @@
 // `@felafel/ui` is renderer-only and the renderer section below doesn't use
 // externalizeDepsPlugin (Vite bundles everything for the browser), so it
 // doesn't need to be listed.
-import { resolve } from "node:path";
+import { resolve } from "pathe";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import react from "@vitejs/plugin-react";
 

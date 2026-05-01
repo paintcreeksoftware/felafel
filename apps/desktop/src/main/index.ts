@@ -9,7 +9,7 @@
 // IPC wiring read top-down as methods on one object, and shifts state out of
 // module scope where it can't be tested or reasoned about cleanly.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
-import { join } from "node:path";
+import { join } from "pathe";
 import { Channels, type OrchestratorStatus, type TailscaleStatus } from "@felafel/shared";
 import { startOrchestrator, stopOrchestrator } from "@felafel/desktop/main/orchestrator.js";
 import {
