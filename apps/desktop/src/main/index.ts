@@ -1,7 +1,7 @@
 // Electron main process entry point. The actual application lifecycle and
-// state owner is `FelafelApp`, which lives in
-// `apps/desktop/src/main/felafel.ts` (module-private there, exposed only
-// through `startFelafelApp`). This file is a thin bootstrap.
-import { startFelafelApp } from "@felafel/desktop/main/felafel";
+// state owner is `DesktopApp`, which lives in
+// `apps/desktop/src/main/desktop.ts` (module-private there, exposed only
+// through `startDesktopApp`). This file is a thin bootstrap.
+import { startDesktopApp } from "@felafel/desktop/main/desktop";
 
-startFelafelApp();
+startDesktopApp();

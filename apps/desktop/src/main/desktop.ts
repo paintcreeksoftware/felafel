@@ -1,10 +1,13 @@
-// Top-level main-process owner. Composes the orchestrator + Tailscale
-// managers and wires them up to Electron's lifecycle and IPC channels.
+// Top-level desktop main-process owner. Composes the orchestrator +
+// Tailscale managers and wires them up to Electron's lifecycle and IPC
+// channels.
 //
-// `FelafelApp` is module-private — only this file knows it exists, and only
-// the bottom of `index.ts` calls `startFelafelApp()`. That keeps the
+// `DesktopApp` is module-private — only this file knows it exists, and only
+// the bottom of `index.ts` calls `startDesktopApp()`. That keeps the
 // "instantiated exactly once per process" property without needing a
-// formal singleton (private constructor, static accessor).
+// formal singleton (private constructor, static accessor). Calling
+// `startDesktopApp` twice would construct two instances and double-register
+// IPC handlers — don't.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { join } from "pathe";
 import {
@@ -23,16 +26,22 @@ import { TailscaleManager } from "@felafel/desktop/main/tailscale";
 const moduleDir = import.meta.dirname;
 
 /**
- * Top-level main-process owner. Composes the orchestrator + Tailscale
- * managers and wires them up to Electron's lifecycle and IPC channels.
+ * Top-level desktop main-process owner. Composes the orchestrator +
+ * Tailscale managers and wires them up to Electron's lifecycle and IPC
+ * channels.
  *
  * @remarks
- * Module-private — instantiated once via {@link startFelafelApp} from
- * `index.ts`. Not a formal singleton (no private constructor / static
- * accessor); the encapsulation comes from being a non-exported class
- * instantiated exactly once per process.
+ * Module-private — instantiated once via {@link startDesktopApp} from
+ * `index.ts`. **Not** a formal singleton: there is no `getInstance`
+ * accessor, no private constructor, and `startDesktopApp` does not check
+ * for an existing instance before constructing. The "exactly once per
+ * process" property is held by call-site discipline (the class is
+ * non-exported, and `index.ts` invokes the bootstrap exactly once at
+ * module load). Naming reflects scope — `Desktop` because this owns the
+ * desktop app's main process, not the whole `Felafel` project (which also
+ * spans the orchestrator and future worker apps).
  */
-class FelafelApp {
+class DesktopApp {
   private mainWindow: BrowserWindow | null = null;
   private orchestratorUrl: string | null = null;
   private readonly orchestrator = new OrchestratorManager();
@@ -195,9 +204,11 @@ class FelafelApp {
 }
 
 /**
- * Bootstrap the desktop main process. Constructs the single {@link FelafelApp}
- * instance and starts it. Called from `index.ts`.
+ * Bootstrap the desktop main process: `new DesktopApp().start()`. Called
+ * from `index.ts` exactly once per process. Calling more than once
+ * constructs a second {@link DesktopApp} (no instance check) and Electron
+ * will throw on the duplicate IPC handler registrations.
  */
-export function startFelafelApp(): void {
-  new FelafelApp().start();
+export function startDesktopApp(): void {
+  new DesktopApp().start();
 }
