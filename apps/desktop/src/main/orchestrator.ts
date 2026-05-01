@@ -149,6 +149,12 @@ export class OrchestratorManager {
    * + `--experimental-sqlite`. In dev/tests: system `node` (24+, where
    * `node:sqlite` is stable without the flag).
    *
+   * TODO: drop `--experimental-sqlite` once Electron's bundled Node tracks
+   * a release where `node:sqlite` is GA (no flag required). Today Electron
+   * 41 ships a Node where it's still experimental; once the bundled Node
+   * matches Node 24 LTS's GA promotion, the flag becomes a runtime warning
+   * and should be removed.
+   *
    * @param script - absolute path to the bundled `.mjs` entry
    * @returns command/argv/env triple to pass to {@link spawn}
    */
