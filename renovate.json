@@ -11,12 +11,5 @@
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 6am on monday"]
-  },
-  "packageRules": [
-    {
-      "matchPackageNames": ["pocketbase"],
-      "description": "PocketBase JS SDK pin must move in lockstep with the server binary version in apps/desktop/scripts/download-pocketbase.mjs. Renovate cannot see that constraint, so we bump it manually.",
-      "enabled": false
-    }
-  ]
+  }
 }

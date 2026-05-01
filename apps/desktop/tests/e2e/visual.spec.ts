@@ -1,7 +1,7 @@
 // Tier 3 — basic visual regression. Captures a screenshot of the home
-// screen after auto-auth completes, masks the dynamic regions (PocketBase
-// URL contains a random port; the signed-in email contains the OS
-// username), and pixel-diffs against a committed baseline on every CI run.
+// screen after the orchestrator reaches "ready", masks the dynamic regions
+// (random orchestrator port, Tailscale pill state), and pixel-diffs against
+// a committed baseline on every CI run.
 //
 // First run with `pnpm test:e2e -- --update-snapshots` produces the
 // baseline. Subsequent runs fail if the screenshot drifts more than

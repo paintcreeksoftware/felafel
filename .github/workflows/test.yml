@@ -19,10 +19,11 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        # postinstall fetches the PocketBase binary into
-        # apps/desktop/resources/pocketbase/linux-x64/, which the integration
-        # tests need.
         run: pnpm install --frozen-lockfile
+
+      - name: Build orchestrator bundle
+        # Integration tests spawn apps/orchestrator/dist/index.mjs.
+        run: pnpm --filter @felafel/orchestrator build
 
       - name: Unit tests with coverage
         run: pnpm --filter @felafel/desktop test --coverage

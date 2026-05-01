@@ -1,8 +1,6 @@
 // Orchestrator sidecar lifecycle. The orchestrator is a Hono service shipped
 // as a Node bundle (apps/orchestrator); the desktop main process spawns it as
-// a child and points the renderer at it over IPC. Same shape as
-// pocketbase.ts; this lives alongside it temporarily until C6 deletes
-// PocketBase.
+// a child and points the renderer at it over IPC.
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -82,8 +80,7 @@ export async function startOrchestrator(): Promise<string> {
   const dataDir = resolveDataDir();
   await mkdir(dataDir, { recursive: true });
 
-  // Random port in 9090–9190. PocketBase uses 8090–8190 so the two sidecars
-  // can't collide while they run side-by-side during the cutover.
+  // Random port in 9090–9190 — bound to localhost only.
   const port = await getPort({ port: portNumbers(9090, 9190) });
   const host = "127.0.0.1";
   const url = `http://${host}:${port}`;

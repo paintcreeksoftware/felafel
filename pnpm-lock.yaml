@@ -53,9 +53,6 @@ importers:
       get-port:
         specifier: ^7.2.0
         version: 7.2.0
-      pocketbase:
-        specifier: ^0.26.8
-        version: 0.26.8
       which:
         specifier: ^6.0.1
         version: 6.0.1
@@ -3753,9 +3750,6 @@ packages:
   plist@3.1.1:
     resolution: {integrity: sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA==}
     engines: {node: '>=10.4.0'}
-
-  pocketbase@0.26.8:
-    resolution: {integrity: sha512-aQ/ewvS7ncvAE8wxoW10iAZu6ElgbeFpBhKPnCfvRovNzm2gW8u/sQNPGN6vNgVEagz44kK//C61oKjfa+7Low==}
 
   postcss-load-config@6.0.1:
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
@@ -7999,8 +7993,6 @@ snapshots:
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
     optional: true
-
-  pocketbase@0.26.8: {}
 
   postcss-load-config@6.0.1(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:

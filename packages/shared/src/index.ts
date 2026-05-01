@@ -30,9 +30,6 @@ export const WorkerSchema = WorkerRegistrationSchema.extend({
 export type Worker = z.infer<typeof WorkerSchema>;
 
 export const Channels = {
-  PocketBaseStatus: "pb:status",
-  PocketBaseUrl: "pb:url",
-  PocketBaseCredentials: "pb:credentials",
   OrchestratorStatus: "orch:status",
   OrchestratorUrl: "orch:url",
   TailscaleStatus: "ts:status",
@@ -40,20 +37,10 @@ export const Channels = {
   TailscaleRefresh: "ts:refresh",
 } as const;
 
-export type PocketBaseStatus =
-  | { kind: "starting" }
-  | { kind: "ready"; url: string }
-  | { kind: "error"; message: string };
-
 export type OrchestratorStatus =
   | { kind: "starting" }
   | { kind: "ready"; url: string }
   | { kind: "error"; message: string };
-
-export interface SuperuserCredentials {
-  email: string;
-  password: string;
-}
 
 // Tailscale connectivity state. The main process probes the host's `tailscale`
 // CLI and broadcasts whichever variant matches. The renderer's pill is driven
@@ -86,9 +73,6 @@ export type TailscaleConnectResult =
 // Shape of `window.api` in the renderer. The preload script is responsible for
 // implementing this exactly; this interface is what the renderer trusts.
 export interface DesktopApi {
-  pocketbaseUrl: () => Promise<string>;
-  pocketbaseCredentials: () => Promise<SuperuserCredentials>;
-  onPocketBaseStatus: (handler: (status: PocketBaseStatus) => void) => () => void;
   orchestratorUrl: () => Promise<string>;
   onOrchestratorStatus: (handler: (status: OrchestratorStatus) => void) => () => void;
   tailscaleStatus: () => Promise<TailscaleStatus>;

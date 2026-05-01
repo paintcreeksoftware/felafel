@@ -3,14 +3,12 @@
   "productName": "Felafel",
   "version": "0.0.0",
   "private": true,
-  "description": "The Electron desktop app — main, preload, and renderer in one package, plus an embedded PocketBase sidecar. electron-vite handles dev/build; electron-builder packages it.",
+  "description": "The Electron desktop app — main, preload, and renderer in one package, with an embedded orchestrator (Hono) sidecar. electron-vite handles dev/build; electron-builder packages it.",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "postinstall": "node scripts/download-pocketbase.mjs",
     "dev": "pnpm --filter @felafel/orchestrator build && electron-vite dev",
     "build": "electron-vite build",
-    "prepackage": "node scripts/download-pocketbase.mjs --all-platforms",
     "package": "electron-builder --config electron-builder.yml",
     "lint": "oxlint",
     "format": "oxfmt",
@@ -23,7 +21,6 @@
     "@felafel/shared": "workspace:*",
     "@felafel/ui": "workspace:*",
     "get-port": "^7.2.0",
-    "pocketbase": "^0.26.8",
     "which": "^6.0.1"
   },
   "devDependencies": {

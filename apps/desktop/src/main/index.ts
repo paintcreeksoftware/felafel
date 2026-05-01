@@ -1,21 +1,15 @@
 // Electron main process — the Node program that owns the application lifecycle,
-// the window, and child processes (PocketBase). It runs in a separate OS
-// process from the renderer, communicates with it over IPC, and has
-// unrestricted Node access (filesystem, child_process, etc).
+// the window, and child processes (the orchestrator service). It runs in a
+// separate OS process from the renderer, communicates with it over IPC, and
+// has unrestricted Node access (filesystem, child_process, etc).
 //
-// Lifecycle: app.whenReady → register IPC handlers → start PocketBase sidecar →
-// create BrowserWindow with preload attached. On `before-quit` we shut
-// PocketBase down cleanly so it doesn't leak as an orphan process.
+// Lifecycle: app.whenReady → register IPC handlers → start orchestrator sidecar
+// → create BrowserWindow with preload attached. On `before-quit` we shut the
+// orchestrator down cleanly so it doesn't leak as an orphan process.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import {
-  Channels,
-  type OrchestratorStatus,
-  type PocketBaseStatus,
-  type TailscaleStatus,
-} from "@felafel/shared";
-import { getCredentials, startPocketBase, stopPocketBase } from "./pocketbase.js";
+import { Channels, type OrchestratorStatus, type TailscaleStatus } from "@felafel/shared";
 import { startOrchestrator, stopOrchestrator } from "./orchestrator.js";
 import {
   getCachedStatus as getCachedTailscaleStatus,
@@ -26,19 +20,7 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
-let pocketBaseUrl: string | null = null;
 let orchestratorUrl: string | null = null;
-
-// Push a status update to every open window. Cached `pocketBaseUrl` is what the
-// IPC handler returns to the renderer when asked.
-function broadcastStatus(status: PocketBaseStatus) {
-  if (status.kind === "ready") {
-    pocketBaseUrl = status.url;
-  }
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(Channels.PocketBaseStatus, status);
-  }
-}
 
 function broadcastOrchestrator(status: OrchestratorStatus) {
   if (status.kind === "ready") {
@@ -98,8 +80,6 @@ async function createWindow() {
 app.whenReady().then(async () => {
   // IPC handlers — must be registered before any window opens, otherwise early
   // renderer calls return undefined.
-  ipcMain.handle(Channels.PocketBaseUrl, () => pocketBaseUrl);
-  ipcMain.handle(Channels.PocketBaseCredentials, () => getCredentials());
   ipcMain.handle(Channels.OrchestratorUrl, () => orchestratorUrl);
 
   // Tailscale handlers. ts:status returns the cached value (instant); ts:refresh
@@ -115,18 +95,6 @@ app.whenReady().then(async () => {
     void probeTailscaleStatus().then(broadcastTailscale);
     return result;
   });
-
-  broadcastStatus({ kind: "starting" });
-  try {
-    const url = await startPocketBase();
-    broadcastStatus({ kind: "ready", url });
-  } catch (err) {
-    console.error("[main] startPocketBase failed:", err);
-    broadcastStatus({
-      kind: "error",
-      message: err instanceof Error ? err.message : String(err),
-    });
-  }
 
   broadcastOrchestrator({ kind: "starting" });
   try {
@@ -162,11 +130,10 @@ app.on("window-all-closed", () => {
   }
 });
 
-// preventDefault + manual exit lets us await PocketBase shutdown before the
+// preventDefault + manual exit lets us await orchestrator shutdown before the
 // process actually goes away — otherwise SIGTERM races with `app.exit()`.
 app.on("before-quit", async (event) => {
   event.preventDefault();
   await stopOrchestrator();
-  await stopPocketBase();
   app.exit(0);
 });
