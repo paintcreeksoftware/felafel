@@ -21,6 +21,13 @@ const mainBundle = join(appRoot, "out", "main", "index.js");
 test("home screen visual snapshot", async () => {
   const electronApp = await electron.launch({ args: [mainBundle], cwd: appRoot });
   const window = await electronApp.firstWindow();
+
+  // Pin the viewport so the captured image is dimensionally identical
+  // across environments. Without this, the BrowserWindow's content area
+  // depends on the host window manager's chrome — Distrobox-on-GNOME
+  // produces ~735px, xvfb-on-CI produces 773 — and the snapshot drifts.
+  await window.setViewportSize({ width: 1200, height: 800 });
+
   await window.waitForSelector("text=Orchestrator:", { timeout: 30_000 });
   await window.waitForSelector("text=No workers registered yet", { timeout: 30_000 });
 
