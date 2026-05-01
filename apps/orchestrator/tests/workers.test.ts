@@ -5,7 +5,7 @@ import { join } from "pathe";
 import { randomUUID } from "node:crypto";
 import { buildApp } from "@felafel/orchestrator/app";
 import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
-import type { Worker, WorkerRegistration } from "@felafel/shared";
+import { type Worker, type WorkerRegistration } from "@felafel/shared";
 
 function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
   return {
