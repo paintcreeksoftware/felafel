@@ -7,7 +7,6 @@
     "composite": true,
     "lib": ["ES2022"],
     "types": ["node", "electron-vite/node"],
-    "baseUrl": ".",
     "paths": { "@felafel/desktop/*": ["./src/*"] }
   },
   "include": [
