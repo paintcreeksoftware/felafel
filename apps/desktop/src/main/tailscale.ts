@@ -20,8 +20,8 @@
 // Why `--authkey-stdin` over `--authkey=`: the latter leaks the key to other
 // users on the box via /proc/<pid>/cmdline. We probe the installed CLI with
 // `tailscale up --help` once and cache the result.
-import { setTimeout as sleep } from "node:timers/promises";
 import { execa, type Result as ExecaResult } from "execa";
+import pRetry from "p-retry";
 import which from "which";
 import type { TailscaleConnectResult, TailscaleStatus } from "@felafel/shared";
 import { DesktopEnvVars } from "@felafel/desktop/main/constants";
@@ -248,17 +248,32 @@ export class TailscaleManager {
       this.cachedStatus = { kind: "missing-binary", path: null };
       return this.cachedStatus;
     }
-    let delay = PROBE_RETRY_INITIAL_DELAY_MS;
-    for (let attempt = 0; attempt < PROBE_RETRY_MAX_ATTEMPTS; attempt++) {
-      const result = await this.tryProbeOnce(binary);
-      const isTransient =
-        result.kind === "error" && /EAGAIN|ETIMEDOUT|aborted/i.test(result.message);
-      if (!isTransient || attempt === PROBE_RETRY_MAX_ATTEMPTS - 1) {
-        this.cachedStatus = result;
-        return this.cachedStatus;
+    // Retain the last probe result so an exhausted-retry path can surface
+    // the actual transient TailscaleStatus instead of a generic Error.
+    let lastResult: TailscaleStatus | undefined;
+    try {
+      this.cachedStatus = await pRetry(
+        async () => {
+          lastResult = await this.tryProbeOnce(binary);
+          const isTransient =
+            lastResult.kind === "error"
+            && /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message);
+          if (isTransient) {
+            throw new Error(lastResult.message);
+          }
+          return lastResult;
+        },
+        {
+          retries: PROBE_RETRY_MAX_ATTEMPTS - 1,
+          factor: 2,
+          minTimeout: PROBE_RETRY_INITIAL_DELAY_MS,
+          maxTimeout: PROBE_RETRY_MAX_DELAY_MS,
+        },
+      );
+    } catch {
+      if (lastResult) {
+        this.cachedStatus = lastResult;
       }
-      await sleep(delay);
-      delay = Math.min(delay * 2, PROBE_RETRY_MAX_DELAY_MS);
     }
     return this.cachedStatus;
   }

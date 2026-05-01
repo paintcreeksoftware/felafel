@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { app } from "electron";
 import getPort from "get-port";
+import pRetry from "p-retry";
 import { join } from "pathe";
 import { LOCALHOST } from "@felafel/desktop/main/constants";
 // Single source of truth for the desktop→orchestrator env-var contract lives
@@ -25,8 +26,8 @@ const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
 const INITIAL_PROBE_DELAY_MS = 50;
 /** Cap for exponential backoff between readiness probes. */
 const MAX_PROBE_DELAY_MS = 1_000;
-/** Total wall-clock budget for the readiness probe to succeed. */
-const READINESS_TIMEOUT_MS = 10_000;
+/** Maximum readiness-probe attempts (with exponential backoff between, capped at MAX_PROBE_DELAY_MS). */
+const MAX_PROBE_ATTEMPTS = 12;
 /** Grace period after SIGTERM before escalating to SIGKILL. */
 const SIGTERM_GRACE_MS = 5_000;
 
@@ -177,32 +178,26 @@ export class OrchestratorManager {
 
   /**
    * Poll `${url}/health` with exponential backoff until it returns 200 or
-   * the total budget elapses.
+   * the retry budget is exhausted.
    *
    * @param url - base URL where the orchestrator is binding
    * @throws if the orchestrator doesn't reach ready within
-   * {@link READINESS_TIMEOUT_MS}
+   * {@link MAX_PROBE_ATTEMPTS} attempts
    */
   private async waitForServer(url: string): Promise<void> {
-    const start = Date.now();
-    let delay = INITIAL_PROBE_DELAY_MS;
-    while (Date.now() - start < READINESS_TIMEOUT_MS) {
-      try {
+    await pRetry(
+      async () => {
         const res = await fetch(`${url}/health`);
-        if (res.ok) {
-          return;
+        if (!res.ok) {
+          throw new Error(`/health returned ${res.status}`);
         }
-      } catch {
-        // not ready yet
-      }
-      const currentDelay = delay;
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, currentDelay);
-      });
-      delay = Math.min(delay * 2, MAX_PROBE_DELAY_MS);
-    }
-    throw new Error(
-      `orchestrator did not become ready within ${READINESS_TIMEOUT_MS}ms`,
+      },
+      {
+        retries: MAX_PROBE_ATTEMPTS - 1,
+        factor: 2,
+        minTimeout: INITIAL_PROBE_DELAY_MS,
+        maxTimeout: MAX_PROBE_DELAY_MS,
+      },
     );
   }
 }
