@@ -29,8 +29,12 @@ import { DesktopEnvVars } from "@felafel/desktop/main/constants";
 
 const execFileAsync = promisify(execFile);
 
-/** Backoff between `tailscale status` retries on transient errors. */
-const PROBE_RETRY_DELAYS_MS = [200, 500, 1500];
+/** Initial backoff between `tailscale status` retries on transient errors. */
+const PROBE_RETRY_INITIAL_DELAY_MS = 200;
+/** Cap for exponential backoff between probe retries. */
+const PROBE_RETRY_MAX_DELAY_MS = 1_500;
+/** Maximum number of probe attempts before surfacing the last error. */
+const PROBE_RETRY_MAX_ATTEMPTS = 4;
 
 /** 5-second cap on a single status probe. */
 const PROBE_SINGLE_ATTEMPT_TIMEOUT_MS = 5_000;
@@ -247,15 +251,17 @@ export class TailscaleManager {
       this.cachedStatus = { kind: "missing-binary", path: null };
       return this.cachedStatus;
     }
-    for (let attempt = 0; attempt <= PROBE_RETRY_DELAYS_MS.length; attempt++) {
+    let delay = PROBE_RETRY_INITIAL_DELAY_MS;
+    for (let attempt = 0; attempt < PROBE_RETRY_MAX_ATTEMPTS; attempt++) {
       const result = await this.tryProbeOnce(binary);
       const isTransient =
         result.kind === "error" && /EAGAIN|ETIMEDOUT|aborted/i.test(result.message);
-      if (!isTransient || attempt === PROBE_RETRY_DELAYS_MS.length) {
+      if (!isTransient || attempt === PROBE_RETRY_MAX_ATTEMPTS - 1) {
         this.cachedStatus = result;
         return this.cachedStatus;
       }
-      await sleep(PROBE_RETRY_DELAYS_MS[attempt]);
+      await sleep(delay);
+      delay = Math.min(delay * 2, PROBE_RETRY_MAX_DELAY_MS);
     }
     return this.cachedStatus;
   }
