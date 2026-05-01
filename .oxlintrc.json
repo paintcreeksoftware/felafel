@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["import"],
+  "rules": {
+    "import/no-duplicates": "error",
+    "import/first": "error",
+    "import/no-cycle": "error",
+    "import/no-self-import": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.integration.test.ts"],
+      "rules": {
+        "import/first": "off"
+      }
+    }
+  ]
+}

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildApp } from "../src/app";
-import { SqliteWorkerStore } from "../src/store/sqlite";
+import { buildApp } from "@/app";
+import { SqliteWorkerStore } from "@/store/sqlite";
 
 describe("GET /health", () => {
   let dataDir: string;

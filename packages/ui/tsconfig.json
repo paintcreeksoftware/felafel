@@ -4,8 +4,10 @@
     "composite": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
-      "@felafel/ui/*": ["./src/*"]
+      "@felafel/ui/*": ["./src/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

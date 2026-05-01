@@ -15,9 +15,12 @@ import { resolve } from "node:path";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import react from "@vitejs/plugin-react";
 
+const aliasToSrc = { "@": resolve(__dirname, "src") };
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: ["@felafel/shared"] })],
+    resolve: { alias: aliasToSrc },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, "src/main/index.ts") },
@@ -26,6 +29,7 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin({ exclude: ["@felafel/shared"] })],
+    resolve: { alias: aliasToSrc },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, "src/preload/index.ts") },
@@ -35,6 +39,7 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, "src/renderer"),
     plugins: [react()],
+    resolve: { alias: aliasToSrc },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, "src/renderer/index.html") },

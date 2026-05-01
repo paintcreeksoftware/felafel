@@ -6,9 +6,13 @@
 // Coverage gate is set to 1 (any positive coverage passes). Bump these
 // numbers as the test suite grows; the gate is wired so the bump is a
 // one-line change rather than new infrastructure.
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: { "@": resolve(__dirname, "src") },
+  },
   test: {
     include: ["src/**/*.test.ts", "src/**/*.integration.test.ts"],
     // E2E lives under tests/e2e/ and is run by Playwright, not Vitest.
