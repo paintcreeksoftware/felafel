@@ -10,6 +10,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import {
   Channels,
   type DesktopApi,
+  type OrchestratorStatus,
   type PocketBaseStatus,
   type SuperuserCredentials,
   type TailscaleConnectResult,
@@ -26,6 +27,12 @@ const api: DesktopApi = {
     const listener = (_event: unknown, status: PocketBaseStatus) => handler(status);
     ipcRenderer.on(Channels.PocketBaseStatus, listener);
     return () => ipcRenderer.removeListener(Channels.PocketBaseStatus, listener);
+  },
+  orchestratorUrl: () => ipcRenderer.invoke(Channels.OrchestratorUrl) as Promise<string>,
+  onOrchestratorStatus: (handler) => {
+    const listener = (_event: unknown, status: OrchestratorStatus) => handler(status);
+    ipcRenderer.on(Channels.OrchestratorStatus, listener);
+    return () => ipcRenderer.removeListener(Channels.OrchestratorStatus, listener);
   },
   tailscaleStatus: () => ipcRenderer.invoke(Channels.TailscaleStatus) as Promise<TailscaleStatus>,
   tailscaleRefresh: () =>

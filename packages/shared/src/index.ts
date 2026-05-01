@@ -33,12 +33,19 @@ export const Channels = {
   PocketBaseStatus: "pb:status",
   PocketBaseUrl: "pb:url",
   PocketBaseCredentials: "pb:credentials",
+  OrchestratorStatus: "orch:status",
+  OrchestratorUrl: "orch:url",
   TailscaleStatus: "ts:status",
   TailscaleConnect: "ts:connect",
   TailscaleRefresh: "ts:refresh",
 } as const;
 
 export type PocketBaseStatus =
+  | { kind: "starting" }
+  | { kind: "ready"; url: string }
+  | { kind: "error"; message: string };
+
+export type OrchestratorStatus =
   | { kind: "starting" }
   | { kind: "ready"; url: string }
   | { kind: "error"; message: string };
@@ -82,6 +89,8 @@ export interface DesktopApi {
   pocketbaseUrl: () => Promise<string>;
   pocketbaseCredentials: () => Promise<SuperuserCredentials>;
   onPocketBaseStatus: (handler: (status: PocketBaseStatus) => void) => () => void;
+  orchestratorUrl: () => Promise<string>;
+  onOrchestratorStatus: (handler: (status: OrchestratorStatus) => void) => () => void;
   tailscaleStatus: () => Promise<TailscaleStatus>;
   tailscaleRefresh: () => Promise<TailscaleStatus>;
   tailscaleConnect: (authkey?: string) => Promise<TailscaleConnectResult>;

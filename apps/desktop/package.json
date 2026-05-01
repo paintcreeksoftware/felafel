@@ -8,7 +8,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "postinstall": "node scripts/download-pocketbase.mjs",
-    "dev": "electron-vite dev",
+    "dev": "pnpm --filter @felafel/orchestrator build && electron-vite dev",
     "build": "electron-vite build",
     "prepackage": "node scripts/download-pocketbase.mjs --all-platforms",
     "package": "electron-builder --config electron-builder.yml",

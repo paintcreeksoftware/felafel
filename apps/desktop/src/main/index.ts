@@ -9,8 +9,14 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { Channels, type PocketBaseStatus, type TailscaleStatus } from "@felafel/shared";
+import {
+  Channels,
+  type OrchestratorStatus,
+  type PocketBaseStatus,
+  type TailscaleStatus,
+} from "@felafel/shared";
 import { getCredentials, startPocketBase, stopPocketBase } from "./pocketbase.js";
+import { startOrchestrator, stopOrchestrator } from "./orchestrator.js";
 import {
   getCachedStatus as getCachedTailscaleStatus,
   probeStatus as probeTailscaleStatus,
@@ -21,6 +27,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
 let pocketBaseUrl: string | null = null;
+let orchestratorUrl: string | null = null;
 
 // Push a status update to every open window. Cached `pocketBaseUrl` is what the
 // IPC handler returns to the renderer when asked.
@@ -30,6 +37,15 @@ function broadcastStatus(status: PocketBaseStatus) {
   }
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send(Channels.PocketBaseStatus, status);
+  }
+}
+
+function broadcastOrchestrator(status: OrchestratorStatus) {
+  if (status.kind === "ready") {
+    orchestratorUrl = status.url;
+  }
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(Channels.OrchestratorStatus, status);
   }
 }
 
@@ -84,6 +100,7 @@ app.whenReady().then(async () => {
   // renderer calls return undefined.
   ipcMain.handle(Channels.PocketBaseUrl, () => pocketBaseUrl);
   ipcMain.handle(Channels.PocketBaseCredentials, () => getCredentials());
+  ipcMain.handle(Channels.OrchestratorUrl, () => orchestratorUrl);
 
   // Tailscale handlers. ts:status returns the cached value (instant); ts:refresh
   // forces a re-probe and broadcasts. ts:connect runs `tailscale up` and kicks
@@ -106,6 +123,18 @@ app.whenReady().then(async () => {
   } catch (err) {
     console.error("[main] startPocketBase failed:", err);
     broadcastStatus({
+      kind: "error",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  broadcastOrchestrator({ kind: "starting" });
+  try {
+    const url = await startOrchestrator();
+    broadcastOrchestrator({ kind: "ready", url });
+  } catch (err) {
+    console.error("[main] startOrchestrator failed:", err);
+    broadcastOrchestrator({
       kind: "error",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -137,6 +166,7 @@ app.on("window-all-closed", () => {
 // process actually goes away — otherwise SIGTERM races with `app.exit()`.
 app.on("before-quit", async (event) => {
   event.preventDefault();
+  await stopOrchestrator();
   await stopPocketBase();
   app.exit(0);
 });
