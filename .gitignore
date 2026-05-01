@@ -18,8 +18,7 @@ out/
 dist/
 dist-electron/
 release/
-apps/desktop/resources/pocketbase/
-apps/desktop/.dev-pb_data/
+apps/desktop/.dev-orchestrator-data/
 
 # production
 build

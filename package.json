@@ -2,7 +2,7 @@
   "name": "felafel",
   "version": "1.0.0",
   "private": true,
-  "description": "Electron desktop application built on Turborepo with an embedded PocketBase backend.",
+  "description": "Electron desktop application built on Turborepo with an embedded Hono orchestrator service.",
   "keywords": [],
   "license": "MIT",
   "author": "Paint Creek Software",
@@ -16,7 +16,7 @@
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
     "test:e2e": "turbo run test:e2e",
-    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\" \"#**/out\" \"#**/release\" \"#**/dist\" \"#**/.dev-pb_data\" \"#apps/desktop/resources\"",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\" \"#**/out\" \"#**/release\" \"#**/dist\"",
     "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg",
     "prepare": "husky"
   },

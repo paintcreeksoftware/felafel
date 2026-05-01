@@ -1,15 +1,17 @@
 # Felafel
 
 Electron desktop application built on a Turborepo workspace, with an embedded
-PocketBase backend and a Vite + React + Tailwind renderer.
+Hono orchestrator service and a Vite + React + Tailwind renderer.
 
 ## Layout
 
 ```text
 apps/
-  desktop/        Electron app (main + preload + renderer + PocketBase sidecar)
+  desktop/        Electron app (main + preload + renderer)
+  orchestrator/   Hono service spawned by desktop in dev/embedded mode;
+                  also shipped as a Docker image for remote deployment
 packages/
-  shared/         IPC channel names and types shared across processes
+  shared/         IPC channel names + worker schemas shared across processes
 ```
 
 ## Development workflow
@@ -22,8 +24,8 @@ alternatives:
 | **Dev Container** ([`.devcontainer/`](.devcontainer/)) | VS Code reopens the workspace inside it. Cross-platform. | Edit code, run Claude Code, lint, typecheck, build, package, git |
 | **Distrobox** ([`distrobox.ini`](distrobox.ini)) | A separate shell on the host (Linux only). Has display + audio access. | Run `pnpm dev` to actually launch the Electron window |
 
-They share `$HOME`, so the repo, `node_modules`, and PocketBase data are visible
-to both — `pnpm install` in either env satisfies the other. You'd typically have
+They share `$HOME`, so the repo, `node_modules`, and orchestrator data are
+visible to both — `pnpm install` in either env satisfies the other. You'd typically have
 a VS Code window (Dev Container) open for editing and a side-by-side host
 terminal (Distrobox) running `pnpm dev`.
 
@@ -109,11 +111,9 @@ pnpm install
 
 This:
 
-- Resolves the workspace dependency graph (`apps/desktop`, `packages/shared`)
+- Resolves the workspace dependency graph (`apps/desktop`, `apps/orchestrator`,
+  `packages/shared`)
 - Installs every package's deps into a shared `node_modules` at the repo root
-- Runs `apps/desktop`'s postinstall, which downloads the PocketBase binary for
-  Linux x64 into `apps/desktop/resources/pocketbase/linux-x64/` and verifies its
-  SHA-256
 
 You only need to run `pnpm install` once across both environments —
 `node_modules` lives at `~/felafel/node_modules`, which both the Dev Container
@@ -142,10 +142,11 @@ Watch the logs. You should see, in order:
 
 1. `dev server running for the electron renderer process at:
    http://localhost:5173/`
-2. `Server started at http://127.0.0.1:8090` (PocketBase)
+2. `orchestrator listening on http://127.0.0.1:909x`
 3. `starting electron app...`
-4. The Electron window opens on your host display, showing "To get started, edit
-   src/renderer/src/App.tsx" and "Signed in as `<your-username>@felafel.local`"
+4. The Electron window opens on your host display, showing "To get started,
+   edit src/renderer/src/App.tsx" with "Orchestrator: ready" and an empty
+   workers list
 
 Edit `apps/desktop/src/renderer/src/App.tsx` in VS Code and the renderer
 hot-reloads in the Electron window. Edit `apps/desktop/src/main/index.ts` and
@@ -167,8 +168,26 @@ else works in either environment, but the Dev Container is the natural home for
 editor-driven workflows (Claude Code, lint, typecheck) since that's where VS
 Code's terminal lives.
 
-In dev, PocketBase data lives at `apps/desktop/.dev-pb_data/`. In a packaged
-build it moves to the OS-standard userData dir.
+In dev, orchestrator data (the SQLite database) lives at
+`apps/desktop/.dev-orchestrator-data/`. In a packaged build it moves to
+`<userData>/orchestrator/` under the OS-standard userData dir.
+
+## Orchestrator: embedded vs container
+
+By default, the desktop app spawns the orchestrator as a child process bound
+to `127.0.0.1` — embedded mode, no external dependencies, fully offline.
+
+The same orchestrator service is also packaged as a Docker image for homelab
+or multi-host deployment:
+
+```sh
+pnpm --filter @felafel/orchestrator package      # builds felafel-orchestrator:latest
+docker run --rm -p 9090:9090 -v orch-data:/data felafel-orchestrator
+```
+
+The image is `node:24-alpine` based, exposes 9090, and stores its SQLite DB
+under the `/data` mount. Wiring the desktop client to point at a remote
+orchestrator (instead of the spawned child) is a future enhancement.
 
 ## Tearing down and rebuilding
 

@@ -5,7 +5,7 @@
 // adjacent integration test file, gated on whether tailscale is installed
 // on the test machine.
 import { describe, expect, it } from "vitest";
-import { classifyUpError, parseStatusJson } from "./tailscale";
+import { classifyUpError, parseStatusJson } from "@felafel/desktop/main/tailscale";
 
 describe("parseStatusJson", () => {
   it("returns connected with tailnet and selfName for BackendState=Running", () => {

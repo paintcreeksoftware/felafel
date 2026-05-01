@@ -5,7 +5,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "rootDir": "src"
+    "rootDir": "src",
+    "paths": { "@felafel/shared/*": ["./src/*"] }
   },
   "include": ["src/**/*"]
 }

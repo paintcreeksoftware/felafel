@@ -18,6 +18,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "out/**"]
     },
+    "@felafel/desktop#build": {
+      "dependsOn": ["^build", "@felafel/orchestrator#build"],
+      "outputs": ["dist/**", "out/**"]
+    },
     "package": {
       "dependsOn": ["build"],
       "outputs": ["release/**"]

@@ -14,7 +14,7 @@ import {
   WifiHigh,
   WifiOff,
 } from "lucide-react";
-import type { TailscaleStatus } from "@felafel/shared";
+import { type TailscaleStatus } from "@felafel/shared";
 import { Alert, AlertDescription, AlertTitle } from "@felafel/ui/components/ui/alert";
 import { Badge } from "@felafel/ui/components/ui/badge";
 import { Button } from "@felafel/ui/components/ui/button";
@@ -58,9 +58,10 @@ export function TailscalePill() {
 
   useEffect(() => {
     let cancelled = false;
-    void window.api.tailscaleStatus().then((s) => {
-      if (!cancelled) setStatus(s);
-    });
+    void (async () => {
+      const s = await window.api.tailscaleStatus();
+      if (!cancelled) {setStatus(s);}
+    })();
     const unsubscribe = window.api.onTailscaleStatus((s) => {
       setStatus(s);
       // If a push reports we're connected, close the modal and reset the
@@ -78,8 +79,8 @@ export function TailscalePill() {
   }, []);
 
   async function handlePillClick() {
-    if (status.kind === "missing-binary") return;
-    if (pillBusy || submittingRef.current) return;
+    if (status.kind === "missing-binary") {return;}
+    if (pillBusy || submittingRef.current) {return;}
     setPillBusy("connecting");
     setSubmitError(null);
     try {
@@ -100,7 +101,7 @@ export function TailscalePill() {
   }
 
   async function handleRefresh() {
-    if (pillBusy || submittingRef.current) return;
+    if (pillBusy || submittingRef.current) {return;}
     setPillBusy("refreshing");
     setSubmitError(null);
     try {
@@ -113,7 +114,7 @@ export function TailscalePill() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || !authkey.trim()) return;
+    if (submitting || !authkey.trim()) {return;}
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -267,13 +268,14 @@ function renderPill(status: TailscaleStatus, busy: "connecting" | "refreshing" |
   }
   switch (status.kind) {
     case "unknown":
-    case "probing":
+    case "probing": {
       return (
         <Badge variant="secondary" className="gap-1.5">
           <LoaderCircle className="size-3 animate-spin" /> Checking…
         </Badge>
       );
-    case "connected":
+    }
+    case "connected": {
       return (
         <Badge
           variant="default"
@@ -282,25 +284,29 @@ function renderPill(status: TailscaleStatus, busy: "connecting" | "refreshing" |
           <WifiHigh className="size-3" /> Connected to {status.tailnet}
         </Badge>
       );
-    case "disconnected":
+    }
+    case "disconnected": {
       return (
         <Badge variant="outline" className="gap-1.5">
           <WifiOff className="size-3" />
           {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
         </Badge>
       );
-    case "error":
+    }
+    case "error": {
       return (
         <Badge variant="outline" className="gap-1.5 border-destructive/40 text-destructive">
           <CircleX className="size-3" /> Tailscale error
         </Badge>
       );
-    case "missing-binary":
+    }
+    case "missing-binary": {
       return (
         <Badge variant="outline" className="gap-1.5 opacity-60">
           <WifiOff className="size-3" /> Tailscale not installed
         </Badge>
       );
+    }
   }
 }
 
@@ -309,6 +315,7 @@ function MissingBinaryTooltip({ children }: { children: React.ReactNode }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs to be focusable */}
           <span tabIndex={0}>{children}</span>
         </TooltipTrigger>
         <TooltipContent className="max-w-sm space-y-2 text-xs">
