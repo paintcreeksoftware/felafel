@@ -28,6 +28,16 @@ export const Defaults = {
   HEARTBEAT_INTERVAL_MS: "30000",
 } as const;
 
+/** HTTP status codes used by the worker's routes. */
+export const HttpStatus = {
+  /**
+   * Job accepted, will run asynchronously. Worker returns this from
+   * `POST /jobs/run` then posts to the orchestrator's
+   * `POST /runs/:id/complete` once finished.
+   */
+  ACCEPTED: 202,
+} as const;
+
 /**
  * Default filesystem path for the worker's identity file. Linux-only — XDG
  * Base Directory Specification is a freedesktop.org spec; the worker is
