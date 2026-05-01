@@ -25,9 +25,10 @@ test("Tailscale pill renders connected state when fake CLI reports Running", asy
   });
 
   const window = await electronApp.firstWindow();
-  // Wait until the auto-auth surface is up so we know the renderer fully
-  // mounted before asserting on the pill.
-  await window.waitForSelector("text=Signed in as", { timeout: 30_000 });
+  // Wait until the orchestrator status row is up so we know the renderer
+  // fully mounted before asserting on the pill. "Orchestrator:" is the label
+  // and shows regardless of starting/ready/error.
+  await window.waitForSelector("text=Orchestrator:", { timeout: 30_000 });
   // Tailscale pill is non-blocking on app launch — give the post-mount probe
   // a moment to flip the badge from "Checking…" to the connected state.
   await expect(window.locator('[data-testid="ts-pill"]')).toContainText("Connected to", {
@@ -49,7 +50,7 @@ test("Tailscale pill renders disconnected state when fake CLI reports NeedsLogin
   });
 
   const window = await electronApp.firstWindow();
-  await window.waitForSelector("text=Signed in as", { timeout: 30_000 });
+  await window.waitForSelector("text=Orchestrator:", { timeout: 30_000 });
   await expect(window.locator('[data-testid="ts-pill"]')).toContainText("Connect to Tailscale", {
     timeout: 10_000,
   });
