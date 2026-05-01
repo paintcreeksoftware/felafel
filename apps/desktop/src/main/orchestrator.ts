@@ -7,14 +7,19 @@ import { mkdir } from "node:fs/promises";
 import { app } from "electron";
 import getPort from "get-port";
 import { join } from "pathe";
-import {
-  ELECTRON_RUN_AS_NODE,
-  LOCALHOST,
-} from "@felafel/desktop/main/constants";
+import { LOCALHOST } from "@felafel/desktop/main/constants";
 // Single source of truth for the desktop→orchestrator env-var contract lives
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
 import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants";
+
+/**
+ * Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child
+ * runs as Node rather than as a second Electron app instance. Electron
+ * checks this env var on startup; presence flips the runtime mode. Used
+ * only here, hence file-private.
+ */
+const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
 
 /** Initial readiness-poll delay, doubled per attempt up to {@link MAX_PROBE_DELAY_MS}. */
 const INITIAL_PROBE_DELAY_MS = 50;
