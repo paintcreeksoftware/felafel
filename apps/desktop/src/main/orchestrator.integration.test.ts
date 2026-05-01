@@ -1,16 +1,16 @@
 // Tier 2 — integration test for the orchestrator sidecar lifecycle. Spawns
 // the real Node bundle at a random port pointing at a temp data dir,
-// exercises startOrchestrator + /health + a worker upsert + verifies SQLite
-// file is created, then verifies stopOrchestrator cleans up. Excluded from
-// the default `pnpm test` run; opt in via `pnpm test:integration`.
+// exercises start + /health + a worker upsert + verifies SQLite file is
+// created, then verifies stop cleans up. Excluded from the default
+// `pnpm test` run; opt in via `pnpm test:integration`.
 //
 // Requires `apps/orchestrator/dist/index.mjs` to exist — run
 // `pnpm --filter @felafel/orchestrator build` first.
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "pathe";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const here = import.meta.dirname;
 
@@ -24,23 +24,26 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { startOrchestrator, stopOrchestrator } from "./orchestrator";
+import { OrchestratorManager } from "./orchestrator";
 
 const devDataDir = join(here, "..", "..", ".dev-orchestrator-data");
 
-describe("orchestrator sidecar lifecycle", () => {
+describe("OrchestratorManager lifecycle", () => {
+  let manager: OrchestratorManager;
+
   beforeEach(async () => {
     userDataDir = await mkdtemp(join(tmpdir(), "felafel-orch-"));
+    manager = new OrchestratorManager();
   });
 
   afterEach(async () => {
-    await stopOrchestrator();
+    await manager.stop();
     await rm(userDataDir, { recursive: true, force: true });
     await rm(devDataDir, { recursive: true, force: true });
   });
 
   it("spawns the orchestrator and serves /health", async () => {
-    const url = await startOrchestrator();
+    const url = await manager.start();
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
 
     const health = await fetch(`${url}/health`);
@@ -49,7 +52,7 @@ describe("orchestrator sidecar lifecycle", () => {
   }, 30_000);
 
   it("registers and lists workers across the spawned process", async () => {
-    const url = await startOrchestrator();
+    const url = await manager.start();
     const reg = {
       id: "550e8400-e29b-41d4-a716-446655440000",
       hostname: "integration-test",
@@ -69,15 +72,15 @@ describe("orchestrator sidecar lifecycle", () => {
   }, 30_000);
 
   it("creates a SQLite file under the data dir", async () => {
-    await startOrchestrator();
+    await manager.start();
     expect(existsSync(join(devDataDir, "orchestrator.sqlite"))).toBe(true);
   }, 30_000);
 
-  it("stopOrchestrator cleans up the child process", async () => {
-    const url = await startOrchestrator();
-    await stopOrchestrator();
+  it("stop() cleans up the child process", async () => {
+    const url = await manager.start();
+    await manager.stop();
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       setTimeout(resolve, 500);
     });
     const fetched = await fetch(`${url}/health`).catch(() => null);

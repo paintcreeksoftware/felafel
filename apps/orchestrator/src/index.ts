@@ -1,13 +1,14 @@
 import { serve } from "@hono/node-server";
 import { buildApp } from "./app";
+import { Defaults, EnvVars } from "./constants";
 import { SqliteWorkerStore } from "./store/sqlite";
 
-const port = Number(process.env.ORCHESTRATOR_PORT ?? "9090");
-const hostname = process.env.ORCHESTRATOR_HOST ?? "127.0.0.1";
-const dataDir = process.env.ORCHESTRATOR_DATA_DIR;
+const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
+const hostname = process.env[EnvVars.HOST] ?? Defaults.HOST;
+const dataDir = process.env[EnvVars.DATA_DIR];
 
 if (!dataDir) {
-  console.error("ORCHESTRATOR_DATA_DIR is required");
+  console.error(`${EnvVars.DATA_DIR} is required`);
   process.exit(1);
 }
 

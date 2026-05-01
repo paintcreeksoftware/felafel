@@ -5,27 +5,20 @@
 // Auto-skips on hosts without Tailscale installed so this test file is safe
 // to leave in the always-on test suite, though it lives outside the default
 // `pnpm test` glob and only runs via `pnpm test:integration`.
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  _resetTailscaleStateForTests,
-  findBinary,
-  probeStatus,
-} from "./tailscale";
+import { beforeAll, describe, expect, it } from "vitest";
+import { TailscaleManager } from "./tailscale";
 
 let binaryAvailable = false;
+let manager: TailscaleManager;
 
 beforeAll(async () => {
-  _resetTailscaleStateForTests();
-  binaryAvailable = (await findBinary({ refresh: true })) !== null;
+  manager = new TailscaleManager();
+  binaryAvailable = (await manager.findBinary({ refresh: true })) !== null;
 });
 
-afterAll(() => {
-  _resetTailscaleStateForTests();
-});
-
-describe("probeStatus (integration)", () => {
+describe("TailscaleManager.probeStatus (integration)", () => {
   it.skipIf(!binaryAvailable)("returns a well-formed TailscaleStatus", async () => {
-    const status = await probeStatus();
+    const status = await manager.probeStatus();
     // Whichever state the host is in, the result should be one of the
     // discriminated-union members. We don't assert which one — that depends
     // on whether the dev box is logged into a tailnet.
