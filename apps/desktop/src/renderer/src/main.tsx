@@ -4,11 +4,11 @@
 // auto-cancelled and surfaces as a misleading "request was aborted" error.
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
-import "./index.css";
+import App from "@felafel/desktop/App";
+import "@felafel/desktop/index.css";
 
-const rootElement = document.getElementById("root");
-if (!rootElement) throw new Error("Root element #root not found");
+const rootElement = document.querySelector("#root");
+if (!rootElement) {throw new Error("Root element #root not found");}
 
 createRoot(rootElement).render(
   <StrictMode>

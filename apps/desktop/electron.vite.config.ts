@@ -11,13 +11,22 @@
 // `@felafel/ui` is renderer-only and the renderer section below doesn't use
 // externalizeDepsPlugin (Vite bundles everything for the browser), so it
 // doesn't need to be listed.
-import { resolve } from "node:path";
+import { resolve } from "pathe";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import react from "@vitejs/plugin-react";
+
+// `@felafel/desktop/*` resolves to `./src/*` in node-side code (main, preload)
+// and `./src/renderer/src/*` in renderer code. The double-src in the renderer
+// path is electron-vite's convention — its renderer is its own Vite root with
+// its own `src/` underneath. The two aliases below mirror what the split
+// tsconfigs (tsconfig.node.json + tsconfig.web.json) say.
+const nodeAlias = { "@felafel/desktop": resolve(__dirname, "src") };
+const rendererAlias = { "@felafel/desktop": resolve(__dirname, "src/renderer/src") };
 
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: ["@felafel/shared"] })],
+    resolve: { alias: nodeAlias },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, "src/main/index.ts") },
@@ -26,6 +35,7 @@ export default defineConfig({
   },
   preload: {
     plugins: [externalizeDepsPlugin({ exclude: ["@felafel/shared"] })],
+    resolve: { alias: nodeAlias },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, "src/preload/index.ts") },
@@ -35,6 +45,7 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, "src/renderer"),
     plugins: [react()],
+    resolve: { alias: rendererAlias },
     build: {
       rollupOptions: {
         input: { index: resolve(__dirname, "src/renderer/index.html") },

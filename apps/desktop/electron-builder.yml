@@ -1,13 +1,9 @@
 # electron-builder config. Operates on `out/` after electron-vite has bundled
 # the source. Produces platform installers in `release/`.
 #
-# `extraResources` ships the PocketBase Go binary alongside the app so the
-# main process can spawn it as a sidecar at runtime.
-#
-# `asarUnpack` keeps those binaries as real files on disk. Electron normally
-# packs everything into a `.asar` archive for fast loading, but you can't
-# `exec()` files inside an archive — so the PocketBase binary has to be
-# unpacked.
+# `extraResources` ships the orchestrator service bundle alongside the app so
+# the main process can spawn it as a sidecar at runtime via Electron's
+# bundled Node (ELECTRON_RUN_AS_NODE).
 appId: software.paintcreek.felafel
 productName: Felafel
 directories:
@@ -20,10 +16,8 @@ files:
   - "!**/*.{ts,tsx,map}"
   - "!**/.eslintrc*"
 extraResources:
-  - from: resources/pocketbase/${platform}-${arch}/
-    to: pocketbase/
-asarUnpack:
-  - resources/pocketbase/**
+  - from: ../orchestrator/dist/
+    to: orchestrator/
 mac:
   target:
     - dmg

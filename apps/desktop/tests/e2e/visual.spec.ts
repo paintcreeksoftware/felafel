@@ -1,7 +1,7 @@
 // Tier 3 — basic visual regression. Captures a screenshot of the home
-// screen after auto-auth completes, masks the dynamic regions (PocketBase
-// URL contains a random port; the signed-in email contains the OS
-// username), and pixel-diffs against a committed baseline on every CI run.
+// screen after the orchestrator reaches "ready", masks the dynamic regions
+// (random orchestrator port, Tailscale pill state), and pixel-diffs against
+// a committed baseline on every CI run.
 //
 // First run with `pnpm test:e2e -- --update-snapshots` produces the
 // baseline. Subsequent runs fail if the screenshot drifts more than
@@ -11,24 +11,29 @@
 // committed to the repo. Re-baseline by running --update-snapshots after
 // intentional UI changes.
 import { _electron as electron, expect, test } from "@playwright/test";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "pathe";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");
 const mainBundle = join(appRoot, "out", "main", "index.js");
 
 test("home screen visual snapshot", async () => {
   const electronApp = await electron.launch({ args: [mainBundle], cwd: appRoot });
   const window = await electronApp.firstWindow();
-  await window.waitForSelector("text=Signed in as", { timeout: 30_000 });
+
+  // Pin the viewport so the captured image is dimensionally identical
+  // across environments. Without this, the BrowserWindow's content area
+  // depends on the host window manager's chrome — Distrobox-on-GNOME
+  // produces ~735px, xvfb-on-CI produces 773 — and the snapshot drifts.
+  await window.setViewportSize({ width: 1200, height: 800 });
+
+  await window.waitForSelector("text=Orchestrator:", { timeout: 30_000 });
+  await window.waitForSelector("text=No workers registered yet", { timeout: 30_000 });
 
   await expect(window).toHaveScreenshot("home.png", {
     mask: [
-      // Random port in the URL changes every run.
-      window.locator("text=/http:\\/\\/127\\.0\\.0\\.1:8\\d{3}/"),
-      // OS-derived email — different per machine / CI runner.
-      window.locator("text=/Signed in as/").locator(".."),
+      // Random orchestrator port changes every run (kernel-assigned ephemeral).
+      window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`),
       // Tailscale pill state varies per environment (CI has no tailscale
       // binary, dev boxes might be connected to different tailnets).
       window.locator('[data-testid="ts-pill"]'),

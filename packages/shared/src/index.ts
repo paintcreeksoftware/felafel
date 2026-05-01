@@ -6,24 +6,41 @@
 // Anything mentioning the wire format goes here, NOT in main/, preload/, or
 // renderer/ — otherwise the three processes drift out of sync silently.
 
+import { z } from "zod";
+
+// Orchestrator worker schemas — consumed by both the orchestrator service
+// (route validation, OpenAPI generation) and the desktop renderer (typed RPC
+// client via hc<AppType>). Defined here so the wire contract has one source
+// of truth.
+export const WorkerRegistrationSchema = z.object({
+  id: z.string().uuid(),
+  hostname: z.string().min(1),
+  tailscaleName: z.string().optional(),
+  os: z.enum(["linux", "darwin", "win32"]).optional(),
+  arch: z.enum(["x64", "arm64"]).optional(),
+  version: z.string().optional(),
+  labels: z.record(z.string(), z.string()).optional(),
+});
+export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
+
+export const WorkerSchema = WorkerRegistrationSchema.extend({
+  registeredAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime(),
+});
+export type Worker = z.infer<typeof WorkerSchema>;
+
 export const Channels = {
-  PocketBaseStatus: "pb:status",
-  PocketBaseUrl: "pb:url",
-  PocketBaseCredentials: "pb:credentials",
+  OrchestratorStatus: "orch:status",
+  OrchestratorUrl: "orch:url",
   TailscaleStatus: "ts:status",
   TailscaleConnect: "ts:connect",
   TailscaleRefresh: "ts:refresh",
 } as const;
 
-export type PocketBaseStatus =
+export type OrchestratorStatus =
   | { kind: "starting" }
   | { kind: "ready"; url: string }
   | { kind: "error"; message: string };
-
-export interface SuperuserCredentials {
-  email: string;
-  password: string;
-}
 
 // Tailscale connectivity state. The main process probes the host's `tailscale`
 // CLI and broadcasts whichever variant matches. The renderer's pill is driven
@@ -56,9 +73,8 @@ export type TailscaleConnectResult =
 // Shape of `window.api` in the renderer. The preload script is responsible for
 // implementing this exactly; this interface is what the renderer trusts.
 export interface DesktopApi {
-  pocketbaseUrl: () => Promise<string>;
-  pocketbaseCredentials: () => Promise<SuperuserCredentials>;
-  onPocketBaseStatus: (handler: (status: PocketBaseStatus) => void) => () => void;
+  orchestratorUrl: () => Promise<string>;
+  onOrchestratorStatus: (handler: (status: OrchestratorStatus) => void) => () => void;
   tailscaleStatus: () => Promise<TailscaleStatus>;
   tailscaleRefresh: () => Promise<TailscaleStatus>;
   tailscaleConnect: (authkey?: string) => Promise<TailscaleConnectResult>;

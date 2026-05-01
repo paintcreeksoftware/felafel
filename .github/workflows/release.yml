@@ -22,9 +22,6 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        # postinstall fetches the host (linux-x64) PocketBase binary;
-        # `pnpm package` triggers the prepackage script which fetches the
-        # full matrix needed by electron-builder.
         run: pnpm install --frozen-lockfile
 
       - name: Build the Electron app

@@ -10,22 +10,19 @@ import { contextBridge, ipcRenderer } from "electron";
 import {
   Channels,
   type DesktopApi,
-  type PocketBaseStatus,
-  type SuperuserCredentials,
+  type OrchestratorStatus,
   type TailscaleConnectResult,
   type TailscaleStatus,
 } from "@felafel/shared";
 
 const api: DesktopApi = {
-  pocketbaseUrl: () => ipcRenderer.invoke(Channels.PocketBaseUrl) as Promise<string>,
-  pocketbaseCredentials: () =>
-    ipcRenderer.invoke(Channels.PocketBaseCredentials) as Promise<SuperuserCredentials>,
   // Push notifications from main → renderer. Returns an unsubscribe so React
   // effects can clean up properly.
-  onPocketBaseStatus: (handler) => {
-    const listener = (_event: unknown, status: PocketBaseStatus) => handler(status);
-    ipcRenderer.on(Channels.PocketBaseStatus, listener);
-    return () => ipcRenderer.removeListener(Channels.PocketBaseStatus, listener);
+  orchestratorUrl: () => ipcRenderer.invoke(Channels.OrchestratorUrl) as Promise<string>,
+  onOrchestratorStatus: (handler) => {
+    const listener = (_event: unknown, status: OrchestratorStatus) => handler(status);
+    ipcRenderer.on(Channels.OrchestratorStatus, listener);
+    return () => ipcRenderer.removeListener(Channels.OrchestratorStatus, listener);
   },
   tailscaleStatus: () => ipcRenderer.invoke(Channels.TailscaleStatus) as Promise<TailscaleStatus>,
   tailscaleRefresh: () =>
