@@ -1,0 +1,98 @@
+name: package
+
+# Exercises the FULL packaging chain on every PR push: electron-builder for
+# the desktop installer artifact, plus `docker build` + smoke-test for the
+# orchestrator container. Catches packaging-time failures (extraResources
+# misses, native module rebuild, asar issues, Dockerfile drift) that pure
+# `pnpm build` doesn't surface.
+#
+# Lives in its own workflow because packaging is slow (multi-stage Docker
+# build, electron-builder produces multi-hundred-MB .AppImage) and would
+# 10x the lane time if folded into build.yml. release.yml uses the same
+# tooling but only fires on `v*` tags; this runs on every PR.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  desktop-package:
+    name: Desktop installer (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Package via electron-builder (AppImage + deb)
+        run: pnpm --filter @felafel/desktop package
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-installers
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: error
+          retention-days: 7
+
+  orchestrator-container:
+    name: Orchestrator container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build orchestrator
+        run: pnpm --filter @felafel/orchestrator build
+
+      - name: Build container image
+        run: docker build -f apps/orchestrator/Dockerfile -t felafel-orchestrator:ci .
+
+      - name: Smoke-test container (/health)
+        run: |
+          # Run with a tmpfs-mounted data dir so SQLite has somewhere writable.
+          # Bind to a random port; query /health; tear down.
+          docker run -d --rm \
+            --name felafel-orchestrator-ci \
+            -e ORCHESTRATOR_DATA_DIR=/data \
+            -v /tmp/felafel-data:/data \
+            -p 9090:9090 \
+            felafel-orchestrator:ci
+          # Wait up to 10s for the server to be ready, polling every 0.5s.
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:9090/health > /dev/null; then
+              echo "Container health check passed (attempt $i)"
+              break
+            fi
+            if [ "$i" -eq 20 ]; then
+              echo "Container failed to become healthy within 10s"
+              docker logs felafel-orchestrator-ci
+              docker stop felafel-orchestrator-ci
+              exit 1
+            fi
+            sleep 0.5
+          done
+          docker stop felafel-orchestrator-ci
