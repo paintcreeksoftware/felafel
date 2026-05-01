@@ -20,14 +20,11 @@
 // Why `--authkey-stdin` over `--authkey=`: the latter leaks the key to other
 // users on the box via /proc/<pid>/cmdline. We probe the installed CLI with
 // `tailscale up --help` once and cache the result.
-import { execFile, spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { promisify } from "node:util";
+import { execa, type Result as ExecaResult } from "execa";
 import which from "which";
 import type { TailscaleConnectResult, TailscaleStatus } from "@felafel/shared";
 import { DesktopEnvVars } from "@felafel/desktop/main/constants";
-
-const execFileAsync = promisify(execFile);
 
 /** Initial backoff between `tailscale status` retries on transient errors. */
 const PROBE_RETRY_INITIAL_DELAY_MS = 200;
@@ -278,11 +275,14 @@ export class TailscaleManager {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), PROBE_SINGLE_ATTEMPT_TIMEOUT_MS);
     try {
-      const result = await execFileAsync(binary, ["status", "--json"], { signal: ac.signal });
+      const result = await execa(binary, ["status", "--json"], {
+        cancelSignal: ac.signal,
+      });
       return parseStatusJson(result.stdout);
     } catch (error: unknown) {
       // tailscale status exits non-zero when not logged in but still emits
-      // valid JSON on stdout — try parsing before giving up.
+      // valid JSON on stdout — try parsing before giving up. execa attaches
+      // stdout/stderr/code to the thrown ExecaError.
       const e = error as { stdout?: unknown; stderr?: unknown; message?: string; code?: string };
       if (typeof e.stdout === "string" && e.stdout.length > 0) {
         const parsed = parseStatusJson(e.stdout);
@@ -407,23 +407,17 @@ export class TailscaleManager {
     | { ok: true; captured: CaptureResult; timedOut: boolean }
     | { ok: false; error: TailscaleConnectResult }
   > {
+    // `reject: false` lets us inspect `result.isCanceled` / `result.failed`
+    // without try/catch — execa returns the result object on both success
+    // and known failure modes. Real spawn errors (e.g. ENOENT) still throw.
+    let result: ExecaResult;
     try {
-      const captured = await spawnAndCapture(
-        binary,
-        invocation.args,
-        invocation.stdin,
-        signal,
-      );
-      return { ok: true, captured, timedOut: false };
+      result = await execa(binary, invocation.args, {
+        input: invocation.stdin,
+        cancelSignal: signal,
+        reject: false,
+      });
     } catch (error: unknown) {
-      const e = error as { name?: string };
-      if (e.name === "AbortError" || signal.aborted) {
-        return {
-          ok: true,
-          captured: { stdout: "", stderr: "", exitCode: null },
-          timedOut: true,
-        };
-      }
       return {
         ok: false,
         error: {
@@ -433,6 +427,22 @@ export class TailscaleManager {
         },
       };
     }
+    if (result.isCanceled) {
+      return {
+        ok: true,
+        captured: { stdout: "", stderr: "", exitCode: null },
+        timedOut: true,
+      };
+    }
+    return {
+      ok: true,
+      captured: {
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+        exitCode: result.exitCode ?? null,
+      },
+      timedOut: false,
+    };
   }
 
   /**
@@ -447,7 +457,7 @@ export class TailscaleManager {
       return this.stdinSupportCache;
     }
     try {
-      const { stdout, stderr } = await execFileAsync(binary, ["up", "--help"]);
+      const { stdout, stderr } = await execa(binary, ["up", "--help"]);
       this.stdinSupportCache = /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);
     } catch {
       this.stdinSupportCache = false;
@@ -456,39 +466,3 @@ export class TailscaleManager {
   }
 }
 
-/**
- * Spawn `binary` with `args`, optionally piping `stdin`, and capture stdout/
- * stderr/exit code. Aborts when `signal` fires.
- *
- * @param binary - absolute path or resolvable name
- * @param args - CLI arguments
- * @param stdin - optional string to pipe in (then close)
- * @param signal - AbortSignal that kills the child when fired
- * @returns captured output and exit code
- */
-function spawnAndCapture(
-  binary: string,
-  args: string[],
-  stdin: string | undefined,
-  signal: AbortSignal,
-): Promise<CaptureResult> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(binary, args, { signal });
-    let stdout = "";
-    let stderr = "";
-    child.stdout?.on("data", (d: Buffer) => {
-      stdout += d.toString();
-    });
-    child.stderr?.on("data", (d: Buffer) => {
-      stderr += d.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      resolve({ stdout, stderr, exitCode: code });
-    });
-    if (stdin !== undefined) {
-      child.stdin?.write(stdin);
-      child.stdin?.end();
-    }
-  });
-}
