@@ -7,17 +7,18 @@ type Status = OrchestratorStatus["kind"] | "unknown";
 export default function App() {
   const [status, setStatus] = useState<Status>("unknown");
   const [orchUrl, setOrchUrl] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [workers, setWorkers] = useState<Worker[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [workersError, setWorkersError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = window.api.onOrchestratorStatus((next) => {
       setStatus(next.kind);
       if (next.kind === "ready") {
         setOrchUrl(next.url);
-        setError(null);
+        setStatusError(null);
       } else if (next.kind === "error") {
-        setError(next.message);
+        setStatusError(next.message);
       }
     });
     void window.api.orchestratorUrl().then((url) => {
@@ -37,8 +38,9 @@ export default function App() {
         const res = await client.workers.$get();
         if (!res.ok) throw new Error(`GET /workers ${res.status}`);
         setWorkers((await res.json()) as Worker[]);
+        setWorkersError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        setWorkersError(err instanceof Error ? err.message : String(err));
       }
     })();
   }, [orchUrl]);
@@ -56,8 +58,8 @@ export default function App() {
           </h1>
           <p className="text-muted-foreground max-w-md text-lg leading-8">
             Orchestrator:{" "}
-            {error ? (
-              <span className="text-destructive">{error}</span>
+            {statusError ? (
+              <span className="text-destructive">{statusError}</span>
             ) : status === "ready" && orchUrl ? (
               <span>
                 <span className="font-mono">ready</span>{" "}
@@ -73,7 +75,9 @@ export default function App() {
           </p>
           <section className="text-muted-foreground w-full max-w-md text-base leading-7">
             <h2 className="text-foreground mb-2 text-lg font-medium">Workers</h2>
-            {workers === null ? (
+            {workersError ? (
+              <p className="text-destructive">{workersError}</p>
+            ) : workers === null ? (
               <p>loading...</p>
             ) : workers.length === 0 ? (
               <p>No workers registered yet.</p>

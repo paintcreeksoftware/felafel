@@ -34,4 +34,17 @@ describe("GET /health", () => {
     expect(spec.paths).toHaveProperty("/health");
     expect(spec.paths).toHaveProperty("/workers");
   });
+
+  it("answers CORS preflight for cross-origin renderer fetches", async () => {
+    const app = buildApp({ store });
+    const res = await app.request("/workers", {
+      method: "OPTIONS",
+      headers: {
+        origin: "http://localhost:5173",
+        "access-control-request-method": "GET",
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBeTruthy();
+  });
 });
