@@ -16,15 +16,15 @@ const moduleDir = dirname(fileURLToPath(import.meta.url));
 let orchestratorProcess: ChildProcess | null = null;
 
 // In dev: resolve to the orchestrator package's built dist/. In packaged: to
-// process.resourcesPath/orchestrator/. Packaging support lands in a follow-up
-// commit — for now this throws clearly if invoked from a packaged build.
+// process.resourcesPath/orchestrator/, where electron-builder's extraResources
+// has placed the bundle.
 function resolveScriptPath(): string {
   if (app.isPackaged) {
-    return join(process.resourcesPath, "orchestrator", "index.js");
+    return join(process.resourcesPath, "orchestrator", "index.mjs");
   }
   // moduleDir is apps/desktop/out/main → up three to reach apps/, then into
-  // orchestrator/dist/index.js.
-  return join(moduleDir, "..", "..", "..", "orchestrator", "dist", "index.js");
+  // orchestrator/dist/index.mjs.
+  return join(moduleDir, "..", "..", "..", "orchestrator", "dist", "index.mjs");
 }
 
 function resolveDataDir(): string {
@@ -32,6 +32,25 @@ function resolveDataDir(): string {
     return join(app.getPath("userData"), "orchestrator");
   }
   return join(moduleDir, "..", "..", ".dev-orchestrator-data");
+}
+
+// In a packaged build, run the orchestrator via Electron's bundled Node
+// (process.execPath + ELECTRON_RUN_AS_NODE=1). Electron 41 ships Node 22.x
+// where node:sqlite is experimental, so --experimental-sqlite is required.
+// In dev/tests, system Node (24+) handles node:sqlite without a flag.
+function buildSpawnInvocation(script: string): {
+  command: string;
+  args: string[];
+  extraEnv: Record<string, string>;
+} {
+  if (app.isPackaged) {
+    return {
+      command: process.execPath,
+      args: ["--experimental-sqlite", script],
+      extraEnv: { ELECTRON_RUN_AS_NODE: "1" },
+    };
+  }
+  return { command: "node", args: [script], extraEnv: {} };
 }
 
 // Exponential backoff probe: 50ms, 100, 200, 400, 800, 1000, 1000... capped at
@@ -69,10 +88,12 @@ export async function startOrchestrator(): Promise<string> {
   const host = "127.0.0.1";
   const url = `http://${host}:${port}`;
 
-  orchestratorProcess = spawn("node", [script], {
+  const { command, args, extraEnv } = buildSpawnInvocation(script);
+  orchestratorProcess = spawn(command, args, {
     stdio: ["ignore", "inherit", "inherit"],
     env: {
       ...process.env,
+      ...extraEnv,
       ORCHESTRATOR_PORT: String(port),
       ORCHESTRATOR_HOST: host,
       ORCHESTRATOR_DATA_DIR: dataDir,

@@ -33,4 +33,4 @@ ENV ORCHESTRATOR_PORT=9090
 EXPOSE 9090
 VOLUME /data
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/index.mjs"]

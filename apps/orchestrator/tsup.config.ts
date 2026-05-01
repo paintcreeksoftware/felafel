@@ -14,6 +14,7 @@ export default defineConfig({
   format: "esm",
   target: "node24",
   outDir: "dist",
+  outExtension: () => ({ js: ".mjs" }),
   clean: true,
   platform: "node",
   // Inline workspace deps into the bundle. Otherwise Node 24 refuses to type-
@@ -22,7 +23,7 @@ export default defineConfig({
   // ship a node_modules tree for these.
   noExternal: ["@felafel/shared"],
   onSuccess: async () => {
-    const path = "dist/index.js";
+    const path = "dist/index.mjs";
     let src = readFileSync(path, "utf-8");
     for (const name of NODE_BUILTINS_NEEDING_PREFIX) {
       src = src.replace(

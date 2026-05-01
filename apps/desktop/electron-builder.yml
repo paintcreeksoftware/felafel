@@ -22,6 +22,8 @@ files:
 extraResources:
   - from: resources/pocketbase/${platform}-${arch}/
     to: pocketbase/
+  - from: ../orchestrator/dist/
+    to: orchestrator/
 asarUnpack:
   - resources/pocketbase/**
 mac:

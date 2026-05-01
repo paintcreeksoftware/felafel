@@ -4,7 +4,7 @@
 // file is created, then verifies stopOrchestrator cleans up. Excluded from
 // the default `pnpm test` run; opt in via `pnpm test:integration`.
 //
-// Requires `apps/orchestrator/dist/index.js` to exist — run
+// Requires `apps/orchestrator/dist/index.mjs` to exist — run
 // `pnpm --filter @felafel/orchestrator build` first.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
