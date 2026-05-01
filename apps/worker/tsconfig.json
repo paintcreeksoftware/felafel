@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": { "@felafel/worker/*": ["./src/*"] }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
