@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import { z } from "zod";
-import { RunSchema } from "@felafel/shared";
+import { RunCompleteSchema, RunSchema } from "@felafel/shared";
 
 const PayloadSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
@@ -69,6 +69,44 @@ export const getRunRoute = createRoute({
   responses: {
     200: {
       description: "Single run",
+      content: {
+        "application/json": {
+          schema: RunSchema,
+        },
+      },
+    },
+    404: {
+      description: "No run with that id",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+    },
+  },
+});
+
+export const completeRunRoute = createRoute({
+  method: "post",
+  path: "/runs/{id}/complete",
+  description:
+    "Worker ack callback. Worker calls this after finishing a dispatched " +
+    "job. ok=true flips status to 'complete'; ok=false flips to 'failed' " +
+    "with the supplied error string.",
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: RunCompleteSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated run",
       content: {
         "application/json": {
           schema: RunSchema,

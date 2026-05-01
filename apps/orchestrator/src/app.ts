@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { dispatchToWorker } from "@felafel/orchestrator/dispatch";
 import { healthRoute } from "@felafel/orchestrator/routes/health";
 import {
+  completeRunRoute,
   getRunRoute,
   listRunsRoute,
   submitRunRoute,
@@ -63,6 +64,22 @@ export function buildApp(opts: BuildAppOptions) {
       }
       // oxlint-disable-next-line no-magic-numbers -- 200 is the published HTTP "OK" status
       return c.json(run, 200);
+    })
+    .openapi(completeRunRoute, (c) => {
+      const { id } = c.req.valid("param");
+      const ack = c.req.valid("json");
+      if (opts.runStore.get(id) === undefined) {
+        // oxlint-disable-next-line no-magic-numbers -- 404 is the published HTTP "Not Found" status
+        return c.json({ message: "no run with that id" }, 404);
+      }
+      const updated = ack.ok
+        ? opts.runStore.markComplete(id, ack.error)
+        : opts.runStore.markFailed(
+            id,
+            ack.error ?? "worker reported failure with no error string",
+          );
+      // oxlint-disable-next-line no-magic-numbers -- 200 is the published HTTP "OK" status
+      return c.json(updated, 200);
     });
 
   app.doc("/openapi.json", {
