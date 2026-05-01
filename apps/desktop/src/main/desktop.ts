@@ -204,10 +204,25 @@ class DesktopApp {
 }
 
 /**
- * Bootstrap the desktop main process: `new DesktopApp().start()`. Called
- * from `index.ts` exactly once per process. Calling more than once
- * constructs a second {@link DesktopApp} (no instance check) and Electron
- * will throw on the duplicate IPC handler registrations.
+ * Bootstrap the desktop main process: `new DesktopApp().start()`.
+ *
+ * **Not a singleton.** This function does not check for an existing
+ * instance; it constructs a new {@link DesktopApp} every time it's
+ * called. There is no `getInstance` accessor, no static cache, no
+ * "return the running app if one exists" branch.
+ *
+ * **Call-site discipline:** invoke this exactly once per process,
+ * from `index.ts` at module load, and never again. A second call
+ * would construct a second `DesktopApp`, which would double-register
+ * IPC handlers (Electron throws on duplicates), attach a second set
+ * of `app.whenReady` / `before-quit` listeners, and spawn a second
+ * orchestrator child. There is no recovery path; the discipline is
+ * the safety mechanism.
+ *
+ * If a future change needs to re-enter this bootstrap (e.g. test
+ * harness, hot-reload), introduce an explicit instance guard or
+ * `getInstance` accessor at that point — don't paper over a second
+ * call with try/catch.
  */
 export function startDesktopApp(): void {
   new DesktopApp().start();
