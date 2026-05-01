@@ -5,12 +5,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { app } from "electron";
-import getPort, { portNumbers } from "get-port";
+import getPort from "get-port";
 import { join } from "pathe";
 import {
   ELECTRON_RUN_AS_NODE,
   LOCALHOST,
-  OrchestratorPortRange,
 } from "@felafel/desktop/main/constants";
 // Single source of truth for the desktop→orchestrator env-var contract lives
 // next to the reader. Importing it here keeps the spawned-process names
@@ -63,10 +62,12 @@ export class OrchestratorManager {
     const dataDir = this.resolveDataDir();
     await mkdir(dataDir, { recursive: true });
 
-    // Random port in the configured range, bound to localhost only.
-    const port = await getPort({
-      port: portNumbers(OrchestratorPortRange.LOW, OrchestratorPortRange.HIGH),
-    });
+    // Kernel-assigned ephemeral port (bind to 0). Avoids picking a fixed
+    // range that might collide with common services (Prometheus on 9090,
+    // Cockpit on the Bluefin host, etc.) — the OS hands us something in the
+    // dynamic range that's guaranteed free, and the renderer learns the
+    // chosen port via IPC anyway.
+    const port = await getPort();
     const url = `http://${LOCALHOST}:${port}`;
 
     const { command, args, extraEnv } = this.buildSpawnInvocation(script);

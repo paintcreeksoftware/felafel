@@ -33,12 +33,6 @@ export const DesktopEnvVars = {
 /** Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child runs as Node. */
 export const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
 
-/** Random-port range the spawned orchestrator binds within (inclusive). */
-export const OrchestratorPortRange = {
-  LOW: 9090,
-  HIGH: 9190,
-} as const;
-
 /** Default BrowserWindow dimensions. */
 export const WindowSize = {
   WIDTH: 1200,

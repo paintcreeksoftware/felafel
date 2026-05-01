@@ -22,9 +22,11 @@ test("Electron launches, orchestrator reaches ready", async () => {
   await window.waitForSelector("text=Orchestrator:", { timeout: 30_000 });
   await window.waitForSelector("text=ready", { timeout: 30_000 });
 
-  // Orchestrator URL renders into the page in the form `http://127.0.0.1:90xx`.
-  const urlLine = await window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:9\d{3}/`).textContent();
-  expect(urlLine).toMatch(/http:\/\/127\.0\.0\.1:9\d{3}/);
+  // Orchestrator URL renders as `http://127.0.0.1:<port>`. The port is
+  // kernel-assigned (bind to 0), so it's whatever ephemeral port the OS
+  // hands us — Linux typically 32768–60999, macOS/Windows 49152–65535.
+  const urlLine = await window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`).textContent();
+  expect(urlLine).toMatch(/http:\/\/127\.0\.0\.1:\d{4,5}/);
 
   // Empty worker list rendered.
   await window.waitForSelector("text=No workers registered yet", { timeout: 5_000 });

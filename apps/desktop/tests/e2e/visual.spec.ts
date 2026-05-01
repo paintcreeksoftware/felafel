@@ -32,8 +32,8 @@ test("home screen visual snapshot", async () => {
 
   await expect(window).toHaveScreenshot("home.png", {
     mask: [
-      // Random orchestrator port changes every run.
-      window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:9\d{3}/`),
+      // Random orchestrator port changes every run (kernel-assigned ephemeral).
+      window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`),
       // Tailscale pill state varies per environment (CI has no tailscale
       // binary, dev boxes might be connected to different tailnets).
       window.locator('[data-testid="ts-pill"]'),
