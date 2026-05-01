@@ -14,7 +14,7 @@ import {
   WifiHigh,
   WifiOff,
 } from "lucide-react";
-import type { TailscaleStatus } from "@felafel/shared";
+import { type TailscaleStatus } from "@felafel/shared";
 import { Alert, AlertDescription, AlertTitle } from "@felafel/ui/components/ui/alert";
 import { Badge } from "@felafel/ui/components/ui/badge";
 import { Button } from "@felafel/ui/components/ui/button";
@@ -58,9 +58,10 @@ export function TailscalePill() {
 
   useEffect(() => {
     let cancelled = false;
-    void window.api.tailscaleStatus().then((s) => {
+    void (async () => {
+      const s = await window.api.tailscaleStatus();
       if (!cancelled) {setStatus(s);}
-    });
+    })();
     const unsubscribe = window.api.onTailscaleStatus((s) => {
       setStatus(s);
       // If a push reports we're connected, close the modal and reset the

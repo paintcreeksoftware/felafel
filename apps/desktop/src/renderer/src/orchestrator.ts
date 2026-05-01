@@ -3,8 +3,8 @@
 // runtime (or its node:sqlite / @hono/zod-openapi deps) ends up in the
 // renderer bundle.
 import { hc } from "hono/client";
-import type { AppType } from "@felafel/orchestrator/app";
-import type { DesktopApi, OrchestratorStatus, Worker } from "@felafel/shared";
+import { type AppType } from "@felafel/orchestrator/app";
+import { type DesktopApi, type OrchestratorStatus, type Worker } from "@felafel/shared";
 
 declare global {
   interface Window {

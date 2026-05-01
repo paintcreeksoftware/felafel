@@ -70,14 +70,24 @@ class DesktopApp {
     // steady-state status arrives via broadcast even though the Promise
     // resolves with the immediate `up` outcome.
     ipcMain.handle(Channels.TailscaleStatus, () => this.tailscale.getCachedStatus());
-    ipcMain.handle(Channels.TailscaleRefresh, () =>
-      this.tailscale.probeStatus().then((s) => this.broadcastTailscale(s)),
-    );
+    ipcMain.handle(Channels.TailscaleRefresh, async () => {
+      const status = await this.tailscale.probeStatus();
+      return this.broadcastTailscale(status);
+    });
     ipcMain.handle(Channels.TailscaleConnect, async (_event, key?: string) => {
       const result = await this.tailscale.runUp(key);
-      void this.tailscale.probeStatus().then((s) => this.broadcastTailscale(s));
+      void this.broadcastProbeStatus();
       return result;
     });
+  }
+
+  /**
+   * Re-probe Tailscale and broadcast the result. Fire-and-forget callers
+   * should invoke this via `void` so unhandled rejections still surface.
+   */
+  private async broadcastProbeStatus(): Promise<void> {
+    const status = await this.tailscale.probeStatus();
+    this.broadcastTailscale(status);
   }
 
   /**
@@ -86,32 +96,7 @@ class DesktopApp {
    * probe, and window creation.
    */
   private registerAppLifecycle(): void {
-    void app.whenReady().then(async () => {
-      this.broadcastOrchestrator({ kind: "starting" });
-      try {
-        const url = await this.orchestrator.start();
-        this.broadcastOrchestrator({ kind: "ready", url });
-      } catch (error) {
-        console.error("[main] orchestrator.start failed:", error);
-        this.broadcastOrchestrator({
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-
-      // Best-effort initial Tailscale probe. Fire-and-forget — Tailscale is
-      // optional and we don't want a missing binary or unreachable daemon
-      // to delay the window opening.
-      void this.tailscale.probeStatus().then((s) => this.broadcastTailscale(s));
-
-      await this.createWindow();
-
-      app.on("activate", () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-          void this.createWindow();
-        }
-      });
-    });
+    void this.bootstrapOnReady();
 
     // macOS convention: keep the app running when all windows close.
     // Linux/Windows quit immediately (the OS quit-on-close behavior).
@@ -128,6 +113,38 @@ class DesktopApp {
       event.preventDefault();
       await this.orchestrator.stop();
       app.exit(0);
+    });
+  }
+
+  /**
+   * `app.whenReady` body, factored out so the registration site can use
+   * `await` instead of `.then(async () => {...})`.
+   */
+  private async bootstrapOnReady(): Promise<void> {
+    await app.whenReady();
+    this.broadcastOrchestrator({ kind: "starting" });
+    try {
+      const url = await this.orchestrator.start();
+      this.broadcastOrchestrator({ kind: "ready", url });
+    } catch (error) {
+      console.error("[main] orchestrator.start failed:", error);
+      this.broadcastOrchestrator({
+        kind: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Best-effort initial Tailscale probe. Fire-and-forget — Tailscale is
+    // optional and we don't want a missing binary or unreachable daemon
+    // to delay the window opening.
+    void this.broadcastProbeStatus();
+
+    await this.createWindow();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        void this.createWindow();
+      }
     });
   }
 

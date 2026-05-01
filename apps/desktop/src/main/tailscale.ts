@@ -20,10 +20,10 @@
 // Why `--authkey-stdin` over `--authkey=`: the latter leaks the key to other
 // users on the box via /proc/<pid>/cmdline. We probe the installed CLI with
 // `tailscale up --help` once and cache the result.
-import { execa, type Result as ExecaResult } from "execa";
+import { execa } from "execa";
 import pRetry from "p-retry";
 import which from "which";
-import type { TailscaleConnectResult, TailscaleStatus } from "@felafel/shared";
+import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
 import { DesktopEnvVars } from "@felafel/desktop/main/constants";
 
 /** Initial backoff between `tailscale status` retries on transient errors. */
@@ -32,6 +32,9 @@ const PROBE_RETRY_INITIAL_DELAY_MS = 200;
 const PROBE_RETRY_MAX_DELAY_MS = 1_500;
 /** Maximum number of probe attempts before surfacing the last error. */
 const PROBE_RETRY_MAX_ATTEMPTS = 4;
+
+/** Cap on stderr preview length when classifying or logging an unmatched `tailscale up` failure. */
+const STDERR_PREVIEW_MAX_LEN = 500;
 
 /** 5-second cap on a single status probe. */
 const PROBE_SINGLE_ATTEMPT_TIMEOUT_MS = 5_000;
@@ -139,10 +142,10 @@ export function classifyUpError(
       message: "Tailscale rejected the auth key — check it isn't expired or revoked.",
     };
   }
-  console.warn("[tailscale] Unmatched stderr from tailscale up:", stderr.slice(0, 500));
+  console.warn("[tailscale] Unmatched stderr from tailscale up:", stderr.slice(0, STDERR_PREVIEW_MAX_LEN));
   return {
     kind: "unknown",
-    message: stderr.trim().slice(0, 500) || `tailscale up exited with code ${exitCode}`,
+    message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale up exited with code ${exitCode}`,
   };
 }
 
@@ -207,10 +210,17 @@ export class TailscaleManager {
     if (this.probeInflight) {
       return this.probeInflight;
     }
-    this.probeInflight = this.doProbe().finally(() => {
-      this.probeInflight = null;
-    });
+    this.probeInflight = this.runProbeAndClear();
     return this.probeInflight;
+  }
+
+  /** Run a probe, then clear the in-flight handle. Async-await form of `.finally`. */
+  private async runProbeAndClear(): Promise<TailscaleStatus> {
+    try {
+      return await this.doProbe();
+    } finally {
+      this.probeInflight = null;
+    }
   }
 
   /**
@@ -230,10 +240,17 @@ export class TailscaleManager {
         message: "Connect already in progress",
       });
     }
-    this.upInflight = this.doRunUp(authkey).finally(() => {
-      this.upInflight = null;
-    });
+    this.upInflight = this.runUpAndClear(authkey);
     return this.upInflight;
+  }
+
+  /** Run `tailscale up`, then clear the in-flight handle. Async-await form of `.finally`. */
+  private async runUpAndClear(authkey: string | undefined): Promise<TailscaleConnectResult> {
+    try {
+      return await this.doRunUp(authkey);
+    } finally {
+      this.upInflight = null;
+    }
   }
 
   /**
@@ -250,7 +267,7 @@ export class TailscaleManager {
     }
     // Retain the last probe result so an exhausted-retry path can surface
     // the actual transient TailscaleStatus instead of a generic Error.
-    let lastResult: TailscaleStatus | undefined;
+    let lastResult: TailscaleStatus | undefined = undefined;
     try {
       this.cachedStatus = await pRetry(
         async () => {
@@ -424,14 +441,30 @@ export class TailscaleManager {
   > {
     // `reject: false` lets us inspect `result.isCanceled` / `result.failed`
     // without try/catch — execa returns the result object on both success
-    // and known failure modes. Real spawn errors (e.g. ENOENT) still throw.
-    let result: ExecaResult;
+    // and known failure modes. Real spawn errors (e.g. ENOENT) still throw
+    // and are caught here.
     try {
-      result = await execa(binary, invocation.args, {
+      const result = await execa(binary, invocation.args, {
         input: invocation.stdin,
         cancelSignal: signal,
         reject: false,
       });
+      if (result.isCanceled) {
+        return {
+          ok: true,
+          captured: { stdout: "", stderr: "", exitCode: null },
+          timedOut: true,
+        };
+      }
+      return {
+        ok: true,
+        captured: {
+          stdout: result.stdout ?? "",
+          stderr: result.stderr ?? "",
+          exitCode: result.exitCode ?? null,
+        },
+        timedOut: false,
+      };
     } catch (error: unknown) {
       return {
         ok: false,
@@ -442,22 +475,6 @@ export class TailscaleManager {
         },
       };
     }
-    if (result.isCanceled) {
-      return {
-        ok: true,
-        captured: { stdout: "", stderr: "", exitCode: null },
-        timedOut: true,
-      };
-    }
-    return {
-      ok: true,
-      captured: {
-        stdout: result.stdout ?? "",
-        stderr: result.stderr ?? "",
-        exitCode: result.exitCode ?? null,
-      },
-      timedOut: false,
-    };
   }
 
   /**

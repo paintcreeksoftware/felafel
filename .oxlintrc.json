@@ -31,11 +31,19 @@
     "import/first": "error",
     "import/no-cycle": "error",
     "import/no-self-import": "error",
+    "import/consistent-type-specifier-style": ["error", "prefer-inline"],
     "no-restricted-imports": ["error", {
       "patterns": [
         { "group": ["./*", "../*"], "message": "Use the @felafel/<pkg>/... alias, not relative paths." },
         { "group": ["*.js"], "message": "Drop the .js extension; bundler resolution handles it." }
       ]
+    }],
+    "no-magic-numbers": ["error", {
+      "ignore": [-1, 0, 1, 2],
+      "ignoreArrayIndexes": true,
+      "ignoreDefaultValues": true,
+      "ignoreClassFieldInitialValues": true,
+      "enforceConst": true
     }],
 
     "react/react-in-jsx-scope": "off",
@@ -51,47 +59,45 @@
     "no-named-export": "off",
     "prefer-default-export": "off",
     "no-ternary": "off",
-    "no-nested-ternary": "off",
     "no-null": "off",
-    "no-magic-numbers": "off",
     "id-length": "off",
     "max-lines": "off",
     "max-lines-per-function": "off",
     "max-statements": "off",
     "max-params": "off",
-    "consistent-type-specifier-style": "off",
     "group-exports": "off",
     "exports-last": "off",
     "no-underscore-dangle": "off",
     "no-inline-comments": "off",
     "filename-case": "off",
-    "init-declarations": "off",
-    "no-anonymous-default-export": "off",
-    "no-unassigned-import": "off",
 
     "capitalized-comments": "off",
     "numeric-separators-style": "off",
 
     "avoid-new": "off",
 
-    "prefer-await-to-then": "off",
     "prefer-global-this": "off",
-    "prefer-top-level-await": "off",
     "no-await-in-loop": "off",
     "no-await-expression-member": "off",
     "no-continue": "off",
     "param-names": "off",
-    "no-nested-ternary": "off",
-    "unicorn/no-nested-ternary": "off",
     "no-nesting": "off",
     "no-multiple-resolved": "off",
     "always-return": "off"
   },
   "overrides": [
     {
-      "files": ["**/*.test.ts", "**/*.integration.test.ts"],
+      "files": ["**/*.test.ts", "**/*.integration.test.ts", "**/*.spec.ts", "**/*.config.ts", "**/*.config.js"],
       "rules": {
-        "import/first": "off"
+        "import/first": "off",
+        "no-magic-numbers": "off",
+        "init-declarations": "off"
+      }
+    },
+    {
+      "files": ["apps/desktop/src/renderer/src/main.tsx"],
+      "rules": {
+        "import/no-unassigned-import": "off"
       }
     }
   ]
