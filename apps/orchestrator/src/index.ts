@@ -3,6 +3,7 @@ import { buildApp } from "./app";
 import { SqliteWorkerStore } from "./store/sqlite";
 
 const port = Number(process.env.ORCHESTRATOR_PORT ?? "9090");
+const hostname = process.env.ORCHESTRATOR_HOST ?? "127.0.0.1";
 const dataDir = process.env.ORCHESTRATOR_DATA_DIR;
 
 if (!dataDir) {
@@ -13,6 +14,6 @@ if (!dataDir) {
 const store = new SqliteWorkerStore(dataDir);
 const app = buildApp({ store });
 
-serve({ fetch: app.fetch, port, hostname: "127.0.0.1" }, (info) => {
+serve({ fetch: app.fetch, port, hostname }, (info) => {
   console.log(`orchestrator listening on http://${info.address}:${info.port}`);
 });

@@ -16,6 +16,11 @@ export default defineConfig({
   outDir: "dist",
   clean: true,
   platform: "node",
+  // Inline workspace deps into the bundle. Otherwise Node 24 refuses to type-
+  // strip @felafel/shared at runtime because it lives inside node_modules
+  // after `pnpm deploy`. Bundling avoids both that constraint and the need to
+  // ship a node_modules tree for these.
+  noExternal: ["@felafel/shared"],
   onSuccess: async () => {
     const path = "dist/index.js";
     let src = readFileSync(path, "utf-8");
