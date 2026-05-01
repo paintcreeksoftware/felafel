@@ -165,7 +165,7 @@ export class OrchestratorManager {
 
   /**
    * Poll `${url}/health` with exponential backoff until it returns 200 or
-   * the total budget elapses. ~12 attempts vs 66 with constant 150ms.
+   * the total budget elapses.
    *
    * @param url - base URL where the orchestrator is binding
    * @throws if the orchestrator doesn't reach ready within
