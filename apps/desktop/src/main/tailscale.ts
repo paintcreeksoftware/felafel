@@ -48,39 +48,38 @@ const UP_OUTER_TIMEOUT_MS = 60_000;
  * @returns discriminated status; `kind: "error"` if the JSON is malformed
  */
 export function parseStatusJson(stdout: string): TailscaleStatus {
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(stdout);
+    const parsed: unknown = JSON.parse(stdout);
+    if (typeof parsed !== "object" || parsed === null) {
+      return { kind: "error", message: "Unexpected `tailscale status --json` shape" };
+    }
+    const obj = parsed as Record<string, unknown>;
+    const backend = obj["BackendState"];
+    switch (backend) {
+      case "Running": {
+        const suffix = typeof obj["MagicDNSSuffix"] === "string" ? obj["MagicDNSSuffix"] : "";
+        // Strip leading dot and any trailing .ts.net to keep the display name short.
+        const tailnet = suffix.replace(/^\./, "").replace(/\.ts\.net$/, "") || "tailnet";
+        const self = (obj["Self"] as Record<string, unknown> | undefined) ?? {};
+        const selfName = typeof self["HostName"] === "string" ? self["HostName"] : "this machine";
+        return { kind: "connected", tailnet, selfName };
+      }
+      case "NeedsLogin": {
+        return { kind: "disconnected", reason: "needs-login" };
+      }
+      case "Stopped": {
+        return { kind: "disconnected", reason: "stopped" };
+      }
+      case "NoState":
+      case "Starting": {
+        return { kind: "probing" };
+      }
+      default: {
+        return { kind: "error", message: `Unexpected BackendState: ${String(backend)}` };
+      }
+    }
   } catch {
     return { kind: "error", message: "Could not parse `tailscale status --json` output" };
-  }
-  if (typeof parsed !== "object" || parsed === null) {
-    return { kind: "error", message: "Unexpected `tailscale status --json` shape" };
-  }
-  const obj = parsed as Record<string, unknown>;
-  const backend = obj["BackendState"];
-  switch (backend) {
-    case "Running": {
-      const suffix = typeof obj["MagicDNSSuffix"] === "string" ? obj["MagicDNSSuffix"] : "";
-      // Strip leading dot and any trailing .ts.net to keep the display name short.
-      const tailnet = suffix.replace(/^\./, "").replace(/\.ts\.net$/, "") || "tailnet";
-      const self = (obj["Self"] as Record<string, unknown> | undefined) ?? {};
-      const selfName = typeof self["HostName"] === "string" ? self["HostName"] : "this machine";
-      return { kind: "connected", tailnet, selfName };
-    }
-    case "NeedsLogin": {
-      return { kind: "disconnected", reason: "needs-login" };
-    }
-    case "Stopped": {
-      return { kind: "disconnected", reason: "stopped" };
-    }
-    case "NoState":
-    case "Starting": {
-      return { kind: "probing" };
-    }
-    default: {
-      return { kind: "error", message: `Unexpected BackendState: ${String(backend)}` };
-    }
   }
 }
 
@@ -317,46 +316,12 @@ export class TailscaleManager {
     const ac = new AbortController();
     const outerTimer = setTimeout(() => ac.abort(), UP_OUTER_TIMEOUT_MS);
     try {
-      let captured: CaptureResult;
-      let timedOut = false;
-      try {
-        if (authkey) {
-          const useStdin = await this.supportsAuthkeyStdin(binary);
-          if (!useStdin) {
-            console.warn(
-              "[tailscale] --authkey-stdin not supported by installed CLI; falling back to --authkey= (leaks the key via /proc/<pid>/cmdline)",
-            );
-          }
-          const args = useStdin
-            ? ["up", "--timeout=30s", "--authkey-stdin"]
-            : ["up", "--timeout=30s", `--authkey=${authkey}`];
-          captured = await spawnAndCapture(
-            binary,
-            args,
-            useStdin ? authkey : undefined,
-            ac.signal,
-          );
-        } else {
-          captured = await spawnAndCapture(
-            binary,
-            ["up", "--timeout=5s"],
-            undefined,
-            ac.signal,
-          );
-        }
-      } catch (error: unknown) {
-        const e = error as { name?: string };
-        if (e.name === "AbortError" || ac.signal.aborted) {
-          timedOut = true;
-          captured = { stdout: "", stderr: "", exitCode: null };
-        } else {
-          return {
-            ok: false,
-            kind: "error",
-            message: error instanceof Error ? error.message : String(error),
-          };
-        }
+      const invocation = await this.buildUpInvocation(binary, authkey);
+      const attempt = await this.attemptUpSpawn(binary, invocation, ac.signal);
+      if (!attempt.ok) {
+        return attempt.error;
       }
+      const { captured, timedOut } = attempt;
       if (captured.exitCode === 0 && !timedOut) {
         return { ok: true, kind: "connected" };
       }
@@ -381,6 +346,86 @@ export class TailscaleManager {
       return { ok: false, kind: "error", message: cls.message };
     } finally {
       clearTimeout(outerTimer);
+    }
+  }
+
+  /**
+   * Decide which CLI args + optional stdin to use for `tailscale up`. Branches
+   * on whether the caller supplied a pre-auth key and whether the installed
+   * CLI accepts `--authkey-stdin` (preferred for security).
+   *
+   * @param binary - resolved path to the `tailscale` binary
+   * @param authkey - optional pre-auth key
+   * @returns argv + optional stdin payload to feed `spawnAndCapture`
+   */
+  private async buildUpInvocation(
+    binary: string,
+    authkey: string | undefined,
+  ): Promise<{ args: string[]; stdin: string | undefined }> {
+    if (!authkey) {
+      return { args: ["up", "--timeout=5s"], stdin: undefined };
+    }
+    const useStdin = await this.supportsAuthkeyStdin(binary);
+    if (!useStdin) {
+      console.warn(
+        "[tailscale] --authkey-stdin not supported by installed CLI; falling back to --authkey= (leaks the key via /proc/<pid>/cmdline)",
+      );
+      return {
+        args: ["up", "--timeout=30s", `--authkey=${authkey}`],
+        stdin: undefined,
+      };
+    }
+    return {
+      args: ["up", "--timeout=30s", "--authkey-stdin"],
+      stdin: authkey,
+    };
+  }
+
+  /**
+   * Run a single `tailscale up` spawn with abort-aware capture. The outer
+   * AbortController fires `ac.abort()` on timeout; AbortError or `signal.aborted`
+   * returns a `timedOut` outcome with empty capture so the caller's classifier
+   * can distinguish timeout from CLI error. Other errors are wrapped into the
+   * `ok: false` branch so the caller can fail with a typed message.
+   *
+   * @param binary - resolved tailscale binary path
+   * @param invocation - argv and optional stdin from {@link buildUpInvocation}
+   * @param signal - abort signal hooked up to the outer timeout
+   * @returns discriminated success/failure
+   */
+  private async attemptUpSpawn(
+    binary: string,
+    invocation: { args: string[]; stdin: string | undefined },
+    signal: AbortSignal,
+  ): Promise<
+    | { ok: true; captured: CaptureResult; timedOut: boolean }
+    | { ok: false; error: TailscaleConnectResult }
+  > {
+    try {
+      const captured = await spawnAndCapture(
+        binary,
+        invocation.args,
+        invocation.stdin,
+        signal,
+      );
+      return { ok: true, captured, timedOut: false };
+    } catch (error: unknown) {
+      const e = error as { name?: string };
+      if (e.name === "AbortError" || signal.aborted) {
+        return {
+          ok: true,
+          captured: { stdout: "", stderr: "", exitCode: null },
+          timedOut: true,
+        };
+      }
+      return {
+        ok: false,
+        error: {
+          ok: false,
+          kind: "error",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      };
     }
   }
 
