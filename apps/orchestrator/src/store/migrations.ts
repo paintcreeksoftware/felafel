@@ -18,4 +18,11 @@ export const migrations: readonly { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: "0002_workers_v2",
+    sql: `
+      ALTER TABLE workers ADD COLUMN control_plane_url TEXT NOT NULL DEFAULT '';
+      ALTER TABLE workers ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+    `,
+  },
 ];

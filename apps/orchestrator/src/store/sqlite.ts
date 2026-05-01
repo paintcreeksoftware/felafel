@@ -32,6 +32,8 @@ interface WorkerRow {
   labels: string | null;
   registered_at: string;
   last_seen_at: string;
+  control_plane_url: string;
+  status: string;
 }
 
 /**
@@ -52,6 +54,8 @@ function rowToWorker(row: WorkerRow): Worker {
     arch: row.arch ?? undefined,
     version: row.version ?? undefined,
     labels: row.labels ? JSON.parse(row.labels) : undefined,
+    controlPlaneUrl: row.control_plane_url,
+    status: row.status,
     registeredAt: row.registered_at,
     lastSeenAt: row.last_seen_at,
   });
@@ -146,11 +150,14 @@ export class SqliteWorkerStore implements WorkerStore {
   upsert(reg: WorkerRegistration): Worker {
     const now = new Date().toISOString();
     const labelsJson = reg.labels ? JSON.stringify(reg.labels) : null;
+    // Heartbeat resets status='active' alongside the bumped last_seen_at —
+    // a worker re-registering is the inverse of the periodic sweep that
+    // flips it to 'stale'.
     this.db
       .prepare(
         `
-        INSERT INTO workers (id, hostname, tailscale_name, os, arch, version, labels, registered_at, last_seen_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO workers (id, hostname, tailscale_name, os, arch, version, labels, control_plane_url, status, registered_at, last_seen_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           hostname = excluded.hostname,
           tailscale_name = excluded.tailscale_name,
@@ -158,6 +165,8 @@ export class SqliteWorkerStore implements WorkerStore {
           arch = excluded.arch,
           version = excluded.version,
           labels = excluded.labels,
+          control_plane_url = excluded.control_plane_url,
+          status = 'active',
           last_seen_at = excluded.last_seen_at
         `,
       )
@@ -169,6 +178,7 @@ export class SqliteWorkerStore implements WorkerStore {
         reg.arch ?? null,
         reg.version ?? null,
         labelsJson,
+        reg.controlPlaneUrl,
         now,
         now,
       );
