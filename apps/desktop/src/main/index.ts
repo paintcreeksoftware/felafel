@@ -11,12 +11,12 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { join } from "node:path";
 import { Channels, type OrchestratorStatus, type TailscaleStatus } from "@felafel/shared";
-import { startOrchestrator, stopOrchestrator } from "@/main/orchestrator.js";
+import { startOrchestrator, stopOrchestrator } from "@felafel/desktop/main/orchestrator.js";
 import {
   getCachedStatus as getCachedTailscaleStatus,
   probeStatus as probeTailscaleStatus,
   runUp as runTailscaleUp,
-} from "@/main/tailscale.js";
+} from "@felafel/desktop/main/tailscale.js";
 
 const __dirname = import.meta.dirname;
 

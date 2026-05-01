@@ -6,8 +6,7 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@felafel/ui/*": ["./src/*"],
-      "@/*": ["./src/*"]
+      "@felafel/ui/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

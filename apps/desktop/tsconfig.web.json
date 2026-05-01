@@ -9,7 +9,7 @@
     "jsx": "react-jsx",
     "types": ["vite/client"],
     "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@felafel/desktop/*": ["./src/renderer/src/*"] }
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"]
 }

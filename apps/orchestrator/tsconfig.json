@@ -3,7 +3,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@felafel/orchestrator/*": ["./src/*"] }
   },
   "include": ["src/**/*", "tests/**/*"]
 }

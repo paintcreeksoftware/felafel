@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { buildApp } from "@/app";
-import { SqliteWorkerStore } from "@/store/sqlite";
+import { buildApp } from "@felafel/orchestrator/app";
+import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 import type { Worker, WorkerRegistration } from "@felafel/shared";
 
 function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
