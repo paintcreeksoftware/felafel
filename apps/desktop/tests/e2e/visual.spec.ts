@@ -11,10 +11,9 @@
 // committed to the repo. Re-baseline by running --update-snapshots after
 // intentional UI changes.
 import { _electron as electron, expect, test } from "@playwright/test";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");
 const mainBundle = join(appRoot, "out", "main", "index.js");
 
@@ -34,7 +33,7 @@ test("home screen visual snapshot", async () => {
   await expect(window).toHaveScreenshot("home.png", {
     mask: [
       // Random orchestrator port changes every run.
-      window.locator("text=/http:\\/\\/127\\.0\\.0\\.1:9\\d{3}/"),
+      window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:9\d{3}/`),
       // Tailscale pill state varies per environment (CI has no tailscale
       // binary, dev boxes might be connected to different tailnets).
       window.locator('[data-testid="ts-pill"]'),

@@ -77,15 +77,19 @@ export function parseStatusJson(stdout: string): TailscaleStatus {
       const selfName = typeof self["HostName"] === "string" ? self["HostName"] : "this machine";
       return { kind: "connected", tailnet, selfName };
     }
-    case "NeedsLogin":
+    case "NeedsLogin": {
       return { kind: "disconnected", reason: "needs-login" };
-    case "Stopped":
+    }
+    case "Stopped": {
       return { kind: "disconnected", reason: "stopped" };
+    }
     case "NoState":
-    case "Starting":
+    case "Starting": {
       return { kind: "probing" };
-    default:
+    }
+    default: {
       return { kind: "error", message: `Unexpected BackendState: ${String(backend)}` };
+    }
   }
 }
 
@@ -146,8 +150,8 @@ export function classifyUpError(
 // same in-flight promise. Retries up to 3× with 200/500/1500ms backoff on
 // transient errors (EAGAIN, AbortError, etc.); deterministic errors (EACCES,
 // missing-binary) are returned immediately without retry.
-export async function probeStatus(): Promise<TailscaleStatus> {
-  if (probeInflight) return probeInflight;
+export function probeStatus(): Promise<TailscaleStatus> {
+  if (probeInflight) {return probeInflight;}
   probeInflight = doProbe().finally(() => {
     probeInflight = null;
   });
@@ -181,13 +185,13 @@ async function tryProbeOnce(binary: string): Promise<TailscaleStatus> {
   try {
     const result = await execFileAsync(binary, ["status", "--json"], { signal: ac.signal });
     return parseStatusJson(result.stdout);
-  } catch (err: unknown) {
+  } catch (error: unknown) {
     // tailscale status exits non-zero when not logged in but still emits valid
     // JSON on stdout — try parsing before giving up.
-    const e = err as { stdout?: unknown; stderr?: unknown; message?: string; code?: string };
+    const e = error as { stdout?: unknown; stderr?: unknown; message?: string; code?: string };
     if (typeof e.stdout === "string" && e.stdout.length > 0) {
       const parsed = parseStatusJson(e.stdout);
-      if (parsed.kind !== "error") return parsed;
+      if (parsed.kind !== "error") {return parsed;}
     }
     if (typeof e.stderr === "string") {
       if (/permission denied|\bEACCES\b/i.test(e.stderr)) {
@@ -201,7 +205,7 @@ async function tryProbeOnce(binary: string): Promise<TailscaleStatus> {
         return { kind: "disconnected", reason: "no-daemon" };
       }
     }
-    return { kind: "error", message: e.message ?? String(err) };
+    return { kind: "error", message: e.message ?? String(error) };
   } finally {
     clearTimeout(timer);
   }
@@ -210,9 +214,9 @@ async function tryProbeOnce(binary: string): Promise<TailscaleStatus> {
 // Run `tailscale up`. With no key: try session resume (5s timeout). With a
 // key: pipe via stdin (30s timeout). The outer 60s AbortController is a
 // safety net that always wins.
-export async function runUp(authkey?: string): Promise<TailscaleConnectResult> {
+export function runUp(authkey?: string): Promise<TailscaleConnectResult> {
   if (upInflight) {
-    return { ok: false, kind: "error", message: "Connect already in progress" };
+    return Promise.resolve({ ok: false, kind: "error", message: "Connect already in progress" });
   }
   upInflight = doRunUp(authkey).finally(() => {
     upInflight = null;
@@ -249,8 +253,8 @@ async function doRunUp(authkey?: string): Promise<TailscaleConnectResult> {
       } else {
         captured = await spawnAndCapture(binary, ["up", "--timeout=5s"], undefined, ac.signal);
       }
-    } catch (err: unknown) {
-      const e = err as { name?: string };
+    } catch (error: unknown) {
+      const e = error as { name?: string };
       if (e.name === "AbortError" || ac.signal.aborted) {
         timedOut = true;
         captured = { stdout: "", stderr: "", exitCode: null };
@@ -258,7 +262,7 @@ async function doRunUp(authkey?: string): Promise<TailscaleConnectResult> {
         return {
           ok: false,
           kind: "error",
-          message: err instanceof Error ? err.message : String(err),
+          message: error instanceof Error ? error.message : String(error),
         };
       }
     }
@@ -323,7 +327,7 @@ function spawnAndCapture(
 }
 
 async function supportsAuthkeyStdin(binary: string): Promise<boolean> {
-  if (stdinSupportCache !== undefined) return stdinSupportCache;
+  if (stdinSupportCache !== undefined) {return stdinSupportCache;}
   try {
     const { stdout, stderr } = await execFileAsync(binary, ["up", "--help"]);
     stdinSupportCache = /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);

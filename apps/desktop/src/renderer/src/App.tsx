@@ -31,16 +31,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!orchUrl) return;
+    if (!orchUrl) {return;}
     const client = makeClient(orchUrl);
     void (async () => {
       try {
         const res = await client.workers.$get();
-        if (!res.ok) throw new Error(`GET /workers ${res.status}`);
+        if (!res.ok) {throw new Error(`GET /workers ${res.status}`);}
         setWorkers((await res.json()) as Worker[]);
         setWorkersError(null);
-      } catch (err) {
-        setWorkersError(err instanceof Error ? err.message : String(err));
+      } catch (error) {
+        setWorkersError(error instanceof Error ? error.message : String(error));
       }
     })();
   }, [orchUrl]);

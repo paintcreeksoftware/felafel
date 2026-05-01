@@ -54,24 +54,24 @@ export class SqliteWorkerStore implements WorkerStore {
     `);
     const applied = new Set(
       (
-        this.db.prepare("SELECT name FROM schema_migrations").all() as Array<{
+        this.db.prepare("SELECT name FROM schema_migrations").all() as {
           name: string;
-        }>
+        }[]
       ).map((r) => r.name),
     );
     const insertMigration = this.db.prepare(
       "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
     );
     for (const m of migrations) {
-      if (applied.has(m.name)) continue;
+      if (applied.has(m.name)) {continue;}
       this.db.exec("BEGIN");
       try {
         this.db.exec(m.sql);
         insertMigration.run(m.name, new Date().toISOString());
         this.db.exec("COMMIT");
-      } catch (e) {
+      } catch (error) {
         this.db.exec("ROLLBACK");
-        throw e;
+        throw error;
       }
     }
   }
@@ -80,7 +80,7 @@ export class SqliteWorkerStore implements WorkerStore {
     const rows = this.db
       .prepare("SELECT * FROM workers ORDER BY registered_at DESC")
       .all() as unknown as WorkerRow[];
-    return rows.map(rowToWorker);
+    return rows.map((row) => rowToWorker(row));
   }
 
   upsert(reg: WorkerRegistration): Worker {
@@ -119,7 +119,7 @@ export class SqliteWorkerStore implements WorkerStore {
   }
 
   close(): void {
-    if (this.closed) return;
+    if (this.closed) {return;}
     this.db.close();
     this.closed = true;
   }

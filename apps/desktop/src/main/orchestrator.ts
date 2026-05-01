@@ -4,12 +4,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { app } from "electron";
 import getPort, { portNumbers } from "get-port";
 
-const moduleDir = dirname(fileURLToPath(import.meta.url));
+const moduleDir = import.meta.dirname;
 
 let orchestratorProcess: ChildProcess | null = null;
 
@@ -59,11 +58,14 @@ async function waitForServer(url: string, timeoutMs = 10_000): Promise<void> {
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(`${url}/health`);
-      if (res.ok) return;
+      if (res.ok) {return;}
     } catch {
       // not ready yet
     }
-    await new Promise((r) => setTimeout(r, delay));
+    const currentDelay = delay;
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, currentDelay);
+    });
     delay = Math.min(delay * 2, 1000);
   }
   throw new Error(`orchestrator did not become ready within ${timeoutMs}ms`);
@@ -108,7 +110,7 @@ export async function startOrchestrator(): Promise<string> {
 
 export async function stopOrchestrator(): Promise<void> {
   const proc = orchestratorProcess;
-  if (!proc) return;
+  if (!proc) {return;}
   orchestratorProcess = null;
   proc.kill("SIGTERM");
   await new Promise<void>((resolve) => {

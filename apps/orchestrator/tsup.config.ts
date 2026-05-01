@@ -22,11 +22,11 @@ export default defineConfig({
   // after `pnpm deploy`. Bundling avoids both that constraint and the need to
   // ship a node_modules tree for these.
   noExternal: ["@felafel/shared"],
-  onSuccess: async () => {
+  onSuccess: () => {
     const path = "dist/index.mjs";
-    let src = readFileSync(path, "utf-8");
+    let src = readFileSync(path, "utf8");
     for (const name of NODE_BUILTINS_NEEDING_PREFIX) {
-      src = src.replace(
+      src = src.replaceAll(
         new RegExp(`from\\s+"${name}"`, "g"),
         `from "node:${name}"`,
       );

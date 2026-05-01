@@ -19,7 +19,7 @@ async function postWorker(
   app: ReturnType<typeof buildApp>,
   reg: WorkerRegistration,
 ): Promise<Response> {
-  return app.request("/workers", {
+  return await app.request("/workers", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(reg),

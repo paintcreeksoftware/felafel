@@ -6,10 +6,9 @@
 // from inside the Distrobox shell where the host display is available.
 import { _electron as electron, expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");
 const mainBundle = join(appRoot, "out", "main", "index.js");
 
@@ -24,7 +23,7 @@ test("Electron launches, orchestrator reaches ready", async () => {
   await window.waitForSelector("text=ready", { timeout: 30_000 });
 
   // Orchestrator URL renders into the page in the form `http://127.0.0.1:90xx`.
-  const urlLine = await window.locator("text=/http:\\/\\/127\\.0\\.0\\.1:9\\d{3}/").textContent();
+  const urlLine = await window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:9\d{3}/`).textContent();
   expect(urlLine).toMatch(/http:\/\/127\.0\.0\.1:9\d{3}/);
 
   // Empty worker list rendered.
@@ -40,7 +39,9 @@ test("quitting the app does not leave an orphan orchestrator process", async () 
   await electronApp.close();
 
   // Give the SIGTERM/SIGKILL flow up to 6 seconds.
-  await new Promise((r) => setTimeout(r, 6_000));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 6_000);
+  });
 
   // `ps -A -o command=` lists every running command. None should be our
   // orchestrator bundle (`index.mjs` under resources/orchestrator/ in

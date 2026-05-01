@@ -7,8 +7,7 @@
 // → create BrowserWindow with preload attached. On `before-quit` we shut the
 // orchestrator down cleanly so it doesn't leak as an orphan process.
 import { app, BrowserWindow, ipcMain, shell } from "electron";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { Channels, type OrchestratorStatus, type TailscaleStatus } from "@felafel/shared";
 import { startOrchestrator, stopOrchestrator } from "./orchestrator.js";
 import {
@@ -17,7 +16,7 @@ import {
   runUp as runTailscaleUp,
 } from "./tailscale.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 
 let mainWindow: BrowserWindow | null = null;
 let orchestratorUrl: string | null = null;
@@ -100,11 +99,11 @@ app.whenReady().then(async () => {
   try {
     const url = await startOrchestrator();
     broadcastOrchestrator({ kind: "ready", url });
-  } catch (err) {
-    console.error("[main] startOrchestrator failed:", err);
+  } catch (error) {
+    console.error("[main] startOrchestrator failed:", error);
     broadcastOrchestrator({
       kind: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 

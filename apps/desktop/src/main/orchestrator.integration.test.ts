@@ -10,10 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 let userDataDir: string;
 
@@ -64,7 +63,7 @@ describe("orchestrator sidecar lifecycle", () => {
     expect(post.ok).toBe(true);
 
     const list = await fetch(`${url}/workers`);
-    const workers = (await list.json()) as Array<{ id: string }>;
+    const workers = (await list.json()) as { id: string }[];
     expect(workers).toHaveLength(1);
     expect(workers[0]?.id).toBe(reg.id);
   }, 30_000);
@@ -78,7 +77,9 @@ describe("orchestrator sidecar lifecycle", () => {
     const url = await startOrchestrator();
     await stopOrchestrator();
 
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500);
+    });
     const fetched = await fetch(`${url}/health`).catch(() => null);
     expect(fetched).toBeNull();
   }, 30_000);
