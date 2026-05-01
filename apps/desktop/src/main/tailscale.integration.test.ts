@@ -6,7 +6,7 @@
 // to leave in the always-on test suite, though it lives outside the default
 // `pnpm test` glob and only runs via `pnpm test:integration`.
 import { beforeAll, describe, expect, it } from "vitest";
-import { TailscaleManager } from "./tailscale";
+import { TailscaleManager } from "@felafel/desktop/main/tailscale";
 
 let binaryAvailable = false;
 let manager: TailscaleManager;

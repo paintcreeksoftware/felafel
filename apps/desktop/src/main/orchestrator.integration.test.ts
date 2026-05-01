@@ -24,7 +24,7 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { OrchestratorManager } from "./orchestrator";
+import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 
 const devDataDir = join(here, "..", "..", ".dev-orchestrator-data");
 

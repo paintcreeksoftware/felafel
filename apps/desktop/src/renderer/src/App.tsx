@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { makeClient, type OrchestratorStatus, type Worker } from "./orchestrator";
-import { TailscalePill } from "./components/TailscalePill";
+import { makeClient, type OrchestratorStatus, type Worker } from "@felafel/desktop/orchestrator";
+import { TailscalePill } from "@felafel/desktop/components/TailscalePill";
 
 type Status = OrchestratorStatus["kind"] | "unknown";
 

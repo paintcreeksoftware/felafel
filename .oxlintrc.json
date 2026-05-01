@@ -31,6 +31,12 @@
     "import/first": "error",
     "import/no-cycle": "error",
     "import/no-self-import": "error",
+    "no-restricted-imports": ["error", {
+      "patterns": [
+        { "group": ["./*", "../*"], "message": "Use the @felafel/<pkg>/... alias, not relative paths." },
+        { "group": ["*.js"], "message": "Drop the .js extension; bundler resolution handles it." }
+      ]
+    }],
 
     "react/react-in-jsx-scope": "off",
     "react/jsx-props-no-spreading": "off",

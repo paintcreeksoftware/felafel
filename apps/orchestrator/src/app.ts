@@ -1,8 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
-import { healthRoute } from "./routes/health";
-import { listWorkersRoute, registerWorkerRoute } from "./routes/workers";
-import type { WorkerStore } from "./store/sqlite";
+import { healthRoute } from "@felafel/orchestrator/routes/health";
+import { listWorkersRoute, registerWorkerRoute } from "@felafel/orchestrator/routes/workers";
+import type { WorkerStore } from "@felafel/orchestrator/store/sqlite";
 
 export function buildApp(opts: { store: WorkerStore }) {
   // The orchestrator binds to 127.0.0.1 only (or, in container mode, behind a

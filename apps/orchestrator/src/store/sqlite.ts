@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { join } from "pathe";
 import { type Worker, type WorkerRegistration, WorkerSchema } from "@felafel/shared";
 import { DB_FILENAME } from "@felafel/orchestrator/constants";
-import { migrations } from "./migrations";
+import { migrations } from "@felafel/orchestrator/store/migrations";
 
 /**
  * Storage interface the route layer programs against. Implemented by

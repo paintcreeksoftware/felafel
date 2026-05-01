@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
-import { buildApp } from "./app";
-import { Defaults, EnvVars } from "./constants";
-import { SqliteWorkerStore } from "./store/sqlite";
+import { buildApp } from "@felafel/orchestrator/app";
+import { Defaults, EnvVars } from "@felafel/orchestrator/constants";
+import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
 const hostname = process.env[EnvVars.HOST] ?? Defaults.HOST;

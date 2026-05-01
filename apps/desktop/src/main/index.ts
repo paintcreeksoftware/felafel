@@ -20,8 +20,8 @@ import {
   Platform,
   WindowSize,
 } from "@felafel/desktop/main/constants";
-import { OrchestratorManager } from "@felafel/desktop/main/orchestrator.js";
-import { TailscaleManager } from "@felafel/desktop/main/tailscale.js";
+import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
+import { TailscaleManager } from "@felafel/desktop/main/tailscale";
 
 const __dirname = import.meta.dirname;
 
