@@ -21,14 +21,13 @@ const mainBundle = join(appRoot, "out", "main", "index.js");
 test("home screen visual snapshot", async () => {
   const electronApp = await electron.launch({ args: [mainBundle], cwd: appRoot });
   const window = await electronApp.firstWindow();
-  await window.waitForSelector("text=Signed in as", { timeout: 30_000 });
+  await window.waitForSelector("text=Orchestrator:", { timeout: 30_000 });
+  await window.waitForSelector("text=No workers registered yet", { timeout: 30_000 });
 
   await expect(window).toHaveScreenshot("home.png", {
     mask: [
-      // Random port in the URL changes every run.
-      window.locator("text=/http:\\/\\/127\\.0\\.0\\.1:8\\d{3}/"),
-      // OS-derived email — different per machine / CI runner.
-      window.locator("text=/Signed in as/").locator(".."),
+      // Random orchestrator port changes every run.
+      window.locator("text=/http:\\/\\/127\\.0\\.0\\.1:9\\d{3}/"),
       // Tailscale pill state varies per environment (CI has no tailscale
       // binary, dev boxes might be connected to different tailnets).
       window.locator('[data-testid="ts-pill"]'),

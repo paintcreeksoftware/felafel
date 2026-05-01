@@ -5,6 +5,10 @@
   "description": "Hono service that registers workers and exposes them over a typed REST API. Spawned by the desktop main process in embedded mode; shipped as a Docker image in container mode.",
   "type": "module",
   "main": "./dist/index.mjs",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./app": "./src/app.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
