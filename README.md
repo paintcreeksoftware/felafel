@@ -172,6 +172,23 @@ In dev, orchestrator data (the SQLite database) lives at
 `apps/desktop/.dev-orchestrator-data/`. In a packaged build it moves to
 `<userData>/orchestrator/` under the OS-standard userData dir.
 
+## Orchestrator: embedded vs container
+
+By default, the desktop app spawns the orchestrator as a child process bound
+to `127.0.0.1` — embedded mode, no external dependencies, fully offline.
+
+The same orchestrator service is also packaged as a Docker image for homelab
+or multi-host deployment:
+
+```sh
+pnpm --filter @felafel/orchestrator package      # builds felafel-orchestrator:latest
+docker run --rm -p 9090:9090 -v orch-data:/data felafel-orchestrator
+```
+
+The image is `node:24-alpine` based, exposes 9090, and stores its SQLite DB
+under the `/data` mount. Wiring the desktop client to point at a remote
+orchestrator (instead of the spawned child) is a future enhancement.
+
 ## Tearing down and rebuilding
 
 ```sh
