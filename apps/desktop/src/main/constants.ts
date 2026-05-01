@@ -30,13 +30,6 @@ export const DesktopEnvVars = {
   ELECTRON_RENDERER_URL: "ELECTRON_RENDERER_URL",
 } as const;
 
-/** Env var names the desktop sets on the spawned orchestrator child. */
-export const OrchestratorEnvVars = {
-  PORT: "ORCHESTRATOR_PORT",
-  HOST: "ORCHESTRATOR_HOST",
-  DATA_DIR: "ORCHESTRATOR_DATA_DIR",
-} as const;
-
 /** Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child runs as Node. */
 export const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
 

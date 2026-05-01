@@ -7,7 +7,8 @@
   "main": "./dist/index.mjs",
   "exports": {
     ".": "./dist/index.mjs",
-    "./app": "./src/app.ts"
+    "./app": "./src/app.ts",
+    "./constants": "./src/constants.ts"
   },
   "scripts": {
     "dev": "tsup --watch",

@@ -10,9 +10,12 @@ import { join } from "pathe";
 import {
   ELECTRON_RUN_AS_NODE,
   LOCALHOST,
-  OrchestratorEnvVars,
   OrchestratorPortRange,
 } from "@felafel/desktop/main/constants";
+// Single source of truth for the desktop→orchestrator env-var contract lives
+// next to the reader. Importing it here keeps the spawned-process names
+// in sync without duplicating the literals.
+import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants";
 
 /** Initial readiness-poll delay, doubled per attempt up to {@link MAX_PROBE_DELAY_MS}. */
 const INITIAL_PROBE_DELAY_MS = 50;
