@@ -3,31 +3,35 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "pathe";
 import { buildApp } from "@felafel/orchestrator/app";
+import { SqliteRunStore } from "@felafel/orchestrator/store/runs";
 import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 
 describe("GET /health", () => {
   let dataDir: string;
-  let store: SqliteWorkerStore;
+  let workerStore: SqliteWorkerStore;
+  let runStore: SqliteRunStore;
 
   beforeEach(() => {
     dataDir = mkdtempSync(join(tmpdir(), "orchestrator-health-"));
-    store = new SqliteWorkerStore(dataDir);
+    workerStore = new SqliteWorkerStore(dataDir);
+    runStore = new SqliteRunStore(dataDir);
   });
 
   afterEach(() => {
-    store.close();
+    runStore.close();
+    workerStore.close();
     rmSync(dataDir, { recursive: true, force: true });
   });
 
   it("returns ok: true", async () => {
-    const app = buildApp({ store });
+    const app = buildApp({ workerStore, runStore });
     const res = await app.request("/health");
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
   });
 
   it("publishes an OpenAPI spec at /openapi.json", async () => {
-    const app = buildApp({ store });
+    const app = buildApp({ workerStore, runStore });
     const res = await app.request("/openapi.json");
     expect(res.status).toBe(200);
     const spec = (await res.json()) as { paths: Record<string, unknown> };
@@ -36,7 +40,7 @@ describe("GET /health", () => {
   });
 
   it("answers CORS preflight for cross-origin renderer fetches", async () => {
-    const app = buildApp({ store });
+    const app = buildApp({ workerStore, runStore });
     const res = await app.request("/workers", {
       method: "OPTIONS",
       headers: {
