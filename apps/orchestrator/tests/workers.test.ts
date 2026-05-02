@@ -11,6 +11,7 @@ function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistrat
   return {
     id: randomUUID(),
     hostname: "test-host",
+    controlPlaneUrl: "http://127.0.0.1:9091",
     ...overrides,
   };
 }
@@ -55,6 +56,8 @@ describe("/workers", () => {
     const body = (await res.json()) as Worker;
     expect(body.id).toBe(reg.id);
     expect(body.hostname).toBe(reg.hostname);
+    expect(body.controlPlaneUrl).toBe(reg.controlPlaneUrl);
+    expect(body.status).toBe("active");
     expect(typeof body.registeredAt).toBe("string");
     expect(typeof body.lastSeenAt).toBe("string");
   });
@@ -99,6 +102,16 @@ describe("/workers", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ hostname: "missing-id" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /workers rejects payload without controlPlaneUrl", async () => {
+    const app = buildApp({ store });
+    const res = await app.request("/workers", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: randomUUID(), hostname: "no-url" }),
     });
     expect(res.status).toBe(400);
   });

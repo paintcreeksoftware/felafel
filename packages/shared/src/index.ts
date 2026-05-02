@@ -10,8 +10,9 @@ import { z } from "zod";
 
 // Orchestrator worker schemas — consumed by both the orchestrator service
 // (route validation, OpenAPI generation) and the desktop renderer (typed RPC
-// client via hc<AppType>). Defined here so the wire contract has one source
-// of truth.
+// client via hc<AppType>). Server-to-server calls (orchestrator → worker,
+// worker → orchestrator) also import these and validate via Schema.parse() at
+// the boundary. Defined here so the wire contract has one source of truth.
 export const WorkerRegistrationSchema = z.object({
   id: z.string().uuid(),
   hostname: z.string().min(1),
@@ -20,14 +21,66 @@ export const WorkerRegistrationSchema = z.object({
   arch: z.enum(["x64", "arm64"]).optional(),
   version: z.string().optional(),
   labels: z.record(z.string(), z.string()).optional(),
+  // Where the orchestrator dials to dispatch jobs to this worker. Required —
+  // every worker must be reachable. Workers that only want to be observed (no
+  // dispatch) aren't a thing in v0.
+  controlPlaneUrl: z.string().url(),
 });
 export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
 
+// Server-managed worker liveness state. Set by the orchestrator's periodic
+// sweep, never sent on registration. `'stale'` means `last_seen_at` is older
+// than the heartbeat-miss threshold; the worker re-registering flips it back.
+export const WorkerStatusSchema = z.enum(["active", "stale"]);
+export type WorkerStatus = z.infer<typeof WorkerStatusSchema>;
+
 export const WorkerSchema = WorkerRegistrationSchema.extend({
+  status: WorkerStatusSchema,
   registeredAt: z.string().datetime(),
   lastSeenAt: z.string().datetime(),
 });
 export type Worker = z.infer<typeof WorkerSchema>;
+
+// Orchestrator → worker dispatch payload. Posted to the worker's
+// `controlPlaneUrl` + `/jobs/run`. Worker returns 202 immediately, then posts
+// to `${ORCHESTRATOR_URL}/runs/:id/complete` when done.
+export const JobAssignmentSchema = z.object({
+  runId: z.string().uuid(),
+  payload: z.record(z.string(), z.unknown()),
+});
+export type JobAssignment = z.infer<typeof JobAssignmentSchema>;
+
+// Worker → orchestrator ack body. `ok: true` flips the run to `'complete'`;
+// `ok: false` flips to `'failed'` and surfaces `error` on the Run record.
+export const RunCompleteSchema = z.object({
+  ok: z.boolean(),
+  result: z.record(z.string(), z.unknown()).optional(),
+  error: z.string().optional(),
+});
+export type RunComplete = z.infer<typeof RunCompleteSchema>;
+
+// Run lifecycle states. `pending` → `dispatched` → (`complete` | `failed`).
+// `pending` is the brief window between INSERT and the orchestrator's outbound
+// dispatch call returning. Stuck `dispatched` runs flip to `failed` via sweep.
+export const RunStatusSchema = z.enum([
+  "pending",
+  "dispatched",
+  "complete",
+  "failed",
+]);
+export type RunStatus = z.infer<typeof RunStatusSchema>;
+
+export const RunSchema = z.object({
+  id: z.string().uuid(),
+  payload: z.record(z.string(), z.unknown()),
+  status: RunStatusSchema,
+  workerId: z.string().uuid().optional(),
+  error: z.string().optional(),
+  createdAt: z.string().datetime(),
+  dispatchedAt: z.string().datetime().optional(),
+  completedAt: z.string().datetime().optional(),
+});
+export type Run = z.infer<typeof RunSchema>;
 
 export const Channels = {
   OrchestratorStatus: "orch:status",
