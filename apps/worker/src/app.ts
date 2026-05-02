@@ -1,5 +1,4 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { HttpStatus } from "@felafel/worker/constants";
 import { healthRoute } from "@felafel/worker/routes/health";
 import { runJobRoute } from "@felafel/worker/routes/jobs";
 
@@ -25,7 +24,8 @@ export function buildApp() {
       setImmediate(() => {
         console.log("received job", runId, JSON.stringify(payload));
       });
-      return c.json({ accepted: true } as const, HttpStatus.ACCEPTED);
+      // oxlint-disable-next-line no-magic-numbers -- 202 is the published HTTP "Accepted" status
+      return c.json({ accepted: true } as const, 202);
     });
 
   app.doc("/openapi.json", {
