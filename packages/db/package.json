@@ -10,6 +10,7 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./conversions": "./src/conversions.ts",
+    "./queries/runs": "./src/queries/runs.ts",
     "./queries/workers": "./src/queries/workers.ts"
   },
   "scripts": {
