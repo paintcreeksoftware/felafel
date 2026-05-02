@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { buildApp } from "@felafel/orchestrator/app";
 import { Defaults, EnvVars } from "@felafel/orchestrator/constants";
+import { SqliteRunStore } from "@felafel/orchestrator/store/runs";
 import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
@@ -12,9 +13,10 @@ if (!dataDir) {
   process.exit(1);
 }
 
-const store = new SqliteWorkerStore(dataDir);
-const app = buildApp({ store });
+const workerStore = new SqliteWorkerStore(dataDir);
+const runStore = new SqliteRunStore(dataDir);
+const app = buildApp({ workerStore, runStore });
 
 serve({ fetch: app.fetch, port, hostname }, (info) => {
-  console.log(`orchestrator listening on http://${info.address}:${info.port}`);
+  console.log(`orchestrator listening on http://${info.address}:${info.port.toString()}`);
 });
