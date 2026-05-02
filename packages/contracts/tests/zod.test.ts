@@ -2,10 +2,10 @@
 //
 // These tests are the load-bearing equivalence proof for D2: when
 // @felafel/shared starts re-exporting these schemas, the renderer / worker
-// daemon / orchestrator should observe no behavior change. Each test
-// exercises a fixture matching the previous hand-authored shape and asserts
-// (a) it parses, (b) the parsed output renames `workerId`/`runId` → `id`,
-// (c) invalid payloads are rejected with the expected fault.
+// daemon / orchestrator should observe NO behavior change. Each test
+// exercises a fixture matching the previous hand-authored shape from
+// @felafel/shared and asserts it parses cleanly; refinement tests verify
+// every guard (.uuid, .url, .min, enum) rejects the expected fault.
 
 import { describe, expect, it } from "vitest";
 
@@ -14,6 +14,8 @@ import {
   RunCompleteSchema,
   RunSchema,
   RunStatusSchema,
+  WorkerArchSchema,
+  WorkerOsSchema,
   WorkerRegistrationSchema,
   WorkerSchema,
   WorkerStatusSchema,
@@ -26,9 +28,9 @@ const runUuid = "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee";
 const otherWorkerUuid = "99999999-8888-4777-a666-555555555555";
 
 describe("WorkerRegistrationSchema", () => {
-  it("accepts a minimal valid payload and renames workerId → id", () => {
+  it("accepts a minimal valid payload", () => {
     const parsed = WorkerRegistrationSchema.parse({
-      workerId: workerUuid,
+      id: workerUuid,
       hostname: "nuc-1",
       controlPlaneUrl: "http://100.64.0.1:7777",
     });
@@ -41,7 +43,7 @@ describe("WorkerRegistrationSchema", () => {
 
   it("accepts every optional wire field", () => {
     const parsed = WorkerRegistrationSchema.parse({
-      workerId: workerUuid,
+      id: workerUuid,
       hostname: "nuc-1",
       tailscaleName: "nuc-1.tail0abcd.ts.net",
       os: "linux",
@@ -55,10 +57,10 @@ describe("WorkerRegistrationSchema", () => {
     expect(parsed.labels).toEqual({ tier: "compute", region: "lan" });
   });
 
-  it("rejects a non-uuid workerId", () => {
+  it("rejects a non-uuid id", () => {
     expect(() =>
       WorkerRegistrationSchema.parse({
-        workerId: "not-a-uuid",
+        id: "not-a-uuid",
         hostname: "nuc-1",
         controlPlaneUrl: "http://100.64.0.1:7777",
       }),
@@ -68,7 +70,7 @@ describe("WorkerRegistrationSchema", () => {
   it("rejects a non-url controlPlaneUrl", () => {
     expect(() =>
       WorkerRegistrationSchema.parse({
-        workerId: workerUuid,
+        id: workerUuid,
         hostname: "nuc-1",
         controlPlaneUrl: "not-a-url",
       }),
@@ -78,7 +80,7 @@ describe("WorkerRegistrationSchema", () => {
   it("rejects an empty hostname", () => {
     expect(() =>
       WorkerRegistrationSchema.parse({
-        workerId: workerUuid,
+        id: workerUuid,
         hostname: "",
         controlPlaneUrl: "http://100.64.0.1:7777",
       }),
@@ -88,7 +90,7 @@ describe("WorkerRegistrationSchema", () => {
   it("rejects an unknown os value", () => {
     expect(() =>
       WorkerRegistrationSchema.parse({
-        workerId: workerUuid,
+        id: workerUuid,
         hostname: "nuc-1",
         os: "freebsd",
         controlPlaneUrl: "http://100.64.0.1:7777",
@@ -99,7 +101,7 @@ describe("WorkerRegistrationSchema", () => {
 
 describe("WorkerSchema", () => {
   const validInput = {
-    workerId: workerUuid,
+    id: workerUuid,
     hostname: "nuc-1",
     controlPlaneUrl: "http://100.64.0.1:7777",
     status: "active" as const,
@@ -107,7 +109,7 @@ describe("WorkerSchema", () => {
     lastSeenAt: "2026-05-02T00:00:30.000Z",
   };
 
-  it("accepts a fully-populated row and renames workerId → id", () => {
+  it("accepts a fully-populated row", () => {
     const parsed = WorkerSchema.parse(validInput);
     expect(parsed.id).toBe(workerUuid);
     expect(parsed.status).toBe("active");
@@ -137,15 +139,33 @@ describe("WorkerStatusSchema", () => {
   });
 });
 
+describe("WorkerOsSchema and WorkerArchSchema", () => {
+  it.each(["linux", "darwin", "win32"])("accepts os %s", (os) => {
+    expect(WorkerOsSchema.parse(os)).toBe(os);
+  });
+
+  it("rejects unknown os values", () => {
+    expect(() => WorkerOsSchema.parse("freebsd")).toThrow();
+  });
+
+  it.each(["x64", "arm64"])("accepts arch %s", (arch) => {
+    expect(WorkerArchSchema.parse(arch)).toBe(arch);
+  });
+
+  it("rejects unknown arch values", () => {
+    expect(() => WorkerArchSchema.parse("riscv")).toThrow();
+  });
+});
+
 describe("RunSchema", () => {
   const validInput = {
-    runId: runUuid,
+    id: runUuid,
     payload: { kind: "noop" },
     status: "pending" as const,
     createdAt: "2026-05-02T00:00:00.000Z",
   };
 
-  it("accepts a minimal pending run and renames runId → id", () => {
+  it("accepts a minimal pending run", () => {
     const parsed = RunSchema.parse(validInput);
     expect(parsed).toEqual({
       id: runUuid,

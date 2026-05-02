@@ -1,98 +1,86 @@
-// Wire-shape Zod schemas. Schemas tied to a DB table are derived from
-// `./schema.ts` via drizzle-zod, then layered with validation refinements
-// (`.uuid()`, `.url()`, `.min(1)`, `.datetime()`) the raw `text` columns
-// can't express, `.pick()`'d down to just the wire fields, and `.transform()`'d
-// at the end to rename `workerId` / `runId` to the wire's `id` field.
+// Wire-shape Zod schemas. These describe what flows over HTTP / IPC, and
+// they intentionally mirror the previous hand-authored schemas in
+// `@felafel/shared` byte-for-byte: same field names (`id` for the worker /
+// run UUID, not `workerId` / `runId`), same optional/required, same
+// refinements (`.uuid()`, `.url()`, `.min(1)`, `.datetime()`).
 //
-// Schemas not tied to a DB table — the dispatch payload `JobAssignmentSchema`
-// and the worker ack `RunCompleteSchema` — are hand-authored. drizzle-zod has
-// nothing to generate from them.
+// What @felafel/contracts adds beyond the previous hand-authored schemas:
+// **enum unions are sourced from the Drizzle column definitions in
+// `./schema.ts`** (e.g. `WorkerStatusSchema = z.enum(workers.status.enumValues)`).
+// Adding a new state value to `schema.ts` flows through here automatically;
+// the wire and the DB stay in sync without duplicate enum literals.
 //
-// Behaviorally identical to the previous hand-authored schemas in
-// `@felafel/shared`; tests/zod.test.ts pins that equivalence.
+// The DB↔wire field rename (`worker_id` ↔ `id`) is NOT done in the schema.
+// It happens in `@felafel/db/conversions.ts` at the row → wire boundary,
+// because doing it via `.transform()` would change the schema's input shape
+// — breaking every existing caller that already passes `{id, ...}`.
+//
+// Schemas not tied to a table — `JobAssignmentSchema` (orchestrator →
+// worker dispatch) and `RunCompleteSchema` (worker ack) — are hand-authored
+// since there's nothing for drizzle-zod to generate from.
 
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+
 import { runs, workers } from "@felafel/contracts/schema";
 
 // ---------- Worker ----------
 
 /**
- * Server-managed worker liveness state. Sourced from the Drizzle column's
- * `enum`, so adding a new state in `schema.ts` flows through here
- * automatically.
+ * Operating systems the worker daemon supports — sourced from the Drizzle
+ * `workers.os` column enum so adding a new value in `schema.ts` flows
+ * through here automatically.
+ */
+export const WorkerOsSchema = z.enum(workers.os.enumValues);
+export type WorkerOs = z.infer<typeof WorkerOsSchema>;
+
+/**
+ * CPU architectures the worker daemon supports — sourced from the Drizzle
+ * `workers.arch` column enum.
+ */
+export const WorkerArchSchema = z.enum(workers.arch.enumValues);
+export type WorkerArch = z.infer<typeof WorkerArchSchema>;
+
+/**
+ * Server-managed worker liveness state. Sourced from the Drizzle
+ * `workers.status` column enum. Set by the orchestrator's periodic sweep,
+ * never sent on registration. `"stale"` means `lastSeenAt` is older than
+ * the heartbeat-miss threshold; the worker re-registering flips it back.
  */
 export const WorkerStatusSchema = z.enum(workers.status.enumValues);
 export type WorkerStatus = z.infer<typeof WorkerStatusSchema>;
 
-const workerOsSchema = z.enum(workers.os.enumValues);
-const workerArchSchema = z.enum(workers.arch.enumValues);
-
 /**
  * Worker registration payload — what the worker daemon POSTs to `/workers`.
  *
- * `id` is the daemon's persisted UUID (stored in the `worker_id` column on
- * the DB side; renamed via the trailing `.transform()`). `controlPlaneUrl`
- * is where the orchestrator dials back to dispatch jobs.
+ * `id` is the daemon's persisted UUID. The orchestrator stores it in the
+ * `worker_id` column (the @felafel/db conversion layer does the rename);
+ * the wire never sees the DB-internal integer PK.
  */
-export const WorkerRegistrationSchema = createInsertSchema(workers, {
-  workerId: z.string().uuid(),
+export const WorkerRegistrationSchema = z.object({
+  id: z.string().uuid(),
   hostname: z.string().min(1),
   tailscaleName: z.string().optional(),
-  os: workerOsSchema.optional(),
-  arch: workerArchSchema.optional(),
+  os: WorkerOsSchema.optional(),
+  arch: WorkerArchSchema.optional(),
   version: z.string().optional(),
   labels: z.record(z.string(), z.string()).optional(),
+  // Where the orchestrator dials to dispatch jobs to this worker. Required —
+  // every worker must be reachable. Workers that only want to be observed
+  // (no dispatch) aren't a thing in v0.
   controlPlaneUrl: z.string().url(),
-})
-  .pick({
-    workerId: true,
-    hostname: true,
-    tailscaleName: true,
-    os: true,
-    arch: true,
-    version: true,
-    labels: true,
-    controlPlaneUrl: true,
-  })
-  .transform(({ workerId, ...rest }) => ({ id: workerId, ...rest }));
+});
 export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
 
 /**
  * Full worker shape — registration fields plus server-managed liveness.
- *
  * Returned by `GET /workers` and echoed back by `POST /workers` after the
- * upsert. `status` flips between `"active"` and `"stale"` based on the
- * heartbeat sweep; `registeredAt` is set on first registration and never
- * mutated; `lastSeenAt` is bumped on every heartbeat.
+ * upsert.
  */
-export const WorkerSchema = createSelectSchema(workers, {
-  workerId: z.string().uuid(),
-  hostname: z.string().min(1),
-  tailscaleName: z.string().optional(),
-  os: workerOsSchema.optional(),
-  arch: workerArchSchema.optional(),
-  version: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
-  controlPlaneUrl: z.string().url(),
+export const WorkerSchema = WorkerRegistrationSchema.extend({
   status: WorkerStatusSchema,
   registeredAt: z.string().datetime(),
   lastSeenAt: z.string().datetime(),
-})
-  .pick({
-    workerId: true,
-    hostname: true,
-    tailscaleName: true,
-    os: true,
-    arch: true,
-    version: true,
-    labels: true,
-    controlPlaneUrl: true,
-    status: true,
-    registeredAt: true,
-    lastSeenAt: true,
-  })
-  .transform(({ workerId, ...rest }) => ({ id: workerId, ...rest }));
+});
 export type Worker = z.infer<typeof WorkerSchema>;
 
 // ---------- Run ----------
@@ -100,17 +88,21 @@ export type Worker = z.infer<typeof WorkerSchema>;
 /**
  * Run lifecycle states: `pending` → `dispatched` → (`complete` | `failed`).
  * Sourced from the Drizzle `runs.status` column.
+ *
+ * `pending` is the brief window between INSERT and the orchestrator's
+ * outbound dispatch call returning. Stuck `dispatched` runs flip to
+ * `failed` via the periodic sweep.
  */
 export const RunStatusSchema = z.enum(runs.status.enumValues);
 export type RunStatus = z.infer<typeof RunStatusSchema>;
 
 /**
- * Full run shape — returned by `GET /runs` and `GET /runs/:id`. Same row vs
- * wire identity story as `Worker`: the DB row's `runId` becomes the wire's
- * `id` via the trailing `.transform()`.
+ * Full run shape — returned by `GET /runs` and `GET /runs/:id`. The DB row's
+ * `run_id` column maps to the wire's `id` (rename happens in
+ * @felafel/db/conversions.ts, not here).
  */
-export const RunSchema = createSelectSchema(runs, {
-  runId: z.string().uuid(),
+export const RunSchema = z.object({
+  id: z.string().uuid(),
   payload: z.record(z.string(), z.unknown()),
   status: RunStatusSchema,
   workerId: z.string().uuid().optional(),
@@ -118,18 +110,7 @@ export const RunSchema = createSelectSchema(runs, {
   createdAt: z.string().datetime(),
   dispatchedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
-})
-  .pick({
-    runId: true,
-    payload: true,
-    status: true,
-    workerId: true,
-    error: true,
-    createdAt: true,
-    dispatchedAt: true,
-    completedAt: true,
-  })
-  .transform(({ runId, ...rest }) => ({ id: runId, ...rest }));
+});
 export type Run = z.infer<typeof RunSchema>;
 
 // ---------- Hand-authored (no table to derive from) ----------

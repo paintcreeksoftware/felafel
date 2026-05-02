@@ -11,6 +11,8 @@ export {
   RunCompleteSchema,
   RunSchema,
   RunStatusSchema,
+  WorkerArchSchema,
+  WorkerOsSchema,
   WorkerRegistrationSchema,
   WorkerSchema,
   WorkerStatusSchema,
@@ -19,6 +21,8 @@ export {
   type RunComplete,
   type RunStatus,
   type Worker,
+  type WorkerArch,
+  type WorkerOs,
   type WorkerRegistration,
   type WorkerStatus,
 } from "@felafel/contracts/zod";
