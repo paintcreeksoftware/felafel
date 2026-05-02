@@ -8,6 +8,15 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    # The official Playwright image bakes in browsers + every required system
+    # library + xvfb. Without it the previous workflow spent ~16 of its ~17
+    # minutes on `apt-get install xvfb` (~6 min) and
+    # `playwright install --with-deps chromium` (~10 min). The container
+    # collapses both to a one-time image pull. Pin the tag to the resolved
+    # @playwright/test version in pnpm-lock.yaml — bump together when
+    # upgrading Playwright in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.59.1-jammy
     steps:
       - uses: actions/checkout@v4
 
@@ -18,16 +27,8 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install xvfb (display server for Electron) and Playwright deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright browsers + system deps
-        run: pnpm --filter @felafel/desktop exec playwright install --with-deps chromium
 
       - name: Build the Electron app
         run: pnpm build
