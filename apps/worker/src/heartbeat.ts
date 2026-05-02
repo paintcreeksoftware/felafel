@@ -1,6 +1,8 @@
 import { hostname as osHostname } from "node:os";
 import {
   WorkerRegistrationSchema,
+  archForRegistration,
+  osForRegistration,
   type WorkerRegistration,
 } from "@felafel/shared";
 
@@ -16,34 +18,6 @@ export interface StartHeartbeatOptions {
   orchestratorUrl: string;
   /** Tick, in milliseconds. Production default 30000. */
   intervalMs: number;
-}
-
-/**
- * Filter `process.platform` down to the values WorkerRegistrationSchema accepts.
- *
- * @param platform - Node's `process.platform` string
- * @returns the matching enum value, or undefined for unsupported platforms
- */
-function pickOs(
-  platform: NodeJS.Platform,
-): WorkerRegistration["os"] {
-  if (platform === "linux" || platform === "darwin" || platform === "win32") {
-    return platform;
-  }
-  return undefined;
-}
-
-/**
- * Filter `process.arch` down to the values WorkerRegistrationSchema accepts.
- *
- * @param arch - Node's `process.arch` string
- * @returns the matching enum value, or undefined for unsupported arches
- */
-function pickArch(arch: string): WorkerRegistration["arch"] {
-  if (arch === "x64" || arch === "arm64") {
-    return arch;
-  }
-  return undefined;
 }
 
 /**
@@ -68,8 +42,8 @@ export function startHeartbeat(opts: StartHeartbeatOptions): () => void {
     const payload: WorkerRegistration = WorkerRegistrationSchema.parse({
       id: opts.identity,
       hostname: osHostname(),
-      os: pickOs(process.platform),
-      arch: pickArch(process.arch),
+      os: osForRegistration(),
+      arch: archForRegistration(),
       controlPlaneUrl: opts.controlPlaneUrl,
     });
     try {
