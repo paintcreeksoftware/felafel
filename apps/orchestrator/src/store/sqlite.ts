@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { join } from "pathe";
 import { type Worker, type WorkerRegistration, WorkerSchema } from "@felafel/shared";
 import { DB_FILENAME } from "@felafel/orchestrator/constants";
-import { migrations } from "@felafel/orchestrator/store/migrations";
+import { runMigrations } from "@felafel/orchestrator/store/migrations";
 
 /**
  * Storage interface the route layer programs against. Implemented by
@@ -85,47 +85,7 @@ export class SqliteWorkerStore implements WorkerStore {
   constructor(dataDir: string) {
     mkdirSync(dataDir, { recursive: true });
     this.db = new DatabaseSync(join(dataDir, DB_FILENAME));
-    this.runMigrations();
-  }
-
-  /**
-   * Apply any not-yet-applied migrations from {@link migrations}, recording
-   * each in `schema_migrations` so reruns are idempotent. Each migration
-   * runs in its own transaction.
-   *
-   * @throws if a migration's SQL fails (transaction rolled back)
-   */
-  private runMigrations(): void {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS schema_migrations (
-        name TEXT PRIMARY KEY,
-        applied_at TEXT NOT NULL
-      );
-    `);
-    const applied = new Set(
-      (
-        this.db.prepare("SELECT name FROM schema_migrations").all() as {
-          name: string;
-        }[]
-      ).map((r) => r.name),
-    );
-    const insertMigration = this.db.prepare(
-      "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
-    );
-    for (const m of migrations) {
-      if (applied.has(m.name)) {
-        continue;
-      }
-      this.db.exec("BEGIN");
-      try {
-        this.db.exec(m.sql);
-        insertMigration.run(m.name, new Date().toISOString());
-        this.db.exec("COMMIT");
-      } catch (error) {
-        this.db.exec("ROLLBACK");
-        throw error;
-      }
-    }
+    runMigrations(this.db);
   }
 
   /**
