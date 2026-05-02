@@ -35,3 +35,9 @@ jobs:
 
       - name: Lint shell scripts
         run: pnpm lint:sh
+
+      # Fails if the Drizzle schema in @felafel/contracts has diverged from
+      # the committed migrations under packages/db/migrations/. Catches the
+      # "edited schema, forgot to run db:generate" failure mode.
+      - name: Drizzle schema-drift check
+        run: pnpm db:check
