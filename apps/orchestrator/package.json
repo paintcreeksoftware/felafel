@@ -20,6 +20,7 @@
     "package": "cd ../.. && docker build -f apps/orchestrator/Dockerfile -t felafel-orchestrator ."
   },
   "dependencies": {
+    "@felafel/db": "workspace:*",
     "@felafel/shared": "workspace:*",
     "@hono/node-server": "^1.18.0",
     "@hono/zod-openapi": "^1.1.0",

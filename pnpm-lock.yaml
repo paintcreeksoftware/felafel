@@ -117,6 +117,9 @@ importers:
 
   apps/orchestrator:
     dependencies:
+      '@felafel/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@felafel/shared':
         specifier: workspace:*
         version: link:../../packages/shared

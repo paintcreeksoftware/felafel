@@ -1,5 +1,17 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
+
+import {
+  type Db,
+  getRun,
+  insertRun,
+  listRuns,
+  listWorkers,
+  markRunComplete,
+  markRunDispatched,
+  markRunFailed,
+  upsertWorker,
+} from "@felafel/db";
 import { dispatchToWorker } from "@felafel/orchestrator/dispatch";
 import { healthRoute } from "@felafel/orchestrator/routes/health";
 import {
@@ -9,12 +21,9 @@ import {
   submitRunRoute,
 } from "@felafel/orchestrator/routes/runs";
 import { listWorkersRoute, registerWorkerRoute } from "@felafel/orchestrator/routes/workers";
-import { type RunStore } from "@felafel/orchestrator/store/runs";
-import { type WorkerStore } from "@felafel/orchestrator/store/sqlite";
 
 export interface BuildAppOptions {
-  workerStore: WorkerStore;
-  runStore: RunStore;
+  db: Db;
 }
 
 export function buildApp(opts: BuildAppOptions) {
@@ -30,34 +39,32 @@ export function buildApp(opts: BuildAppOptions) {
 
   const app = base
     .openapi(healthRoute, (c) => c.json({ ok: true } as const))
-    .openapi(listWorkersRoute, (c) => c.json(opts.workerStore.list()))
+    .openapi(listWorkersRoute, (c) => c.json(listWorkers(opts.db)))
     .openapi(registerWorkerRoute, (c) =>
-      c.json(opts.workerStore.upsert(c.req.valid("json"))),
+      c.json(upsertWorker(opts.db, c.req.valid("json"))),
     )
     .openapi(submitRunRoute, async (c) => {
       const { payload } = c.req.valid("json");
-      const activeWorker = opts.workerStore
-        .list()
-        .find((w) => w.status === "active");
+      const activeWorker = listWorkers(opts.db).find((w) => w.status === "active");
       if (activeWorker === undefined) {
         // oxlint-disable-next-line no-magic-numbers -- 503 is the published HTTP "Service Unavailable" status
         return c.json({ message: "no active worker available" }, 503);
       }
-      const run = opts.runStore.insert(payload);
+      const run = insertRun(opts.db, payload);
       try {
         await dispatchToWorker(activeWorker, run.id, payload);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         // oxlint-disable-next-line no-magic-numbers -- 200 is the published HTTP "OK" status
-        return c.json(opts.runStore.markFailed(run.id, message), 200);
+        return c.json(markRunFailed(opts.db, run.id, message), 200);
       }
       // oxlint-disable-next-line no-magic-numbers -- 200 is the published HTTP "OK" status
-      return c.json(opts.runStore.markDispatched(run.id, activeWorker.id), 200);
+      return c.json(markRunDispatched(opts.db, run.id, activeWorker.id), 200);
     })
-    .openapi(listRunsRoute, (c) => c.json(opts.runStore.list()))
+    .openapi(listRunsRoute, (c) => c.json(listRuns(opts.db)))
     .openapi(getRunRoute, (c) => {
       const { id } = c.req.valid("param");
-      const run = opts.runStore.get(id);
+      const run = getRun(opts.db, id);
       if (run === undefined) {
         // oxlint-disable-next-line no-magic-numbers -- 404 is the published HTTP "Not Found" status
         return c.json({ message: "no run with that id" }, 404);
@@ -68,13 +75,14 @@ export function buildApp(opts: BuildAppOptions) {
     .openapi(completeRunRoute, (c) => {
       const { id } = c.req.valid("param");
       const ack = c.req.valid("json");
-      if (opts.runStore.get(id) === undefined) {
+      if (getRun(opts.db, id) === undefined) {
         // oxlint-disable-next-line no-magic-numbers -- 404 is the published HTTP "Not Found" status
         return c.json({ message: "no run with that id" }, 404);
       }
       const updated = ack.ok
-        ? opts.runStore.markComplete(id, ack.error)
-        : opts.runStore.markFailed(
+        ? markRunComplete(opts.db, id, ack.error)
+        : markRunFailed(
+            opts.db,
             id,
             ack.error ?? "worker reported failure with no error string",
           );

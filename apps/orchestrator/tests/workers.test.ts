@@ -3,9 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "pathe";
 import { randomUUID } from "node:crypto";
+import { createDb, type DbHandle } from "@felafel/db";
 import { buildApp } from "@felafel/orchestrator/app";
-import { SqliteRunStore } from "@felafel/orchestrator/store/runs";
-import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 import { type Worker, type WorkerRegistration } from "@felafel/shared";
 
 function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
@@ -30,30 +29,27 @@ async function postWorker(
 
 describe("/workers", () => {
   let dataDir: string;
-  let store: SqliteWorkerStore;
-  let runStore: SqliteRunStore;
+  let handle: DbHandle;
 
   beforeEach(() => {
     dataDir = mkdtempSync(join(tmpdir(), "orchestrator-workers-"));
-    store = new SqliteWorkerStore(dataDir);
-    runStore = new SqliteRunStore(dataDir);
+    handle = createDb(dataDir);
   });
 
   afterEach(() => {
-    runStore.close();
-    store.close();
+    handle.close();
     rmSync(dataDir, { recursive: true, force: true });
   });
 
   it("GET /workers returns empty list initially", async () => {
-    const app = buildApp({ workerStore: store, runStore });
+    const app = buildApp({ db: handle.db });
     const res = await app.request("/workers");
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([]);
   });
 
   it("POST /workers registers a worker", async () => {
-    const app = buildApp({ workerStore: store, runStore });
+    const app = buildApp({ db: handle.db });
     const reg = sampleReg();
     const res = await postWorker(app, reg);
     expect(res.status).toBe(200);
@@ -67,7 +63,7 @@ describe("/workers", () => {
   });
 
   it("POST /workers with same id upserts (no duplicate)", async () => {
-    const app = buildApp({ workerStore: store, runStore });
+    const app = buildApp({ db: handle.db });
     const id = randomUUID();
     await postWorker(app, sampleReg({ id, hostname: "first" }));
     const res = await postWorker(app, sampleReg({ id, hostname: "second" }));
@@ -83,15 +79,15 @@ describe("/workers", () => {
   it("workers persist across orchestrator restarts", async () => {
     const reg = sampleReg();
     {
-      const app = buildApp({ workerStore: store, runStore });
+      const app = buildApp({ db: handle.db });
       const res = await postWorker(app, reg);
       expect(res.status).toBe(200);
     }
-    store.close();
+    handle.close();
 
-    const reopened = new SqliteWorkerStore(dataDir);
+    const reopened = createDb(dataDir);
     try {
-      const app = buildApp({ workerStore: reopened, runStore });
+      const app = buildApp({ db: reopened.db });
       const list = (await (await app.request("/workers")).json()) as Worker[];
       expect(list).toHaveLength(1);
       expect(list[0]?.id).toBe(reg.id);
@@ -101,7 +97,7 @@ describe("/workers", () => {
   });
 
   it("POST /workers rejects invalid payload", async () => {
-    const app = buildApp({ workerStore: store, runStore });
+    const app = buildApp({ db: handle.db });
     const res = await app.request("/workers", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -111,7 +107,7 @@ describe("/workers", () => {
   });
 
   it("POST /workers rejects payload without controlPlaneUrl", async () => {
-    const app = buildApp({ workerStore: store, runStore });
+    const app = buildApp({ db: handle.db });
     const res = await app.request("/workers", {
       method: "POST",
       headers: { "content-type": "application/json" },
