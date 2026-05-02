@@ -28,6 +28,31 @@ export const WorkerRegistrationSchema = z.object({
 });
 export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
 
+/**
+ * Narrow Node's `process.platform` (a wide union including `freebsd`,
+ * `aix`, etc.) to the values WorkerRegistrationSchema accepts. Returns
+ * undefined on unsupported platforms so the worker registers with `os`
+ * omitted rather than failing the whole registration.
+ *
+ * @returns the matching enum value, or undefined for unsupported platforms
+ */
+export function osForRegistration(): WorkerRegistration["os"] {
+  const result = WorkerRegistrationSchema.shape.os.safeParse(process.platform);
+  return result.success ? result.data : undefined;
+}
+
+/**
+ * Narrow Node's `process.arch` the same way — see
+ * {@link osForRegistration}. Lets the schema be the single source of
+ * truth for which arches we accept.
+ *
+ * @returns the matching enum value, or undefined for unsupported arches
+ */
+export function archForRegistration(): WorkerRegistration["arch"] {
+  const result = WorkerRegistrationSchema.shape.arch.safeParse(process.arch);
+  return result.success ? result.data : undefined;
+}
+
 // Server-managed worker liveness state. Set by the orchestrator's periodic
 // sweep, never sent on registration. `'stale'` means `last_seen_at` is older
 // than the heartbeat-miss threshold; the worker re-registering flips it back.
