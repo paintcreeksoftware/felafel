@@ -125,4 +125,56 @@ describe("/runs", () => {
     const missingRes = await app.request(`/runs/${randomUUID()}`);
     expect(missingRes.status).toBe(404);
   });
+
+  it("POST /runs/:id/complete with ok:true flips status to complete", async () => {
+    workerStore.upsert(sampleReg(fakeWorker.url));
+    const app = buildApp({ workerStore, runStore });
+    const submitRes = await app.request("/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ payload: { x: 1 } }),
+    });
+    const submitted = (await submitRes.json()) as Run;
+
+    const completeRes = await app.request(`/runs/${submitted.id}/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ok: true }),
+    });
+    expect(completeRes.status).toBe(200);
+    const completed = (await completeRes.json()) as Run;
+    expect(completed.status).toBe("complete");
+    expect(completed.completedAt).toBeDefined();
+  });
+
+  it("POST /runs/:id/complete with ok:false flips status to failed", async () => {
+    workerStore.upsert(sampleReg(fakeWorker.url));
+    const app = buildApp({ workerStore, runStore });
+    const submitRes = await app.request("/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ payload: { x: 1 } }),
+    });
+    const submitted = (await submitRes.json()) as Run;
+
+    const completeRes = await app.request(`/runs/${submitted.id}/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ok: false, error: "exit 1" }),
+    });
+    expect(completeRes.status).toBe(200);
+    const completed = (await completeRes.json()) as Run;
+    expect(completed.status).toBe("failed");
+    expect(completed.error).toBe("exit 1");
+  });
+
+  it("POST /runs/:id/complete returns 404 for unknown run", async () => {
+    const app = buildApp({ workerStore, runStore });
+    const res = await app.request(`/runs/${randomUUID()}/complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ok: true }),
+    });
+    expect(res.status).toBe(404);
+  });
 });
