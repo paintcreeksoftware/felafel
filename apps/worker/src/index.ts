@@ -24,7 +24,7 @@ if (!orchestratorUrl) {
 }
 
 const id = loadOrCreateIdentity(identityPath);
-const app = buildApp();
+const app = buildApp({ orchestratorUrl });
 
 console.log(`worker started: id=${id} hostname=${hostname()}`);
 
