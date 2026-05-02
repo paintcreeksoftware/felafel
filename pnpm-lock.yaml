@@ -204,6 +204,9 @@ importers:
 
   packages/shared:
     dependencies:
+      '@felafel/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       zod:
         specifier: ^4.0.0
         version: 4.3.6

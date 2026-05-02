@@ -2,7 +2,7 @@
   "name": "@felafel/shared",
   "version": "0.0.0",
   "private": true,
-  "description": "Wire contract types shared across the Felafel codebase — Electron IPC channels, orchestrator HTTP API schemas, and worker dispatch/run schemas. Workspace-only; never published.",
+  "description": "Wire-contract surface shared across the Felafel codebase. Re-exports DB-backed schemas from @felafel/contracts and adds the IPC/Tailscale-specific types (Channels, OrchestratorStatus, TailscaleStatus, DesktopApi) that have no DB counterpart. Workspace-only; never published.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -15,6 +15,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@felafel/contracts": "workspace:*",
     "zod": "^4.0.0"
   },
   "devDependencies": {
