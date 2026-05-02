@@ -23,6 +23,16 @@ export interface RunStore {
   list(): Run[];
   /** Single run by id, or undefined if missing. */
   get(id: string): Run | undefined;
+  /**
+   * Bulk-update: mark `dispatched` runs as `failed` if their `dispatched_at`
+   * predates `threshold`. Used by the periodic sweep to catch workers that
+   * accepted a job but never posted `/runs/:id/complete`.
+   *
+   * @param threshold - ISO 8601 timestamp; rows with `dispatched_at < threshold` are eligible
+   * @param error - human-readable failure reason written to each row's `error` column
+   * @returns count of rows newly flipped to 'failed'
+   */
+  markTimedOutSince(threshold: string, error: string): number;
 }
 
 /** Raw column shape of the `runs` table. snake_case mirrors the SQL. */
@@ -194,6 +204,27 @@ export class SqliteRunStore implements RunStore {
       return undefined;
     }
     return rowToRun(row);
+  }
+
+  /**
+   * Bulk-mark timed-out dispatched runs. See
+   * {@link RunStore.markTimedOutSince}.
+   *
+   * @param threshold - ISO 8601 timestamp
+   * @param error - reason written to each row
+   * @returns count of newly-failed rows
+   */
+  markTimedOutSince(threshold: string, error: string): number {
+    const now = new Date().toISOString();
+    const result = this.db
+      .prepare(
+        `
+        UPDATE runs SET status = 'failed', completed_at = ?, error = ?
+        WHERE status = 'dispatched' AND dispatched_at < ?
+        `,
+      )
+      .run(now, error, threshold);
+    return Number(result.changes);
   }
 
   /**

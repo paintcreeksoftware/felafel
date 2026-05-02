@@ -19,6 +19,16 @@ export interface WorkerStore {
    * @returns the persisted row, after upsert
    */
   upsert(reg: WorkerRegistration): Worker;
+  /**
+   * Bulk-update: flip status='stale' for any worker whose last_seen_at
+   * predates `threshold`. Workers that re-register after this resets their
+   * status (the upsert path always sets 'active'). Used by the periodic
+   * sweep.
+   *
+   * @param threshold - ISO 8601 timestamp; rows with `last_seen_at < threshold` are eligible
+   * @returns count of rows newly flipped to 'stale' (already-stale rows aren't counted)
+   */
+  markStaleSince(threshold: string): number;
 }
 
 /** Raw column shape of the `workers` table. snake_case mirrors the SQL. */
@@ -146,6 +156,21 @@ export class SqliteWorkerStore implements WorkerStore {
       .prepare("SELECT * FROM workers WHERE id = ?")
       .get(reg.id) as unknown as WorkerRow;
     return rowToWorker(row);
+  }
+
+  /**
+   * Bulk-mark stale workers. See {@link WorkerStore.markStaleSince}.
+   *
+   * @param threshold - ISO 8601 timestamp
+   * @returns count of newly-stale rows
+   */
+  markStaleSince(threshold: string): number {
+    const result = this.db
+      .prepare(
+        "UPDATE workers SET status = 'stale' WHERE last_seen_at < ? AND status != 'stale'",
+      )
+      .run(threshold);
+    return Number(result.changes);
   }
 
   /**
