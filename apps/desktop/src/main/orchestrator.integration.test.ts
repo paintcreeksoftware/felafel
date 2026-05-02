@@ -56,6 +56,7 @@ describe("OrchestratorManager lifecycle", () => {
     const reg = {
       id: "550e8400-e29b-41d4-a716-446655440000",
       hostname: "integration-test",
+      controlPlaneUrl: "http://127.0.0.1:9091",
     };
 
     const post = await fetch(`${url}/workers`, {
