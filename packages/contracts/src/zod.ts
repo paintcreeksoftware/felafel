@@ -2,7 +2,7 @@
 // they intentionally mirror the previous hand-authored schemas in
 // `@felafel/shared` byte-for-byte: same field names (`id` for the worker /
 // run UUID, not `workerId` / `runId`), same optional/required, same
-// refinements (`.uuid()`, `.url()`, `.min(1)`, `.datetime()`).
+// refinements (`z.uuid()`, `z.url()`, `z.string().min(1)`, `z.iso.datetime()`).
 //
 // What @felafel/contracts adds beyond the previous hand-authored schemas:
 // **enum unions are sourced from the Drizzle column definitions in
@@ -57,7 +57,7 @@ export type WorkerStatus = z.infer<typeof WorkerStatusSchema>;
  * the wire never sees the DB-internal integer PK.
  */
 export const WorkerRegistrationSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   hostname: z.string().min(1),
   tailscaleName: z.string().optional(),
   os: WorkerOsSchema.optional(),
@@ -67,7 +67,7 @@ export const WorkerRegistrationSchema = z.object({
   // Where the orchestrator dials to dispatch jobs to this worker. Required —
   // every worker must be reachable. Workers that only want to be observed
   // (no dispatch) aren't a thing in v0.
-  controlPlaneUrl: z.string().url(),
+  controlPlaneUrl: z.url(),
 });
 export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
 
@@ -78,8 +78,8 @@ export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
  */
 export const WorkerSchema = WorkerRegistrationSchema.extend({
   status: WorkerStatusSchema,
-  registeredAt: z.string().datetime(),
-  lastSeenAt: z.string().datetime(),
+  registeredAt: z.iso.datetime(),
+  lastSeenAt: z.iso.datetime(),
 });
 export type Worker = z.infer<typeof WorkerSchema>;
 
@@ -102,14 +102,14 @@ export type RunStatus = z.infer<typeof RunStatusSchema>;
  * @felafel/db/conversions.ts, not here).
  */
 export const RunSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   payload: z.record(z.string(), z.unknown()),
   status: RunStatusSchema,
-  workerId: z.string().uuid().optional(),
+  workerId: z.uuid().optional(),
   error: z.string().optional(),
-  createdAt: z.string().datetime(),
-  dispatchedAt: z.string().datetime().optional(),
-  completedAt: z.string().datetime().optional(),
+  createdAt: z.iso.datetime(),
+  dispatchedAt: z.iso.datetime().optional(),
+  completedAt: z.iso.datetime().optional(),
 });
 export type Run = z.infer<typeof RunSchema>;
 
@@ -121,7 +121,7 @@ export type Run = z.infer<typeof RunSchema>;
  * posts back to `${ORCHESTRATOR_URL}/runs/:id/complete` when done.
  */
 export const JobAssignmentSchema = z.object({
-  runId: z.string().uuid(),
+  runId: z.uuid(),
   payload: z.record(z.string(), z.unknown()),
 });
 export type JobAssignment = z.infer<typeof JobAssignmentSchema>;
