@@ -3,16 +3,32 @@
 //   preload   — the bridge script that runs in the renderer with Node access
 //   renderer  — the Chromium tab where React lives
 //
-// `externalizeDepsPlugin` leaves Node `import`s as runtime requires instead of
-// bundling them — necessary for native modules and for things electron-builder
-// must see in node_modules at packaging time. We `exclude: ["@felafel/shared"]`
-// because that workspace package is pure TS source and Node can't load .ts at
-// runtime; bundling it inlines `Channels` directly into main/preload output.
-// `@felafel/ui` is renderer-only and the renderer section below doesn't use
-// externalizeDepsPlugin (Vite bundles everything for the browser), so it
-// doesn't need to be listed.
+// All three are fully bundled — no runtime `require`/`import` from
+// `node_modules`. `electron` itself and Node builtins (`node:fs`,
+// `node:child_process`, …) stay external because they're provided by the
+// Electron runtime, not by deps; everything else gets pulled into the
+// produced JS so the asar is self-contained at runtime.
+//
+// We deliberately set `build.externalizeDeps: false` for main and preload
+// to suppress electron-vite's default behavior of auto-installing its
+// `externalizeDepsPlugin`, which would otherwise mark every package.json
+// dep as external. Why we want bundled instead of externalized: with pnpm
+// + electron-builder, externalizing forces electron-builder to walk
+// `node_modules` at packaging time, and its walker can't follow pnpm's
+// nested-version paths (e.g. `which@2` vs `which@6`). The packaged
+// AppImage then crashes on launch with `ERR_MODULE_NOT_FOUND: path-key`
+// (or any other missing transitive of `execa` etc.) — see
+// electron-userland/electron-builder#9654 and PAI-90 for the failure
+// surface. Bundling sidesteps the dep walker entirely.
+//
+// If a future native module (e.g. `better-sqlite3`) ever lands in this
+// app, it MUST be externalized — native `.node` binaries can't be
+// bundled by Rollup. At that point either re-introduce
+// `externalizeDepsPlugin` scoped to the native package(s) only, or
+// pass an explicit `external` array to `rollupOptions`. Today the
+// desktop main/preload have no native deps.
 import { resolve } from "pathe";
-import { defineConfig, externalizeDepsPlugin } from "electron-vite";
+import { defineConfig } from "electron-vite";
 import react from "@vitejs/plugin-react";
 
 // `@felafel/desktop/*` resolves to `./src/*` in node-side code (main, preload)
@@ -25,18 +41,18 @@ const rendererAlias = { "@felafel/desktop": resolve(__dirname, "src/renderer/src
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ["@felafel/shared"] })],
     resolve: { alias: nodeAlias },
     build: {
+      externalizeDeps: false,
       rollupOptions: {
         input: { index: resolve(__dirname, "src/main/index.ts") },
       },
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin({ exclude: ["@felafel/shared"] })],
     resolve: { alias: nodeAlias },
     build: {
+      externalizeDeps: false,
       rollupOptions: {
         input: { index: resolve(__dirname, "src/preload/index.ts") },
       },
