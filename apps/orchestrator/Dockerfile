@@ -13,7 +13,14 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/orchestrator/package.json apps/orchestrator/
 COPY packages/shared/package.json packages/shared/
 COPY packages/contracts/package.json packages/contracts/
-RUN pnpm install --frozen-lockfile --filter @felafel/orchestrator...
+# --ignore-scripts skips lifecycle scripts during install. The workspace
+# now contains @felafel/db (uses better-sqlite3, which has a native
+# postinstall compile step that needs Python + build-base on Alpine).
+# The orchestrator doesn't import @felafel/db at this stage (D6 in the
+# PAI-89 plan does), so its native module isn't needed in this image
+# and we skip the compile rather than installing toolchains we'd then
+# throw away. Revisit when the orchestrator cuts over to @felafel/db.
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter @felafel/orchestrator...
 
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
