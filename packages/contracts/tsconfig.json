@@ -1,0 +1,12 @@
+// `composite: true` is required for TypeScript project references — it tells
+// tsc to emit declaration files and `.tsbuildinfo` so other packages can
+// consume this one without recompiling it from scratch every time.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "paths": { "@felafel/contracts/*": ["./src/*"] }
+  },
+  "include": ["src/**/*"]
+}

@@ -64,7 +64,7 @@ export const getRunRoute = createRoute({
   method: "get",
   path: "/runs/{id}",
   request: {
-    params: z.object({ id: z.string().uuid() }),
+    params: z.object({ id: z.uuid() }),
   },
   responses: {
     200: {
@@ -94,7 +94,7 @@ export const completeRunRoute = createRoute({
     "job. ok=true flips status to 'complete'; ok=false flips to 'failed' " +
     "with the supplied error string.",
   request: {
-    params: z.object({ id: z.string().uuid() }),
+    params: z.object({ id: z.uuid() }),
     body: {
       required: true,
       content: {
