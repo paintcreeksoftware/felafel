@@ -3,6 +3,7 @@
   "productName": "Felafel",
   "version": "0.0.0",
   "private": true,
+  "author": "Paint Creek Software",
   "description": "The Electron desktop app — main, preload, and renderer in one package, with an embedded orchestrator (Hono) sidecar. electron-vite handles dev/build; electron-builder packages it.",
   "type": "module",
   "main": "./out/main/index.js",
