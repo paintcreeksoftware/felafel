@@ -1,0 +1,59 @@
+# Coverage diagnostic — runs vitest with coverage across all workspace
+# packages and posts the per-package summary tables to GitHub's Step
+# Summary so they're visible in the PR Checks tab without leaving
+# GitHub.
+#
+# Informational only by design — there is no threshold gate. The step
+# fails only if the underlying tests fail (the dedicated `test`
+# workflow would catch that too). Coverage drops or low percentages
+# never block a merge from this workflow. See PAI-92 for the why.
+#
+# Trade-off vs codecov: no inline diff-coverage PR comment. Click into
+# the run to see the full table.
+
+name: coverage
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests with coverage
+        # `pnpm -r test --coverage` fans the flag out to every package's
+        # `test` script (each invokes `vitest run`-flavored commands, so
+        # the flag becomes `vitest run --coverage`). Tee to disk so the
+        # summary step can include the output even if tests fail.
+        run: pnpm -r test --coverage 2>&1 | tee /tmp/coverage.log
+
+      - name: Post coverage to Step Summary
+        if: always()
+        run: |
+          {
+            echo "## Coverage by package"
+            echo ""
+            echo "Informational only; no threshold gate. Output from \`pnpm -r test --coverage\`."
+            echo ""
+            echo "<details><summary>Full output (click to expand)</summary>"
+            echo ""
+            echo '```text'
+            cat /tmp/coverage.log 2>/dev/null || echo "(no output captured)"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
