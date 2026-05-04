@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { dirname } from "pathe";
 import { z } from "zod";
 
-const UuidSchema = z.string().uuid();
+const UuidSchema = z.uuid();
 
 /**
  * Read the worker's persistent identity from disk, or generate + persist a
