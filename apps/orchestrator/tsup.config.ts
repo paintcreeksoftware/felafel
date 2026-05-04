@@ -17,11 +17,27 @@ export default defineConfig({
   outExtension: () => ({ js: ".mjs" }),
   clean: true,
   platform: "node",
-  // Inline workspace deps into the bundle. Otherwise Node 24 refuses to type-
-  // strip @felafel/shared at runtime because it lives inside node_modules
-  // after `pnpm deploy`. Bundling avoids both that constraint and the need to
-  // ship a node_modules tree for these.
-  noExternal: ["@felafel/shared"],
+  // Inline EVERY runtime dep into the bundle, not just workspace packages.
+  //
+  // Workspace deps (@felafel/shared) need bundling because Node 24 refuses
+  // to type-strip TypeScript files that live inside node_modules after
+  // `pnpm deploy`.
+  //
+  // Third-party deps (hono, @hono/node-server, zod, …) need bundling
+  // because the orchestrator ships as a *sidecar* inside the desktop
+  // AppImage — `electron-builder.yml`'s `extraResources` copies
+  // `apps/orchestrator/dist/` to `resources/orchestrator/` in the
+  // installer, but it does NOT copy a node_modules tree alongside.
+  // Without inlining, the packaged sidecar crashes on first launch with
+  // `ERR_MODULE_NOT_FOUND: @hono/node-server`. See PAI-90 for the
+  // sibling fix on the desktop main bundle.
+  //
+  // The catch-all regex makes this fail-fast: a future native dep
+  // (e.g. `better-sqlite3`) would surface as a build-time esbuild error
+  // instead of a silent runtime crash in the packaged build. Today the
+  // orchestrator has zero native deps; persistence uses `node:sqlite`,
+  // which is a Node builtin, not a package.
+  noExternal: [/.*/],
   onSuccess: () => {
     const path = "dist/index.mjs";
     let src = readFileSync(path, "utf8");
