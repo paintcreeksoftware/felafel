@@ -34,6 +34,18 @@ test("Electron launches, orchestrator reaches ready", async () => {
   await electronApp.close();
 });
 
+test("Linux/Windows main window has no application menu", async () => {
+  // Regression test for PAI-78: setApplicationMenu(null) was applied to
+  // strip electron-vite's stock File/Edit/View menu. The visual snapshot
+  // can't catch a menu coming back (renderer viewport is pinned, menu
+  // chrome lives outside it), so we ask Electron directly.
+  const electronApp = await electron.launch({ args: [mainBundle], cwd: appRoot });
+  await electronApp.firstWindow();
+  const menu = await electronApp.evaluate(({ Menu }) => Menu.getApplicationMenu());
+  expect(menu).toBeNull();
+  await electronApp.close();
+});
+
 test("quitting the app does not leave an orphan orchestrator process", async () => {
   const electronApp = await electron.launch({ args: [mainBundle], cwd: appRoot });
   const window = await electronApp.firstWindow();
