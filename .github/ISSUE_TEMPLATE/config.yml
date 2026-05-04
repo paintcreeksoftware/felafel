@@ -1,0 +1,7 @@
+# GitHub issue template chooser configuration. `blank_issues_enabled:
+# false` means contributors must pick one of the structured templates;
+# the "Open a blank issue" escape hatch is hidden. Reduces low-context
+# drive-by issues without blocking anyone — they can still link to the
+# repo directly via the URL bar if absolutely needed.
+
+blank_issues_enabled: false
