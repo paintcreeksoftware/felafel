@@ -1,12 +1,21 @@
 // `composite: true` is required for TypeScript project references — it tells
 // tsc to emit declaration files and `.tsbuildinfo` so other packages can
 // consume this one without recompiling it from scratch every time.
+//
+// `types: ["node"]` is explicit instead of relying on TypeScript's default
+// "auto-include every @types/* package found in node_modules". The auto-
+// include behavior is inconsistent across IDE TS servers in pnpm workspaces
+// — some find @types/node hoisted at the workspace root, others don't and
+// surface "Cannot find name 'process'" on the Node-globals references in
+// `osForRegistration` / `archForRegistration`. Naming it explicitly makes
+// the dependency visible and the editor experience reliable.
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "paths": { "@felafel/shared/*": ["./src/*"] }
+    "paths": { "@felafel/shared/*": ["./src/*"] },
+    "types": ["node"]
   },
   "include": ["src/**/*"]
 }

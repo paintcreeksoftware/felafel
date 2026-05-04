@@ -204,10 +204,16 @@ importers:
 
   packages/shared:
     dependencies:
+      '@felafel/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       zod:
         specifier: ^4.0.0
         version: 4.3.6
     devDependencies:
+      '@types/node':
+        specifier: ^24.12.2
+        version: 24.12.2
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

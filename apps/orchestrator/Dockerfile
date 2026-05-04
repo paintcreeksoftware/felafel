@@ -12,10 +12,12 @@ RUN corepack enable
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/orchestrator/package.json apps/orchestrator/
 COPY packages/shared/package.json packages/shared/
+COPY packages/contracts/package.json packages/contracts/
 RUN pnpm install --frozen-lockfile --filter @felafel/orchestrator...
 
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
+COPY packages/contracts packages/contracts
 COPY apps/orchestrator apps/orchestrator
 
 RUN pnpm --filter @felafel/orchestrator build

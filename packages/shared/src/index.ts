@@ -1,111 +1,60 @@
-// IPC contract — the single source of truth for messages crossing the Electron
-// process boundary. Main registers handlers keyed by these channel names,
-// preload exposes typed wrappers via contextBridge, and the renderer imports
-// the types so `window.api` is fully type-checked.
+// IPC and wire contract surface — the single source of truth for messages
+// crossing process boundaries (Electron main↔renderer, orchestrator↔worker).
 //
-// Anything mentioning the wire format goes here, NOT in main/, preload/, or
-// renderer/ — otherwise the three processes drift out of sync silently.
+// Schemas tied to a database table live in `@felafel/contracts` (Drizzle
+// table → wire-shape Zod, with enum unions sourced from the column
+// definitions). This file re-exports them so existing consumers — main,
+// preload, renderer, worker daemon — keep importing from `@felafel/shared`
+// unchanged. Anything mentioning the wire format goes here (or in
+// @felafel/contracts), NOT in main/, preload/, or renderer/ — otherwise
+// the three processes drift out of sync silently.
 
-import { z } from "zod";
+import { WorkerArchSchema, WorkerOsSchema, type WorkerRegistration } from "@felafel/contracts";
 
-// Orchestrator worker schemas — consumed by both the orchestrator service
-// (route validation, OpenAPI generation) and the desktop renderer (typed RPC
-// client via hc<AppType>). Server-to-server calls (orchestrator → worker,
-// worker → orchestrator) also import these and validate via Schema.parse() at
-// the boundary. Defined here so the wire contract has one source of truth.
-export const WorkerRegistrationSchema = z.object({
-  id: z.uuid(),
-  hostname: z.string().min(1),
-  tailscaleName: z.string().optional(),
-  os: z.enum(["linux", "darwin", "win32"]).optional(),
-  arch: z.enum(["x64", "arm64"]).optional(),
-  version: z.string().optional(),
-  labels: z.record(z.string(), z.string()).optional(),
-  // Where the orchestrator dials to dispatch jobs to this worker. Required —
-  // every worker must be reachable. Workers that only want to be observed (no
-  // dispatch) aren't a thing in v0.
-  controlPlaneUrl: z.url(),
-});
-export type WorkerRegistration = z.infer<typeof WorkerRegistrationSchema>;
+export {
+  JobAssignmentSchema,
+  RunCompleteSchema,
+  RunSchema,
+  RunStatusSchema,
+  WorkerArchSchema,
+  WorkerOsSchema,
+  WorkerRegistrationSchema,
+  WorkerSchema,
+  WorkerStatusSchema,
+  type JobAssignment,
+  type Run,
+  type RunComplete,
+  type RunStatus,
+  type Worker,
+  type WorkerArch,
+  type WorkerOs,
+  type WorkerRegistration,
+  type WorkerStatus,
+} from "@felafel/contracts";
 
 /**
  * Narrow Node's `process.platform` (a wide union including `freebsd`,
- * `aix`, etc.) to the values WorkerRegistrationSchema accepts. Returns
+ * `aix`, etc.) to the values `WorkerRegistrationSchema` accepts. Returns
  * undefined on unsupported platforms so the worker registers with `os`
  * omitted rather than failing the whole registration.
  *
  * @returns the matching enum value, or undefined for unsupported platforms
  */
 export function osForRegistration(): WorkerRegistration["os"] {
-  const result = WorkerRegistrationSchema.shape.os.safeParse(process.platform);
+  const result = WorkerOsSchema.safeParse(process.platform);
   return result.success ? result.data : undefined;
 }
 
 /**
- * Narrow Node's `process.arch` the same way — see
- * {@link osForRegistration}. Lets the schema be the single source of
- * truth for which arches we accept.
+ * Narrow Node's `process.arch` the same way — see {@link osForRegistration}.
+ * Lets the schema be the single source of truth for which arches we accept.
  *
  * @returns the matching enum value, or undefined for unsupported arches
  */
 export function archForRegistration(): WorkerRegistration["arch"] {
-  const result = WorkerRegistrationSchema.shape.arch.safeParse(process.arch);
+  const result = WorkerArchSchema.safeParse(process.arch);
   return result.success ? result.data : undefined;
 }
-
-// Server-managed worker liveness state. Set by the orchestrator's periodic
-// sweep, never sent on registration. `'stale'` means `last_seen_at` is older
-// than the heartbeat-miss threshold; the worker re-registering flips it back.
-export const WorkerStatusSchema = z.enum(["active", "stale"]);
-export type WorkerStatus = z.infer<typeof WorkerStatusSchema>;
-
-export const WorkerSchema = WorkerRegistrationSchema.extend({
-  status: WorkerStatusSchema,
-  registeredAt: z.iso.datetime(),
-  lastSeenAt: z.iso.datetime(),
-});
-export type Worker = z.infer<typeof WorkerSchema>;
-
-// Orchestrator → worker dispatch payload. Posted to the worker's
-// `controlPlaneUrl` + `/jobs/run`. Worker returns 202 immediately, then posts
-// to `${ORCHESTRATOR_URL}/runs/:id/complete` when done.
-export const JobAssignmentSchema = z.object({
-  runId: z.uuid(),
-  payload: z.record(z.string(), z.unknown()),
-});
-export type JobAssignment = z.infer<typeof JobAssignmentSchema>;
-
-// Worker → orchestrator ack body. `ok: true` flips the run to `'complete'`;
-// `ok: false` flips to `'failed'` and surfaces `error` on the Run record.
-export const RunCompleteSchema = z.object({
-  ok: z.boolean(),
-  result: z.record(z.string(), z.unknown()).optional(),
-  error: z.string().optional(),
-});
-export type RunComplete = z.infer<typeof RunCompleteSchema>;
-
-// Run lifecycle states. `pending` → `dispatched` → (`complete` | `failed`).
-// `pending` is the brief window between INSERT and the orchestrator's outbound
-// dispatch call returning. Stuck `dispatched` runs flip to `failed` via sweep.
-export const RunStatusSchema = z.enum([
-  "pending",
-  "dispatched",
-  "complete",
-  "failed",
-]);
-export type RunStatus = z.infer<typeof RunStatusSchema>;
-
-export const RunSchema = z.object({
-  id: z.uuid(),
-  payload: z.record(z.string(), z.unknown()),
-  status: RunStatusSchema,
-  workerId: z.uuid().optional(),
-  error: z.string().optional(),
-  createdAt: z.iso.datetime(),
-  dispatchedAt: z.iso.datetime().optional(),
-  completedAt: z.iso.datetime().optional(),
-});
-export type Run = z.infer<typeof RunSchema>;
 
 export const Channels = {
   OrchestratorStatus: "orch:status",
