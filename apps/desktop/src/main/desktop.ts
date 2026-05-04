@@ -8,7 +8,7 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, shell } from "electron";
 import { join } from "pathe";
 import {
   Channels,
@@ -52,8 +52,61 @@ class DesktopApp {
    * because this is called once per process.
    */
   start(): void {
+    this.removeDefaultMenu();
     this.registerIpcHandlers();
     this.registerAppLifecycle();
+  }
+
+  /**
+   * Strip electron-vite's stock menu bar. On Linux/Windows the menu is
+   * removed entirely; on macOS we keep a minimal application menu so
+   * standard text-input shortcuts (Cmd-C/V, Cmd-Q) keep working — passing
+   * `null` on macOS leaves a degraded built-in that's worse than a small
+   * custom one.
+   */
+  private removeDefaultMenu(): void {
+    if (process.platform === Platform.MACOS) {
+      Menu.setApplicationMenu(this.buildMinimalMacMenu());
+    } else {
+      Menu.setApplicationMenu(null);
+    }
+  }
+
+  /**
+   * Build the minimum-viable macOS application menu: app submenu (about,
+   * hide, quit) + Edit submenu (the Edit roles are what wires Cmd-C/V/X
+   * and Cmd-A into focused inputs on macOS — without them, copy/paste
+   * silently stops working in form fields).
+   *
+   * @returns the assembled `Menu` ready to pass to `setApplicationMenu`
+   */
+  private buildMinimalMacMenu(): Menu {
+    return Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          { role: "about" },
+          { type: "separator" },
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+          { type: "separator" },
+          { role: "quit" },
+        ],
+      },
+      {
+        label: "Edit",
+        submenu: [
+          { role: "undo" },
+          { role: "redo" },
+          { type: "separator" },
+          { role: "cut" },
+          { role: "copy" },
+          { role: "paste" },
+          { role: "selectAll" },
+        ],
+      },
+    ]);
   }
 
   /**
@@ -111,6 +164,7 @@ class DesktopApp {
     // app.exit().
     app.on("before-quit", async (event) => {
       event.preventDefault();
+      globalShortcut.unregisterAll();
       await this.orchestrator.stop();
       app.exit(0);
     });
@@ -122,6 +176,16 @@ class DesktopApp {
    */
   private async bootstrapOnReady(): Promise<void> {
     await app.whenReady();
+
+    // Re-add the DevTools accelerator the default View menu would have
+    // provided. Dev-only: a packaged build should not expose DevTools to
+    // end users by default.
+    if (process.env[DesktopEnvVars.ELECTRON_RENDERER_URL]) {
+      globalShortcut.register("CmdOrCtrl+Shift+I", () => {
+        BrowserWindow.getFocusedWindow()?.webContents.toggleDevTools();
+      });
+    }
+
     this.broadcastOrchestrator({ kind: "starting" });
     try {
       const url = await this.orchestrator.start();
@@ -178,15 +242,12 @@ class DesktopApp {
       return { action: "deny" };
     });
 
+    // Dev (rendererUrl set): load Vite's HTTP dev server so HMR works.
+    // Production: load the bundled renderer from disk.
     const rendererUrl = process.env[DesktopEnvVars.ELECTRON_RENDERER_URL];
-    if (rendererUrl) {
-      // Dev: load Vite's HTTP dev server so HMR works.
-      await this.mainWindow.loadURL(rendererUrl);
-      this.mainWindow.webContents.openDevTools({ mode: "detach" });
-    } else {
-      // Production: load the bundled renderer from disk.
-      await this.mainWindow.loadFile(join(moduleDir, "../renderer/index.html"));
-    }
+    await (rendererUrl
+      ? this.mainWindow.loadURL(rendererUrl)
+      : this.mainWindow.loadFile(join(moduleDir, "../renderer/index.html")));
   }
 
   /**
