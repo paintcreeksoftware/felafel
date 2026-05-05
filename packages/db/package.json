@@ -8,7 +8,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./conversions": "./src/conversions.ts",
+    "./queries/workers": "./src/queries/workers.ts"
   },
   "scripts": {
     "lint": "oxlint --deny-warnings",
