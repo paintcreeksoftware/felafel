@@ -38,6 +38,13 @@ export const DesktopEnvVars = {
    * until multiple defaults justify one.
    */
   FELAFEL_ORCHESTRATOR_TAILNET_PORT: "FELAFEL_ORCHESTRATOR_TAILNET_PORT",
+  /**
+   * Override the orchestrator bundle path resolved by `OrchestratorManager`.
+   * Used by E2E tests to point the bundle at a non-existent file so
+   * `start()` throws "bundle missing" and the renderer's error-state
+   * rendering can be exercised without breaking the real bundle on disk.
+   */
+  FELAFEL_ORCHESTRATOR_FAKE_BUNDLE: "FELAFEL_ORCHESTRATOR_FAKE_BUNDLE",
 } as const;
 
 /** Default BrowserWindow dimensions. */
