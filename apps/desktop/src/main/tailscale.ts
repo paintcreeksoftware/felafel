@@ -692,6 +692,38 @@ export class TailscaleManager {
   }
 
   /**
+   * Read the current `tailscale serve` config and return what's mapped to
+   * `tailnetPort`, or null if nothing is mapped. Used at startup to detect
+   * a stale mapping left by a prior crashed AppImage launch (so we can
+   * unpublish + republish with the new ephemeral port instead of leaving
+   * a dangling forward to a dead PID).
+   *
+   * Caller MUST have confirmed Tailscale is available (e.g. via
+   * {@link probeStatus}) before calling — this method throws if the binary
+   * is missing rather than silently returning null. Null is reserved for
+   * the genuine "no mapping configured" case.
+   *
+   * @param opts.tailnetPort - the Tailnet port to look up
+   * @returns `{ targetLocalPort }` when a TCP forward exists, else null
+   * @throws when the `tailscale` binary is missing on PATH
+   */
+  async readServePublished(
+    opts: { tailnetPort: number },
+  ): Promise<{ targetLocalPort: number } | null> {
+    const binary = await this.requireBinary();
+    const result = await execa(binary, ["serve", "status", "--json"], {
+      cancelSignal: AbortSignal.timeout(PROBE_SINGLE_ATTEMPT_TIMEOUT_MS),
+      reject: false,
+    });
+    // Tailscale exits non-zero with no JSON when nothing is configured;
+    // treat that as "nothing mapped" rather than a hard error.
+    if (result.stdout.trim().length === 0) {
+      return null;
+    }
+    return parseServeConfigJson(result.stdout, opts.tailnetPort);
+  }
+
+  /**
    * Shared spawn wrapper for `tailscale serve` mutating commands (publish,
    * unpublish). Handles binary discovery, abort-aware timeout, and error
    * classification. Throws a descriptive Error on failure so callers can
