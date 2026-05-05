@@ -1,6 +1,6 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { DatabaseSync } from "node:sqlite";
+import { drizzle } from "drizzle-orm/node-sqlite";
+import { migrate } from "drizzle-orm/node-sqlite/migrator";
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "pathe";
 
@@ -54,12 +54,24 @@ const DEFAULT_MIGRATIONS_FOLDER = resolve(import.meta.dirname, "..", "migrations
  */
 export function createDb(dataDir: string, migrationsFolder: string = DEFAULT_MIGRATIONS_FOLDER): DbHandle {
   mkdirSync(dataDir, { recursive: true });
-  const sqlite = new Database(join(dataDir, DB_FILENAME));
-  const db = drizzle(sqlite, { schema, logger: true });
+  // node:sqlite's DatabaseSync is the underlying handle; pass it as
+  // `client` to drizzle 1.0's config-object overload (the (path, config)
+  // overload doesn't fit since we already constructed the connection).
+  const sqlite = new DatabaseSync(join(dataDir, DB_FILENAME));
+  const db = drizzle({ client: sqlite, schema, logger: true });
   migrate(db, { migrationsFolder });
+  let closed = false;
   return {
     db,
+    // Idempotent: better-sqlite3 used to swallow double-close; node:sqlite
+    // throws "database is not open." Cleanup paths in tests + SIGTERM
+    // handlers occasionally call close twice, so guard explicitly rather
+    // than rely on driver behavior.
     close: () => {
+      if (closed) {
+        return;
+      }
+      closed = true;
       sqlite.close();
     },
   };
