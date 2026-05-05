@@ -272,10 +272,10 @@ export class TailscaleManager {
       this.cachedStatus = await pRetry(
         async () => {
           lastResult = await this.tryProbeOnce(binary);
-          const isTransient =
+          if (
             lastResult.kind === "error"
-            && /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message);
-          if (isTransient) {
+            && /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message)
+          ) {
             throw new Error(lastResult.message);
           }
           return lastResult;
