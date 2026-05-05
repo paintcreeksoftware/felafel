@@ -44,6 +44,11 @@ const moduleDir = import.meta.dirname;
 class DesktopApp {
   private mainWindow: BrowserWindow | null = null;
   private orchestratorUrl: string | null = null;
+  // Cached status — broadcasts fire before createWindow() so a renderer
+  // that mounts after the broadcast (always, in practice) needs a way to
+  // recover the latest state on mount. Mirrors orchestratorUrl above but
+  // carries the full discriminated union.
+  private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
   private readonly orchestrator = new OrchestratorManager();
   private readonly tailscale = new TailscaleManager();
 
@@ -116,6 +121,7 @@ class DesktopApp {
    */
   private registerIpcHandlers(): void {
     ipcMain.handle(Channels.OrchestratorUrl, () => this.orchestratorUrl);
+    ipcMain.handle(Channels.OrchestratorStatusGet, () => this.orchestratorStatus);
 
     // Tailscale handlers. ts:status returns the cached value (instant);
     // ts:refresh forces a re-probe and broadcasts. ts:connect runs
@@ -260,6 +266,10 @@ class DesktopApp {
     if (status.kind === "ready") {
       this.orchestratorUrl = status.url;
     }
+    // Cache so renderers that mount after this broadcast can still recover
+    // the latest state via OrchestratorStatusGet (the broadcast itself
+    // goes nowhere if no window is open yet).
+    this.orchestratorStatus = status;
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(Channels.OrchestratorStatus, status);
     }

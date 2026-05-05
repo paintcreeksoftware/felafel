@@ -74,11 +74,16 @@ export default function App() {
         setStatusError(next.message);
       }
     });
+    // Recover the latest cached status so an "error" or "ready" broadcast
+    // that fired before the window mounted still lands in our state. Live
+    // updates after this point arrive via the subscription above.
     void (async () => {
-      const url = await window.api.orchestratorUrl();
-      if (url) {
-        setStatus("ready");
-        setOrchUrl(url);
+      const cached = await window.api.orchestratorStatus();
+      setStatus(cached.kind);
+      if (cached.kind === "ready") {
+        setOrchUrl(cached.url);
+      } else if (cached.kind === "error") {
+        setStatusError(cached.message);
       }
     })();
     return unsubscribe;

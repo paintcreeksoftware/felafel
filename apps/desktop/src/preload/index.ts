@@ -19,6 +19,8 @@ const api: DesktopApi = {
   // Push notifications from main → renderer. Returns an unsubscribe so React
   // effects can clean up properly.
   orchestratorUrl: () => ipcRenderer.invoke(Channels.OrchestratorUrl) as Promise<string>,
+  orchestratorStatus: () =>
+    ipcRenderer.invoke(Channels.OrchestratorStatusGet) as Promise<OrchestratorStatus>,
   onOrchestratorStatus: (handler) => {
     const listener = (_event: unknown, status: OrchestratorStatus) => handler(status);
     ipcRenderer.on(Channels.OrchestratorStatus, listener);
