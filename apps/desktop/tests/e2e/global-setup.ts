@@ -4,16 +4,16 @@
 // individual specs (e.g., launch.spec's polling test).
 //
 // Resolves the same path apps/desktop/src/main/orchestrator.ts uses for
-// dev-mode runs: <repo-root>/.dev-orchestrator-data. The e2e suite boots
-// the bundled `out/main/index.js` which is unpackaged from Electron's
-// perspective (`app.isPackaged === false`), so it lands in the dev path,
-// not Electron's userData.
+// dev-mode runs: <apps/desktop>/.dev-orchestrator-data. Derived from
+// `moduleDir/../..` in resolveDataDir, where moduleDir is
+// apps/desktop/out/main when the e2e suite boots the bundled
+// `out/main/index.js` (unpackaged → dev path, not Electron's userData).
 import { rm } from "node:fs/promises";
 import { join } from "pathe";
 
 const here = import.meta.dirname;
-const repoRoot = join(here, "..", "..", "..", "..");
-const devDataDir = join(repoRoot, ".dev-orchestrator-data");
+const desktopRoot = join(here, "..", "..");
+const devDataDir = join(desktopRoot, ".dev-orchestrator-data");
 
 export default async function globalSetup(): Promise<void> {
   await rm(devDataDir, { recursive: true, force: true });

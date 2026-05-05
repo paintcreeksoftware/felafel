@@ -13,10 +13,13 @@ const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");
 const mainBundle = join(appRoot, "out", "main", "index.js");
 // Same path the orchestrator uses in dev mode — see
-// apps/desktop/src/main/orchestrator.ts:resolveDataDir. Duplicated rather
-// than imported because the path-alias lint rule covers `src/` only and
-// tests/e2e/ siblings can't use the @felafel/desktop/... alias.
-const devOrchestratorDataDir = join(appRoot, "..", "..", ".dev-orchestrator-data");
+// apps/desktop/src/main/orchestrator.ts:resolveDataDir. Lives at
+// apps/desktop/.dev-orchestrator-data, NOT the repo root: moduleDir
+// (apps/desktop/out/main) joined with ../../.dev-orchestrator-data
+// resolves under apps/desktop. Duplicated rather than imported because
+// the path-alias lint rule covers `src/` only and tests/e2e/ siblings
+// can't use the @felafel/desktop/... alias.
+const devOrchestratorDataDir = join(appRoot, ".dev-orchestrator-data");
 
 test("Electron launches, orchestrator reaches ready", async () => {
   const electronApp = await electron.launch({
