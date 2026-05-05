@@ -171,7 +171,17 @@ class DesktopApp {
     app.on("before-quit", async (event) => {
       event.preventDefault();
       globalShortcut.unregisterAll();
-      await this.orchestrator.stop();
+      // The handler must reach app.exit(0) no matter what — a thrown
+      // error here would leave the preventDefault()'d quit hanging
+      // forever. orchestrator.stop() now propagates the (rare) tailscale
+      // unpublish failure; this is the right layer to log+continue
+      // because exit-cleanup UX is desktop main's concern, not the
+      // manager's.
+      try {
+        await this.orchestrator.stop();
+      } catch (error) {
+        console.error("[main] orchestrator.stop failed:", error);
+      }
       app.exit(0);
     });
   }

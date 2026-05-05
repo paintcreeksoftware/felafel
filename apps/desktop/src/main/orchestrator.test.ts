@@ -9,9 +9,10 @@ import { type TailscaleManager } from "@felafel/desktop/main/tailscale";
 
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => "/tmp" } }));
 
-/** Type-only escape hatch so tests can call private helpers. */
+/** Type-only escape hatch so tests can call private helpers + reach internal state. */
 interface Privates {
   setupTailnetServe(localPort: number): Promise<void>;
+  process: { kill: () => void; once: (ev: string, cb: () => void) => void } | null;
 }
 
 function mockTailscale(overrides: Partial<TailscaleManager> = {}): TailscaleManager {
@@ -89,5 +90,35 @@ describe("OrchestratorManager.setupTailnetServe", () => {
     const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(ts.publishServe).toHaveBeenCalledWith({ tailnetPort: 12345, localPort: 54321 });
+  });
+});
+
+describe("OrchestratorManager.stop unpublish error", () => {
+  it("kills the child first, then propagates the unpublish error", async () => {
+    const ts = mockTailscale({
+      unpublishServe: vi.fn().mockRejectedValue(new Error("tailscale serve (eacces): denied")),
+    });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    // Inject a fake child process so stop() has something to kill without
+    // requiring a real spawn. The fake fires "exit" synchronously so the
+    // SIGTERM-grace timer never trips.
+    const kill = vi.fn();
+    m.process = {
+      kill,
+      // Mirrors EventEmitter#once — callback shape is the API we're stubbing,
+      // not a style choice. Fires "exit" synchronously so SIGTERM-grace
+      // never trips and the test stays deterministic.
+      /* oxlint-disable prefer-await-to-callbacks -- stubbing EventEmitter#once API */
+      once: (event: string, cb: () => void) => {
+        if (event === "exit") {
+          cb();
+        }
+      },
+      /* oxlint-enable prefer-await-to-callbacks */
+    };
+    await expect(m.stop()).rejects.toThrow(/eacces/);
+    // Child WAS killed before the unpublish error propagated — no orphan.
+    expect(kill).toHaveBeenCalledWith("SIGTERM");
+    expect(ts.unpublishServe).toHaveBeenCalled();
   });
 });
