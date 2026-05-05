@@ -15,7 +15,12 @@ import {
   upsertWorker,
   getRun,
 } from "@felafel/db";
-import { startSweep } from "@felafel/orchestrator/sweep";
+import {
+  BACKOFF_MAX_DELAY_MS,
+  BACKOFF_THRESHOLD_FAILURES,
+  startSweep,
+  sweepDelayFor,
+} from "@felafel/orchestrator/sweep";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -160,5 +165,52 @@ describe("startSweep", () => {
     // update; ensure the (stopped) sweep doesn't act.
     await sleep(80);
     expect(listWorkers(handle.db)[0]?.status).toBe("active");
+  });
+});
+
+describe("sweepDelayFor", () => {
+  const baseOpts = {
+    baseMs: 1000,
+    thresholdFailures: BACKOFF_THRESHOLD_FAILURES,
+    maxDelayMs: BACKOFF_MAX_DELAY_MS,
+  };
+
+  it("returns baseMs at zero failures", () => {
+    expect(sweepDelayFor({ ...baseOpts, consecutiveFailures: 0 })).toBe(1000);
+  });
+
+  it("returns baseMs at exactly the failure threshold", () => {
+    expect(
+      sweepDelayFor({ ...baseOpts, consecutiveFailures: BACKOFF_THRESHOLD_FAILURES }),
+    ).toBe(1000);
+  });
+
+  it("doubles per additional failure past the threshold", () => {
+    expect(
+      sweepDelayFor({ ...baseOpts, consecutiveFailures: BACKOFF_THRESHOLD_FAILURES + 1 }),
+    ).toBe(2000);
+    expect(
+      sweepDelayFor({ ...baseOpts, consecutiveFailures: BACKOFF_THRESHOLD_FAILURES + 2 }),
+    ).toBe(4000);
+    expect(
+      sweepDelayFor({ ...baseOpts, consecutiveFailures: BACKOFF_THRESHOLD_FAILURES + 3 }),
+    ).toBe(8000);
+  });
+
+  it("clamps at maxDelayMs no matter how many failures accumulate", () => {
+    expect(
+      sweepDelayFor({ ...baseOpts, consecutiveFailures: 1000 }),
+    ).toBe(BACKOFF_MAX_DELAY_MS);
+  });
+
+  it("respects a custom threshold + max", () => {
+    expect(
+      sweepDelayFor({
+        baseMs: 100,
+        consecutiveFailures: 5,
+        thresholdFailures: 1,
+        maxDelayMs: 1000,
+      }),
+    ).toBe(1000);
   });
 });
