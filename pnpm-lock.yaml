@@ -117,6 +117,9 @@ importers:
 
   apps/orchestrator:
     dependencies:
+      '@felafel/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@felafel/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -126,6 +129,9 @@ importers:
       '@hono/zod-openapi':
         specifier: ^1.1.0
         version: 1.3.0(hono@4.12.16)(zod@4.3.6)
+      better-sqlite3:
+        specifier: ^11.0.0
+        version: 11.10.0
       hono:
         specifier: ^4.10.0
         version: 4.12.16

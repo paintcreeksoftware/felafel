@@ -1,8 +1,7 @@
 import { serve } from "@hono/node-server";
+import { createDb } from "@felafel/db";
 import { buildApp } from "@felafel/orchestrator/app";
 import { Defaults, EnvVars } from "@felafel/orchestrator/constants";
-import { SqliteRunStore } from "@felafel/orchestrator/store/runs";
-import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 import { startSweep } from "@felafel/orchestrator/sweep";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
@@ -14,10 +13,9 @@ if (!dataDir) {
   process.exit(1);
 }
 
-const workerStore = new SqliteWorkerStore(dataDir);
-const runStore = new SqliteRunStore(dataDir);
-const app = buildApp({ workerStore, runStore });
-const stopSweep = startSweep({ workerStore, runStore });
+const { db, close: closeDb } = createDb(dataDir);
+const app = buildApp({ db });
+const stopSweep = startSweep({ db });
 
 serve({ fetch: app.fetch, port, hostname }, (info) => {
   console.log(`orchestrator listening on http://${info.address}:${info.port.toString()}`);
@@ -26,8 +24,7 @@ serve({ fetch: app.fetch, port, hostname }, (info) => {
 function shutdown(signal: string): void {
   console.log(`received ${signal}, shutting down...`);
   stopSweep();
-  runStore.close();
-  workerStore.close();
+  closeDb();
   process.exit(0);
 }
 

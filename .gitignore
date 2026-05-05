@@ -20,6 +20,11 @@ dist-electron/
 release/
 apps/desktop/.dev-orchestrator-data/
 
+# tsup copies @felafel/db's migrations into apps/orchestrator/migrations
+# at build time so the bundled orchestrator finds them as a sibling of
+# dist/. Source of truth is packages/db/migrations.
+apps/orchestrator/migrations/
+
 # production
 build
 # ...except electron-builder's buildResources dir, which holds the app icon

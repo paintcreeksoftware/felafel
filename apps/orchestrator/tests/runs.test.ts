@@ -3,9 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { join } from "pathe";
+import { createDb, type DbHandle, upsertWorker } from "@felafel/db";
 import { buildApp } from "@felafel/orchestrator/app";
-import { SqliteRunStore } from "@felafel/orchestrator/store/runs";
-import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
 import { type Run, type WorkerRegistration } from "@felafel/shared";
 import { type FakeWorker, startFakeWorker } from "./helpers/fake-worker";
 
@@ -23,26 +22,23 @@ function sampleReg(
 
 describe("/runs", () => {
   let dataDir: string;
-  let workerStore: SqliteWorkerStore;
-  let runStore: SqliteRunStore;
+  let handle: DbHandle;
   let fakeWorker: FakeWorker;
 
   beforeEach(async () => {
     dataDir = mkdtempSync(join(tmpdir(), "orchestrator-runs-route-"));
-    workerStore = new SqliteWorkerStore(dataDir);
-    runStore = new SqliteRunStore(dataDir);
+    handle = createDb(dataDir);
     fakeWorker = await startFakeWorker();
   });
 
   afterEach(async () => {
     await fakeWorker.close();
-    runStore.close();
-    workerStore.close();
+    handle.close();
     rmSync(dataDir, { recursive: true, force: true });
   });
 
   it("POST /runs returns 503 when no workers are active", async () => {
-    const app = buildApp({ workerStore, runStore });
+    const app = buildApp({ db: handle.db });
     const res = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -52,8 +48,8 @@ describe("/runs", () => {
   });
 
   it("POST /runs dispatches to the active worker and returns the dispatched run", async () => {
-    workerStore.upsert(sampleReg(fakeWorker.url));
-    const app = buildApp({ workerStore, runStore });
+    upsertWorker(handle.db, sampleReg(fakeWorker.url));
+    const app = buildApp({ db: handle.db });
     const res = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -69,11 +65,11 @@ describe("/runs", () => {
   });
 
   it("POST /runs marks the run failed when the worker returns 5xx", async () => {
-    workerStore.upsert(sampleReg(fakeWorker.url));
+    upsertWorker(handle.db, sampleReg(fakeWorker.url));
     fakeWorker.setResponder(() =>
       Response.json({ error: "boom" }, { status: 500 }),
     );
-    const app = buildApp({ workerStore, runStore });
+    const app = buildApp({ db: handle.db });
     const res = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -86,8 +82,8 @@ describe("/runs", () => {
   });
 
   it("GET /runs returns runs newest-first", async () => {
-    workerStore.upsert(sampleReg(fakeWorker.url));
-    const app = buildApp({ workerStore, runStore });
+    upsertWorker(handle.db, sampleReg(fakeWorker.url));
+    const app = buildApp({ db: handle.db });
     const post = async (n: number): Promise<Run> => {
       const res = await app.request("/runs", {
         method: "POST",
@@ -108,8 +104,8 @@ describe("/runs", () => {
   });
 
   it("GET /runs/:id returns the run, or 404 when missing", async () => {
-    workerStore.upsert(sampleReg(fakeWorker.url));
-    const app = buildApp({ workerStore, runStore });
+    upsertWorker(handle.db, sampleReg(fakeWorker.url));
+    const app = buildApp({ db: handle.db });
     const submitRes = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -127,8 +123,8 @@ describe("/runs", () => {
   });
 
   it("POST /runs/:id/complete with ok:true flips status to complete", async () => {
-    workerStore.upsert(sampleReg(fakeWorker.url));
-    const app = buildApp({ workerStore, runStore });
+    upsertWorker(handle.db, sampleReg(fakeWorker.url));
+    const app = buildApp({ db: handle.db });
     const submitRes = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -148,8 +144,8 @@ describe("/runs", () => {
   });
 
   it("POST /runs/:id/complete with ok:false flips status to failed", async () => {
-    workerStore.upsert(sampleReg(fakeWorker.url));
-    const app = buildApp({ workerStore, runStore });
+    upsertWorker(handle.db, sampleReg(fakeWorker.url));
+    const app = buildApp({ db: handle.db });
     const submitRes = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -169,7 +165,7 @@ describe("/runs", () => {
   });
 
   it("POST /runs/:id/complete returns 404 for unknown run", async () => {
-    const app = buildApp({ workerStore, runStore });
+    const app = buildApp({ db: handle.db });
     const res = await app.request(`/runs/${randomUUID()}/complete`, {
       method: "POST",
       headers: { "content-type": "application/json" },

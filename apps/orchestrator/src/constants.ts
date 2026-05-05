@@ -19,6 +19,3 @@ export const Defaults = {
   PORT: "9090",
   HOST: LOCALHOST,
 } as const;
-
-/** Filename of the SQLite DB inside `ORCHESTRATOR_DATA_DIR`. */
-export const DB_FILENAME = "orchestrator.sqlite";

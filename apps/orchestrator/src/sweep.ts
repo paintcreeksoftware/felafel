@@ -1,5 +1,4 @@
-import { type RunStore } from "@felafel/orchestrator/store/runs";
-import { type WorkerStore } from "@felafel/orchestrator/store/sqlite";
+import { type Db, markRunsTimedOutSince, markWorkersStaleSince } from "@felafel/db";
 
 /** Default sweep tick — runs every 30s in production. */
 export const DEFAULT_SWEEP_INTERVAL_MS = 30_000;
@@ -12,8 +11,7 @@ export const DEFAULT_RUN_TIMEOUT_MS = 300_000;
  * Configuration accepted by {@link startSweep}.
  */
 export interface StartSweepOptions {
-  workerStore: WorkerStore;
-  runStore: RunStore;
+  db: Db;
   /** Tick, in milliseconds. */
   intervalMs?: number;
   /** Worker is considered stale if `last_seen_at` is older than this. */
@@ -51,8 +49,9 @@ export function startSweep(opts: StartSweepOptions): () => void {
     const workerThreshold = new Date(now - workerStaleAfterMs).toISOString();
     const runThreshold = new Date(now - runTimeoutMs).toISOString();
     try {
-      const workersMarked = opts.workerStore.markStaleSince(workerThreshold);
-      const runsMarked = opts.runStore.markTimedOutSince(
+      const workersMarked = markWorkersStaleSince(opts.db, workerThreshold);
+      const runsMarked = markRunsTimedOutSince(
+        opts.db,
         runThreshold,
         "dispatch timeout",
       );

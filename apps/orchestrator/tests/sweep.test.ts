@@ -3,8 +3,18 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { join } from "pathe";
-import { SqliteRunStore } from "@felafel/orchestrator/store/runs";
-import { SqliteWorkerStore } from "@felafel/orchestrator/store/sqlite";
+import {
+  createDb,
+  type DbHandle,
+  insertRun,
+  listWorkers,
+  markRunDispatched,
+  markRunComplete,
+  markRunFailed,
+  markWorkersStaleSince,
+  upsertWorker,
+  getRun,
+} from "@felafel/db";
 import { startSweep } from "@felafel/orchestrator/sweep";
 
 function sleep(ms: number): Promise<void> {
@@ -15,32 +25,28 @@ function sleep(ms: number): Promise<void> {
 
 describe("startSweep", () => {
   let dataDir: string;
-  let workerStore: SqliteWorkerStore;
-  let runStore: SqliteRunStore;
+  let handle: DbHandle;
 
   beforeEach(() => {
     dataDir = mkdtempSync(join(tmpdir(), "orchestrator-sweep-"));
-    workerStore = new SqliteWorkerStore(dataDir);
-    runStore = new SqliteRunStore(dataDir);
+    handle = createDb(dataDir);
   });
 
   afterEach(() => {
-    runStore.close();
-    workerStore.close();
+    handle.close();
     rmSync(dataDir, { recursive: true, force: true });
   });
 
   it("flips workers stale once they pass the threshold", async () => {
     const id = randomUUID();
-    workerStore.upsert({
+    upsertWorker(handle.db, {
       id,
       hostname: "test",
       controlPlaneUrl: "http://127.0.0.1:9091",
     });
 
     const stop = startSweep({
-      workerStore,
-      runStore,
+      db: handle.db,
       intervalMs: 50,
       // 1ms threshold so the just-registered worker ages out immediately
       workerStaleAfterMs: 1,
@@ -51,7 +57,7 @@ describe("startSweep", () => {
       await sleep(10); // give last_seen_at age past 1ms
       // sweep ticks every 50ms; wait at least one tick
       await sleep(80);
-      const list = workerStore.list();
+      const list = listWorkers(handle.db);
       expect(list[0]?.status).toBe("stale");
     } finally {
       stop();
@@ -65,22 +71,28 @@ describe("startSweep", () => {
       hostname: "test",
       controlPlaneUrl: "http://127.0.0.1:9091",
     };
-    workerStore.upsert(reg);
+    upsertWorker(handle.db, reg);
     await sleep(10);
-    workerStore.markStaleSince(new Date().toISOString());
-    expect(workerStore.list()[0]?.status).toBe("stale");
+    markWorkersStaleSince(handle.db, new Date().toISOString());
+    expect(listWorkers(handle.db)[0]?.status).toBe("stale");
 
-    workerStore.upsert(reg);
-    expect(workerStore.list()[0]?.status).toBe("active");
+    upsertWorker(handle.db, reg);
+    expect(listWorkers(handle.db)[0]?.status).toBe("active");
   });
 
   it("flips dispatched runs to failed once they pass the timeout", async () => {
-    const run = runStore.insert({ x: 1 });
-    runStore.markDispatched(run.id, randomUUID());
+    // FK on runs.worker_id requires the worker to exist.
+    const workerId = randomUUID();
+    upsertWorker(handle.db, {
+      id: workerId,
+      hostname: "test",
+      controlPlaneUrl: "http://127.0.0.1:9091",
+    });
+    const run = insertRun(handle.db, { x: 1 });
+    markRunDispatched(handle.db, run.id, workerId);
 
     const stop = startSweep({
-      workerStore,
-      runStore,
+      db: handle.db,
       intervalMs: 50,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 1,
@@ -89,7 +101,7 @@ describe("startSweep", () => {
     try {
       await sleep(10);
       await sleep(80);
-      const fetched = runStore.get(run.id);
+      const fetched = getRun(handle.db, run.id);
       expect(fetched?.status).toBe("failed");
       expect(fetched?.error).toBe("dispatch timeout");
     } finally {
@@ -98,16 +110,21 @@ describe("startSweep", () => {
   });
 
   it("does not touch already-complete or already-failed runs", async () => {
-    const completed = runStore.insert({ x: 1 });
-    runStore.markDispatched(completed.id, randomUUID());
-    runStore.markComplete(completed.id);
+    const workerId = randomUUID();
+    upsertWorker(handle.db, {
+      id: workerId,
+      hostname: "test",
+      controlPlaneUrl: "http://127.0.0.1:9091",
+    });
+    const completed = insertRun(handle.db, { x: 1 });
+    markRunDispatched(handle.db, completed.id, workerId);
+    markRunComplete(handle.db, completed.id);
 
-    const failed = runStore.insert({ x: 2 });
-    runStore.markFailed(failed.id, "earlier error");
+    const failed = insertRun(handle.db, { x: 2 });
+    markRunFailed(handle.db, failed.id, "earlier error");
 
     const stop = startSweep({
-      workerStore,
-      runStore,
+      db: handle.db,
       intervalMs: 50,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 1,
@@ -116,8 +133,8 @@ describe("startSweep", () => {
     try {
       await sleep(10);
       await sleep(80);
-      expect(runStore.get(completed.id)?.status).toBe("complete");
-      expect(runStore.get(failed.id)?.error).toBe("earlier error");
+      expect(getRun(handle.db, completed.id)?.status).toBe("complete");
+      expect(getRun(handle.db, failed.id)?.error).toBe("earlier error");
     } finally {
       stop();
     }
@@ -125,15 +142,14 @@ describe("startSweep", () => {
 
   it("stop() halts the loop", async () => {
     const id = randomUUID();
-    workerStore.upsert({
+    upsertWorker(handle.db, {
       id,
       hostname: "test",
       controlPlaneUrl: "http://127.0.0.1:9091",
     });
 
     const stop = startSweep({
-      workerStore,
-      runStore,
+      db: handle.db,
       intervalMs: 50,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 60_000,
@@ -143,6 +159,6 @@ describe("startSweep", () => {
     // Re-register fresh worker after stop, then mark it stale via direct
     // update; ensure the (stopped) sweep doesn't act.
     await sleep(80);
-    expect(workerStore.list()[0]?.status).toBe("active");
+    expect(listWorkers(handle.db)[0]?.status).toBe("active");
   });
 });
