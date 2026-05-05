@@ -15,6 +15,11 @@ const SLEEP_MS = 5;
 import { type WorkerRegistration } from "@felafel/contracts";
 import { createDb, type DbHandle } from "@felafel/db";
 import {
+  insertRun,
+  markRunDispatched,
+} from "@felafel/db/queries/runs";
+import {
+  deleteWorker,
   listWorkers,
   markWorkersStaleSince,
   upsertWorker,
@@ -129,6 +134,48 @@ describe("workers queries", () => {
       markWorkersStaleSince(handle.db, "9999-01-01T00:00:00.000Z");
       const second = markWorkersStaleSince(handle.db, "9999-01-01T00:00:00.000Z");
       expect(second).toBe(0);
+    });
+  });
+
+  describe("deleteWorker", () => {
+    it("hard-deletes a worker with no referencing runs", () => {
+      upsertWorker(handle.db, reg());
+      const result = deleteWorker(handle.db, workerUuidA);
+      expect(result).toEqual({ outcome: "deleted" });
+      expect(listWorkers(handle.db)).toEqual([]);
+    });
+
+    it("returns 'missing' for an id that doesn't exist", () => {
+      const result = deleteWorker(handle.db, workerUuidA);
+      expect(result).toEqual({ outcome: "missing" });
+    });
+
+    it("returns 'blocked' with the count when runs reference the worker", () => {
+      upsertWorker(handle.db, reg());
+      const run1 = insertRun(handle.db, { kind: "noop" });
+      const run2 = insertRun(handle.db, { kind: "noop" });
+      markRunDispatched(handle.db, run1.id, workerUuidA);
+      markRunDispatched(handle.db, run2.id, workerUuidA);
+
+      const result = deleteWorker(handle.db, workerUuidA);
+      expect(result).toEqual({ outcome: "blocked", referencingRunCount: 2 });
+      // Confirm the worker row was NOT deleted.
+      expect(listWorkers(handle.db)).toHaveLength(1);
+    });
+
+    it("only counts runs that reference THIS worker, not other workers", () => {
+      upsertWorker(handle.db, reg({ id: workerUuidA }));
+      upsertWorker(
+        handle.db,
+        reg({ id: workerUuidB, hostname: "nuc-2", controlPlaneUrl: "http://100.64.0.2:7777" }),
+      );
+      const run = insertRun(handle.db, { kind: "noop" });
+      markRunDispatched(handle.db, run.id, workerUuidB);
+
+      // workerA has no referencing runs even though workerB does.
+      const result = deleteWorker(handle.db, workerUuidA);
+      expect(result).toEqual({ outcome: "deleted" });
+      expect(listWorkers(handle.db).map((w) => w.id)).toEqual([workerUuidB]);
     });
   });
 });
