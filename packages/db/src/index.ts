@@ -8,6 +8,8 @@
 export { createDb, type Db, type DbHandle } from "@felafel/db/client";
 
 export {
+  deleteWorker,
+  type DeleteWorkerResult,
   listWorkers,
   markWorkersStaleSince,
   upsertWorker,
