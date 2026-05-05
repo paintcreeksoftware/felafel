@@ -29,6 +29,23 @@ export const Defaults = {
 } as const;
 
 /**
+ * Bounded-retry parameters for the `POST /runs/:id/complete` callback.
+ * The orchestrator's stale-run sweep marks `dispatched` runs as `failed`
+ * after 5 minutes — these settings keep the total retry window well
+ * under that threshold (max ~9.5s) so transient orchestrator
+ * unavailability during the callback window doesn't quietly become a
+ * "dispatch timeout" on a run that actually succeeded.
+ */
+export const CompleteCallbackRetry = {
+  /** Total attempts including the initial one. */
+  MAX_ATTEMPTS: 5,
+  /** Initial backoff between retries, in ms. Doubled per attempt. */
+  INITIAL_DELAY_MS: 250,
+  /** Cap on the backoff between retries, in ms. */
+  MAX_DELAY_MS: 4_000,
+} as const;
+
+/**
  * Default filesystem path for the worker's identity file. Linux-only — XDG
  * Base Directory Specification is a freedesktop.org spec; the worker is
  * Linux-only for v0 (homelab + container deployments). Override with the
