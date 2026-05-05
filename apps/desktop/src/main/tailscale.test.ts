@@ -6,6 +6,7 @@
 // on the test machine.
 import { describe, expect, it } from "vitest";
 import {
+  classifyServeError,
   classifyUpError,
   parseServeConfigJson,
   parseStatusJson,
@@ -202,5 +203,51 @@ describe("parseServeConfigJson", () => {
 
   it("returns null when stdout is empty", () => {
     expect(parseServeConfigJson("", 9090)).toBeNull();
+  });
+});
+
+describe("classifyServeError", () => {
+  it("returns timeout when timedOut=true regardless of stderr content", () => {
+    expect(classifyServeError("permission denied", 1, true)).toMatchObject({ kind: "timeout" });
+  });
+
+  it("classifies 'permission denied' stderr as eacces", () => {
+    expect(
+      classifyServeError(
+        "tailscale: permission denied on /var/run/tailscale/tailscaled.sock",
+        1,
+        false,
+      ),
+    ).toMatchObject({ kind: "eacces" });
+  });
+
+  it("classifies tailscaled.sock connect failures as no-daemon", () => {
+    expect(
+      classifyServeError("dial unix /var/run/tailscale/tailscaled.sock: no such file", 1, false),
+    ).toMatchObject({ kind: "no-daemon" });
+  });
+
+  it("classifies 'address already in use' as port-in-use", () => {
+    expect(classifyServeError("listen tcp :9090: address already in use", 1, false)).toMatchObject({
+      kind: "port-in-use",
+    });
+  });
+
+  it("classifies 'already serving on port' as port-in-use", () => {
+    expect(classifyServeError("port 9090 already serving", 1, false)).toMatchObject({
+      kind: "port-in-use",
+    });
+  });
+
+  it("falls through to unknown for unmatched stderr", () => {
+    expect(classifyServeError("something completely unexpected", 7, false)).toMatchObject({
+      kind: "unknown",
+    });
+  });
+
+  it("EACCES wins over port-in-use when both phrases appear", () => {
+    expect(
+      classifyServeError("permission denied while binding port already in use", 1, false),
+    ).toMatchObject({ kind: "eacces" });
   });
 });
