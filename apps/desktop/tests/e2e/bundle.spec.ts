@@ -58,9 +58,15 @@ function extractImportSpecifiers(src: string): string[] {
   return [...matches].map((m) => m[1]).filter((id): id is string => id !== undefined);
 }
 
-function externalizedSpecifiers(bundlePath: string): string[] {
+function externalizedSpecifiers(bundlePath: string, allowed: ReadonlySet<string> = new Set()): string[] {
   const src = readFileSync(bundlePath, "utf8");
-  return [...new Set(extractImportSpecifiers(src).filter((id) => !isAllowedExternal(id)))];
+  return [
+    ...new Set(
+      extractImportSpecifiers(src).filter(
+        (id) => !isAllowedExternal(id) && !allowed.has(id),
+      ),
+    ),
+  ];
 }
 
 test("desktop main bundle inlines all package deps", () => {
@@ -73,10 +79,21 @@ test("desktop preload bundle inlines all package deps", () => {
   expect(externalizedSpecifiers(bundlePath)).toEqual([]);
 });
 
-test("orchestrator sidecar bundle inlines all package deps", () => {
+// Native modules can't be bundled (the .node binary stub uses CJS
+// `require()` calls that ESM bundles can't honor — see PAI-89_6's
+// tsup.config.ts comment on `external: ["better-sqlite3"]` for the
+// failure mode). Each one we add must stay in node_modules at runtime
+// AND ship via electron-builder's `extraResources` for the AppImage
+// sidecar to load it. Allowlisted here so the test stays meaningful as
+// other unintended externalizations regress; new entries should require
+// matching electron-builder + Dockerfile changes.
+const NATIVE_MODULES_ALLOWED_EXTERNAL = new Set(["better-sqlite3"]);
+
+test("orchestrator sidecar bundle inlines all non-native deps", () => {
   // Shipped via electron-builder.yml's extraResources block, so the
-  // AppImage packs dist/index.mjs with no node_modules beside it. Same
-  // hygiene requirement as desktop main/preload.
+  // AppImage packs dist/index.mjs without a node_modules tree beside
+  // it. Same hygiene requirement as desktop main/preload, modulo the
+  // native-module allowlist.
   const bundlePath = join(repoRoot, "apps", "orchestrator", "dist", "index.mjs");
-  expect(externalizedSpecifiers(bundlePath)).toEqual([]);
+  expect(externalizedSpecifiers(bundlePath, NATIVE_MODULES_ALLOWED_EXTERNAL)).toEqual([]);
 });
