@@ -94,6 +94,72 @@ describe("OrchestratorManager.setupTailnetServe", () => {
   });
 });
 
+describe("OrchestratorManager.getServeDegradation", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
+  it("returns null when setupTailnetServe ran without error", async () => {
+    const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    await m.setupTailnetServe(54321);
+    expect(m.getServeDegradation()).toBeNull();
+  });
+
+  it("captures classification fields from a typed ServeFailureError", async () => {
+    // publishServe throws an Error decorated with `classification` per
+    // PAI-106's typed-tag pattern. setupTailnetServe should read the
+    // classification's message + remediation into the degradation field.
+    const taggedError: Error & {
+      classification: { kind: string; message: string; remediation?: string };
+    } = Object.assign(new Error("tailscale serve (eacces): denied"), {
+      classification: {
+        kind: "eacces",
+        message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+        remediation: "sudo tailscale set --operator=$USER",
+      },
+    });
+    const ts = mockTailscale({
+      probeStatus: vi.fn().mockResolvedValue(connectedStatus),
+      publishServe: vi.fn().mockRejectedValue(taggedError),
+    });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    await m.setupTailnetServe(54321);
+    expect(m.getServeDegradation()).toEqual({
+      reason: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+      remediation: "sudo tailscale set --operator=$USER",
+    });
+  });
+
+  it("falls back to error.message when the throw isn't a typed ServeFailureError", async () => {
+    const ts = mockTailscale({
+      probeStatus: vi.fn().mockResolvedValue(connectedStatus),
+      publishServe: vi.fn().mockRejectedValue(new Error("something untyped")),
+    });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    await m.setupTailnetServe(54321);
+    expect(m.getServeDegradation()).toEqual({ reason: "something untyped" });
+  });
+
+  it("clears a stale degradation on a new successful setupTailnetServe", async () => {
+    // First run fails → degradation captured.
+    const ts = mockTailscale({
+      probeStatus: vi.fn().mockResolvedValue(connectedStatus),
+      publishServe: vi.fn().mockRejectedValueOnce(new Error("first failure")).mockResolvedValueOnce(),
+    });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    await m.setupTailnetServe(54321);
+    expect(m.getServeDegradation()).not.toBeNull();
+    // Second run succeeds → degradation reset to null.
+    await m.setupTailnetServe(54321);
+    expect(m.getServeDegradation()).toBeNull();
+  });
+});
+
 describe("OrchestratorManager.stop", () => {
   /** Build a manager with a fake child so stop() has something to kill without a real spawn. */
   function withFakeProcess(ts: TailscaleManager): {
