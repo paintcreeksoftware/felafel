@@ -660,7 +660,7 @@ export class TailscaleManager {
 
   /**
    * Map a stable Tailnet TCP port to a local loopback port via
-   * `tailscale serve --tcp=<tailnetPort> tcp://127.0.0.1:<localPort>`.
+   * `tailscale serve --bg --tcp=<tailnetPort> tcp://127.0.0.1:<localPort>`.
    * Idempotent — re-publishing the same mapping is a no-op for Tailscale,
    * and republishing with a different `localPort` overwrites the prior
    * target.
@@ -670,6 +670,13 @@ export class TailscaleManager {
    * to the local target. Lets the orchestrator keep an ephemeral local
    * bind without sacrificing remote discoverability.
    *
+   * `--bg` (background) publish so the mapping persists past the calling
+   * process and `tailscale serve status` (without `--json`) shows it. The
+   * trade-off is that a hard-killed AppImage leaves the mapping behind;
+   * `setupTailnetServe`'s reap-on-startup catches that on next launch
+   * by reading the existing mapping and unpublishing it before
+   * re-publishing the new ephemeral port.
+   *
    * @param opts.tailnetPort - stable Tailnet-side TCP port
    * @param opts.localPort - local loopback port the orchestrator picked
    * @throws when the underlying `tailscale serve` invocation fails for a
@@ -678,6 +685,7 @@ export class TailscaleManager {
   async publishServe(opts: { tailnetPort: number; localPort: number }): Promise<void> {
     await this.runServeCommand([
       "serve",
+      "--bg",
       `--tcp=${String(opts.tailnetPort)}`,
       `tcp://${LOCALHOST}:${String(opts.localPort)}`,
     ]);

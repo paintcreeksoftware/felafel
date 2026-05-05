@@ -308,7 +308,7 @@ describe("TailscaleManager serve methods (with mocked execa)", () => {
     await manager.publishServe({ tailnetPort: 9090, localPort: 54321 });
     expect(execa).toHaveBeenCalledWith(
       stubBinary,
-      ["serve", "--tcp=9090", "tcp://127.0.0.1:54321"],
+      ["serve", "--bg", "--tcp=9090", "tcp://127.0.0.1:54321"],
       expect.any(Object),
     );
   });
