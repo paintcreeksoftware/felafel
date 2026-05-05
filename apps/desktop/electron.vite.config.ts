@@ -21,12 +21,14 @@
 // electron-userland/electron-builder#9654 and PAI-90 for the failure
 // surface. Bundling sidesteps the dep walker entirely.
 //
-// If a future native module (e.g. `better-sqlite3`) ever lands in this
-// app, it MUST be externalized — native `.node` binaries can't be
-// bundled by Rollup. At that point either re-introduce
-// `externalizeDepsPlugin` scoped to the native package(s) only, or
-// pass an explicit `external` array to `rollupOptions`. Today the
-// desktop main/preload have no native deps.
+// If a future native module ever lands in this app, it MUST be
+// externalized — native `.node` binaries can't be bundled by Rollup.
+// At that point either re-introduce `externalizeDepsPlugin` scoped to
+// the native package(s) only, or pass an explicit `external` array to
+// `rollupOptions`. Today the desktop main/preload have no native deps.
+// (Historically `better-sqlite3` was the canonical example via
+// `@felafel/db`; PAI-103 replaced it with `node:sqlite` so the
+// orchestrator sidecar's bundle has no native modules either.)
 import { resolve } from "pathe";
 import { defineConfig } from "electron-vite";
 import react from "@vitejs/plugin-react";

@@ -3,26 +3,14 @@
 # installs the workspace deps and produces dist/index.mjs + a flattened
 # prod node_modules via `pnpm deploy`. Runtime ships just that.
 #
-# Base image: `node:24-slim` (Debian-slim, glibc) instead of
-# `node:24-alpine`. Reason: @felafel/db pulls in `better-sqlite3`, whose
-# prebuilds are glibc-only — Alpine (musl) would force a source compile
-# requiring Python + build-base in the builder, AND a runtime that can
-# load a glibc-compiled .node binary (which Alpine can't). Slim is ~75MB
-# vs alpine's ~30MB; the size delta is acceptable for working
-# native-module support out of the box.
+# Base image: `node:24-slim` (Debian-slim, glibc). After the PAI-103
+# cutover from better-sqlite3 to node:sqlite, there are no native
+# modules left in the orchestrator bundle — we could move to
+# `node:24-alpine` (musl) for a ~45MB size reduction. Deferred to a
+# separate ticket so this change stays scoped to the driver swap.
 
 FROM node:24-slim AS builder
 WORKDIR /repo
-# Python + build tools for better-sqlite3's source compile.
-# better-sqlite3@11.x doesn't ship Node 24 prebuilts (last prebuilt
-# version is Node 22), so the postinstall falls back to building from
-# source. Upgrading to better-sqlite3@12.x would remove this need but
-# is out of scope here. Slim's base image is bare; install the toolchain,
-# do the install, then `pnpm deploy` strips everything that isn't a
-# runtime dep — so the runtime stage stays toolchain-free.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 
 # Cache install layer by copying only manifests first.
