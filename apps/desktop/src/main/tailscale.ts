@@ -23,8 +23,9 @@
 import { execa } from "execa";
 import pRetry from "p-retry";
 import which from "which";
+import { z } from "zod";
 import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
-import { DesktopEnvVars } from "@felafel/desktop/main/constants";
+import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 
 /** Initial backoff between `tailscale status` retries on transient errors. */
 const PROBE_RETRY_INITIAL_DELAY_MS = 200;
@@ -35,6 +36,41 @@ const PROBE_RETRY_MAX_ATTEMPTS = 4;
 
 /** Cap on stderr preview length when classifying or logging an unmatched `tailscale up` failure. */
 const STDERR_PREVIEW_MAX_LEN = 500;
+
+/** Maximum valid TCP/UDP port number per RFC 793. */
+const MAX_PORT_NUMBER = 65535;
+
+/**
+ * Zod schema for a TCP forward entry inside `tailscale serve`'s ServeConfig
+ * JSON. We only care about the `TCPForward: "host:port"` shape — HTTPS
+ * termination and Web routes are ignored. Schema is intentionally narrow:
+ * extra fields on the entry pass through untouched so a CLI version bump
+ * doesn't break the parse.
+ */
+const ServeTcpEntrySchema = z.object({
+  TCPForward: z
+    .string()
+    // "host:port" — split on the last colon so an IPv6 literal like
+    // "[::1]:54321" still parses cleanly.
+    .transform((value, ctx) => {
+      const colon = value.lastIndexOf(":");
+      if (colon === -1) {
+        ctx.addIssue({ code: "custom", message: "TCPForward missing port" });
+        return z.NEVER;
+      }
+      const port = Number(value.slice(colon + 1));
+      if (!Number.isInteger(port) || port <= 0 || port > MAX_PORT_NUMBER) {
+        ctx.addIssue({ code: "custom", message: "TCPForward port out of range" });
+        return z.NEVER;
+      }
+      return port;
+    }),
+});
+
+/** Top-level shape of `tailscale serve status --json`. */
+const ServeConfigSchema = z.object({
+  TCP: z.record(z.string(), ServeTcpEntrySchema).optional(),
+});
 
 /** 5-second cap on a single status probe. */
 const PROBE_SINGLE_ATTEMPT_TIMEOUT_MS = 5_000;
@@ -146,6 +182,102 @@ export function classifyUpError(
   return {
     kind: "unknown",
     message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale up exited with code ${exitCode}`,
+  };
+}
+
+/**
+ * Pure parser. Reads `tailscale serve status --json` stdout and pulls out
+ * the local TCPForward target for a specific Tailnet port. Returns null
+ * when no such mapping exists (or the JSON is malformed) so callers can
+ * use it both to detect "is anything published?" and "what's it pointing at?"
+ *
+ * The `tailscale serve` config schema (Tailscale's `ServeConfig` type) keys
+ * TCP forwards by port-number-as-string and stores the local target as
+ * `TCPForward: "host:port"`. Anything else (HTTPS termination, Web routes,
+ * Funnel) is ignored — we only care about raw TCP forwarding here.
+ *
+ * @param stdout - raw stdout from `tailscale serve status --json`
+ * @param tailnetPort - the Tailnet-side port we want the mapping for
+ * @returns `{ targetLocalPort }` if a TCP forward exists for this port, else null
+ */
+export function parseServeConfigJson(
+  stdout: string,
+  tailnetPort: number,
+): { targetLocalPort: number } | null {
+  try {
+    const result = ServeConfigSchema.safeParse(JSON.parse(stdout));
+    if (!result.success) {
+      // Malformed shape from a CLI we shell out to is a real bug
+      // (tailscale version mismatch, partial output, etc.). Return null
+      // because the call-site treats absence and corruption the same way,
+      // but log so the bug is observable instead of silently masked.
+      console.warn(
+        "[tailscale] `serve status --json` failed schema validation:",
+        result.error.message,
+      );
+      return null;
+    }
+    const targetLocalPort = result.data.TCP?.[String(tailnetPort)]?.TCPForward;
+    return targetLocalPort === undefined ? null : { targetLocalPort };
+  } catch {
+    console.warn(
+      "[tailscale] malformed `serve status --json` output:",
+      stdout.slice(0, STDERR_PREVIEW_MAX_LEN),
+    );
+    return null;
+  }
+}
+
+/** Classification of a `tailscale serve` failure. */
+export interface ServeErrorClassification {
+  kind: "eacces" | "no-daemon" | "port-in-use" | "timeout" | "unknown";
+  message: string;
+}
+
+/**
+ * Pure classifier. Reads stderr/stdout from `tailscale serve` and decides
+ * which failure mode we're in. Mirrors {@link classifyUpError}'s priority
+ * ordering — EACCES wins over everything else because it's the most
+ * actionable.
+ *
+ * @param stderr - combined stderr (stdout can be appended) from the CLI run
+ * @param exitCode - CLI exit code, or null if it timed out
+ * @param timedOut - true when the outer AbortController fired
+ * @returns the classified failure
+ */
+export function classifyServeError(
+  stderr: string,
+  exitCode: number | null,
+  timedOut: boolean,
+): ServeErrorClassification {
+  if (timedOut) {
+    return {
+      kind: "timeout",
+      message: "Tailscale didn't respond — check your network and try again.",
+    };
+  }
+  if (/permission denied|\bEACCES\b/i.test(stderr)) {
+    return {
+      kind: "eacces",
+      message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+    };
+  }
+  if (/(failed to connect.*tailscaled|tailscaled\.sock)/i.test(stderr)) {
+    return {
+      kind: "no-daemon",
+      message: "The tailscaled daemon isn't running on this machine.",
+    };
+  }
+  if (/already (in use|configured|serving)|address.*in use/i.test(stderr)) {
+    return {
+      kind: "port-in-use",
+      message: "That Tailnet port is already published by another process.",
+    };
+  }
+  console.warn("[tailscale] Unmatched stderr from tailscale serve:", stderr.slice(0, STDERR_PREVIEW_MAX_LEN));
+  return {
+    kind: "unknown",
+    message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale serve exited with code ${exitCode}`,
   };
 }
 
@@ -272,10 +404,10 @@ export class TailscaleManager {
       this.cachedStatus = await pRetry(
         async () => {
           lastResult = await this.tryProbeOnce(binary);
-          const isTransient =
+          if (
             lastResult.kind === "error"
-            && /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message);
-          if (isTransient) {
+            && /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message)
+          ) {
             throw new Error(lastResult.message);
           }
           return lastResult;
@@ -495,6 +627,123 @@ export class TailscaleManager {
       this.stdinSupportCache = false;
     }
     return this.stdinSupportCache;
+  }
+
+  /**
+   * Resolve the cached `tailscale` binary path or throw if it isn't on
+   * PATH. Centralizes the fail-fast precondition for every method that
+   * needs to spawn the CLI — a single source of the error message, called
+   * from the spawn sites instead of an `if (!binary)` branch in each.
+   *
+   * Callers that want to short-circuit before any work (e.g. the desktop
+   * main process at startup) can call this once explicitly to verify
+   * Tailscale availability before constructing dependent components.
+   *
+   * @returns absolute path to the `tailscale` binary
+   * @throws when the binary cannot be resolved on PATH
+   */
+  async requireBinary(): Promise<string> {
+    const binary = await this.findBinary();
+    if (!binary) {
+      throw new Error("Tailscale binary not found on PATH");
+    }
+    return binary;
+  }
+
+  /**
+   * Map a stable Tailnet TCP port to a local loopback port via
+   * `tailscale serve --tcp=<tailnetPort> tcp://127.0.0.1:<localPort>`.
+   * Idempotent — re-publishing the same mapping is a no-op for Tailscale,
+   * and republishing with a different `localPort` overwrites the prior
+   * target.
+   *
+   * Workers on the same Tailnet can then dial
+   * `http://<this-node-magicdns-name>:<tailnetPort>`; Tailscale forwards
+   * to the local target. Lets the orchestrator keep an ephemeral local
+   * bind without sacrificing remote discoverability.
+   *
+   * @param opts.tailnetPort - stable Tailnet-side TCP port
+   * @param opts.localPort - local loopback port the orchestrator picked
+   * @throws when the underlying `tailscale serve` invocation fails for a
+   *   non-recoverable reason (no daemon, permission denied, port in use)
+   */
+  async publishServe(opts: { tailnetPort: number; localPort: number }): Promise<void> {
+    await this.runServeCommand([
+      "serve",
+      `--tcp=${String(opts.tailnetPort)}`,
+      `tcp://${LOCALHOST}:${String(opts.localPort)}`,
+    ]);
+  }
+
+  /**
+   * Tear down the Tailnet→local TCP forward for `tailnetPort`. Idempotent:
+   * a no-op when nothing is published. Should be called on graceful
+   * shutdown so the AppImage doesn't leave a stale mapping pointing at a
+   * dead local port.
+   *
+   * @param opts.tailnetPort - the stable Tailnet port to clear
+   */
+  async unpublishServe(opts: { tailnetPort: number }): Promise<void> {
+    await this.runServeCommand([
+      "serve",
+      `--tcp=${String(opts.tailnetPort)}`,
+      "off",
+    ]);
+  }
+
+  /**
+   * Read the current `tailscale serve` config and return what's mapped to
+   * `tailnetPort`, or null if nothing is mapped. Used at startup to detect
+   * a stale mapping left by a prior crashed AppImage launch (so we can
+   * unpublish + republish with the new ephemeral port instead of leaving
+   * a dangling forward to a dead PID).
+   *
+   * Caller MUST have confirmed Tailscale is available (e.g. via
+   * {@link probeStatus}) before calling — this method throws if the binary
+   * is missing rather than silently returning null. Null is reserved for
+   * the genuine "no mapping configured" case.
+   *
+   * @param opts.tailnetPort - the Tailnet port to look up
+   * @returns `{ targetLocalPort }` when a TCP forward exists, else null
+   * @throws when the `tailscale` binary is missing on PATH
+   */
+  async readServePublished(
+    opts: { tailnetPort: number },
+  ): Promise<{ targetLocalPort: number } | null> {
+    const binary = await this.requireBinary();
+    const result = await execa(binary, ["serve", "status", "--json"], {
+      cancelSignal: AbortSignal.timeout(PROBE_SINGLE_ATTEMPT_TIMEOUT_MS),
+      reject: false,
+    });
+    // Tailscale exits non-zero with no JSON when nothing is configured;
+    // treat that as "nothing mapped" rather than a hard error.
+    if (result.stdout.trim().length === 0) {
+      return null;
+    }
+    return parseServeConfigJson(result.stdout, opts.tailnetPort);
+  }
+
+  /**
+   * Shared spawn wrapper for `tailscale serve` mutating commands (publish,
+   * unpublish). Handles binary discovery, abort-aware timeout, and error
+   * classification. Throws a descriptive Error on failure so callers can
+   * just `await` and let exceptions propagate.
+   *
+   * @param args - argv to pass after the resolved tailscale binary
+   * @throws when the binary is missing or the CLI returns a classified failure
+   */
+  private async runServeCommand(args: string[]): Promise<void> {
+    const binary = await this.requireBinary();
+    const result = await execa(binary, args, {
+      cancelSignal: AbortSignal.timeout(UP_OUTER_TIMEOUT_MS),
+      reject: false,
+    });
+    if (result.exitCode === 0 && !result.isCanceled) {
+      return;
+    }
+    const combined = `${result.stdout}\n${result.stderr}`;
+    const cls = classifyServeError(combined, result.exitCode ?? null, result.isCanceled);
+    throw new Error(`tailscale serve (${cls.kind}): ${cls.message}`);
   }
 }
 
