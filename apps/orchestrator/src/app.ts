@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 
 import {
   type Db,
+  deleteWorker,
   getRun,
   insertRun,
   listRuns,
@@ -20,7 +21,11 @@ import {
   listRunsRoute,
   submitRunRoute,
 } from "@felafel/orchestrator/routes/runs";
-import { listWorkersRoute, registerWorkerRoute } from "@felafel/orchestrator/routes/workers";
+import {
+  deleteWorkerRoute,
+  listWorkersRoute,
+  registerWorkerRoute,
+} from "@felafel/orchestrator/routes/workers";
 
 export interface BuildAppOptions {
   db: Db;
@@ -43,6 +48,26 @@ export function buildApp(opts: BuildAppOptions) {
     .openapi(registerWorkerRoute, (c) =>
       c.json(upsertWorker(opts.db, c.req.valid("json"))),
     )
+    .openapi(deleteWorkerRoute, (c) => {
+      const { id } = c.req.valid("param");
+      const result = deleteWorker(opts.db, id);
+      if (result.outcome === "missing") {
+        // oxlint-disable-next-line no-magic-numbers -- 404 is the published HTTP "Not Found" status
+        return c.json({ message: "no worker with that id" }, 404);
+      }
+      if (result.outcome === "blocked") {
+        return c.json(
+          {
+            message: `cannot delete: ${result.referencingRunCount.toString()} run(s) reference this worker`,
+            referencingRunCount: result.referencingRunCount,
+          },
+          // oxlint-disable-next-line no-magic-numbers -- 409 is the published HTTP "Conflict" status
+          409,
+        );
+      }
+      // oxlint-disable-next-line no-magic-numbers -- 204 is the published HTTP "No Content" status
+      return c.body(null, 204);
+    })
     .openapi(submitRunRoute, async (c) => {
       const { payload } = c.req.valid("json");
       const activeWorker = listWorkers(opts.db).find((w) => w.status === "active");

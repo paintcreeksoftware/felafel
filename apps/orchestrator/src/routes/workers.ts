@@ -42,3 +42,47 @@ export const registerWorkerRoute = createRoute({
     },
   },
 });
+
+/**
+ * Schema for a 409 response from DELETE /workers/{id} when one or more
+ * runs reference the worker. Includes the count so the renderer can
+ * surface it in the inline error message ("12 runs reference this worker
+ * — can't forget yet").
+ */
+const DeleteWorkerBlockedSchema = z.object({
+  message: z.string(),
+  referencingRunCount: z.number().int().nonnegative(),
+});
+
+export const deleteWorkerRoute = createRoute({
+  method: "delete",
+  path: "/workers/{id}",
+  description:
+    "Hard-delete a worker by wire UUID. Refuses (409) if any rows in " +
+    "`runs` reference this worker — preserves run history rather than " +
+    "orphaning the FK or cascading deletes.",
+  request: {
+    params: z.object({ id: z.uuid() }),
+  },
+  responses: {
+    204: {
+      description: "Worker deleted; no body.",
+    },
+    404: {
+      description: "No worker with that id.",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+    },
+    409: {
+      description: "Cannot delete: one or more runs reference this worker.",
+      content: {
+        "application/json": {
+          schema: DeleteWorkerBlockedSchema,
+        },
+      },
+    },
+  },
+});
