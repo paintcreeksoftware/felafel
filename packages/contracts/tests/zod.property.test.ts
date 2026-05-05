@@ -20,6 +20,7 @@ import {
   date,
   dictionary,
   jsonValue,
+  pre,
   record,
   string,
   uuid,
@@ -156,3 +157,27 @@ describe("schema arbitraries match their schemas — runs", () => {
 // JS-object equality from wire equality and require careful
 // arbitrary filtering. Worth doing right in a follow-up; not a
 // blocker for the v0 scaffold.
+
+// Targeted rejection: pin a few fields to known-invalid values while
+// letting the rest be arbitrary. Catches a future refactor that
+// drops a refinement (e.g. `z.uuid()` → `z.string()`) — example
+// tests that only use valid UUIDs would miss this. Preconditions
+// (`pre()`) filter out coincidentally-valid second arbitraries.
+describe("schema rejects malformed input on refined fields", () => {
+  test.prop([workerRegistrationArb(), string({ minLength: 1, maxLength: 20 })])(
+    "WorkerRegistrationSchema rejects non-UUID id",
+    (base, nonUuid) => {
+      pre(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nonUuid));
+      const result = WorkerRegistrationSchema.safeParse({ ...(base as object), id: nonUuid });
+      expect(result.success).toBe(false);
+    },
+  );
+
+  test.prop([workerRegistrationArb()])(
+    "WorkerRegistrationSchema rejects empty hostname",
+    (base) => {
+      const result = WorkerRegistrationSchema.safeParse({ ...(base as object), hostname: "" });
+      expect(result.success).toBe(false);
+    },
+  );
+});
