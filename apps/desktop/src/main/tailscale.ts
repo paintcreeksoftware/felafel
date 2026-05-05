@@ -23,6 +23,7 @@
 import { execa } from "execa";
 import pRetry from "p-retry";
 import which from "which";
+import { z } from "zod";
 import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
 import { DesktopEnvVars } from "@felafel/desktop/main/constants";
 
@@ -35,6 +36,41 @@ const PROBE_RETRY_MAX_ATTEMPTS = 4;
 
 /** Cap on stderr preview length when classifying or logging an unmatched `tailscale up` failure. */
 const STDERR_PREVIEW_MAX_LEN = 500;
+
+/** Maximum valid TCP/UDP port number per RFC 793. */
+const MAX_PORT_NUMBER = 65535;
+
+/**
+ * Zod schema for a TCP forward entry inside `tailscale serve`'s ServeConfig
+ * JSON. We only care about the `TCPForward: "host:port"` shape — HTTPS
+ * termination and Web routes are ignored. Schema is intentionally narrow:
+ * extra fields on the entry pass through untouched so a CLI version bump
+ * doesn't break the parse.
+ */
+const ServeTcpEntrySchema = z.object({
+  TCPForward: z
+    .string()
+    // "host:port" — split on the last colon so an IPv6 literal like
+    // "[::1]:54321" still parses cleanly.
+    .transform((value, ctx) => {
+      const colon = value.lastIndexOf(":");
+      if (colon === -1) {
+        ctx.addIssue({ code: "custom", message: "TCPForward missing port" });
+        return z.NEVER;
+      }
+      const port = Number(value.slice(colon + 1));
+      if (!Number.isInteger(port) || port <= 0 || port > MAX_PORT_NUMBER) {
+        ctx.addIssue({ code: "custom", message: "TCPForward port out of range" });
+        return z.NEVER;
+      }
+      return port;
+    }),
+});
+
+/** Top-level shape of `tailscale serve status --json`. */
+const ServeConfigSchema = z.object({
+  TCP: z.record(z.string(), ServeTcpEntrySchema).optional(),
+});
 
 /** 5-second cap on a single status probe. */
 const PROBE_SINGLE_ATTEMPT_TIMEOUT_MS = 5_000;
@@ -147,6 +183,49 @@ export function classifyUpError(
     kind: "unknown",
     message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale up exited with code ${exitCode}`,
   };
+}
+
+/**
+ * Pure parser. Reads `tailscale serve status --json` stdout and pulls out
+ * the local TCPForward target for a specific Tailnet port. Returns null
+ * when no such mapping exists (or the JSON is malformed) so callers can
+ * use it both to detect "is anything published?" and "what's it pointing at?"
+ *
+ * The `tailscale serve` config schema (Tailscale's `ServeConfig` type) keys
+ * TCP forwards by port-number-as-string and stores the local target as
+ * `TCPForward: "host:port"`. Anything else (HTTPS termination, Web routes,
+ * Funnel) is ignored — we only care about raw TCP forwarding here.
+ *
+ * @param stdout - raw stdout from `tailscale serve status --json`
+ * @param tailnetPort - the Tailnet-side port we want the mapping for
+ * @returns `{ targetLocalPort }` if a TCP forward exists for this port, else null
+ */
+export function parseServeConfigJson(
+  stdout: string,
+  tailnetPort: number,
+): { targetLocalPort: number } | null {
+  try {
+    const result = ServeConfigSchema.safeParse(JSON.parse(stdout));
+    if (!result.success) {
+      // Malformed shape from a CLI we shell out to is a real bug
+      // (tailscale version mismatch, partial output, etc.). Return null
+      // because the call-site treats absence and corruption the same way,
+      // but log so the bug is observable instead of silently masked.
+      console.warn(
+        "[tailscale] `serve status --json` failed schema validation:",
+        result.error.message,
+      );
+      return null;
+    }
+    const targetLocalPort = result.data.TCP?.[String(tailnetPort)]?.TCPForward;
+    return targetLocalPort === undefined ? null : { targetLocalPort };
+  } catch {
+    console.warn(
+      "[tailscale] malformed `serve status --json` output:",
+      stdout.slice(0, STDERR_PREVIEW_MAX_LEN),
+    );
+    return null;
+  }
 }
 
 /** Result of capturing a child-process invocation's output. */
