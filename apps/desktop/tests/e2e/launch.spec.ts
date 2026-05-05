@@ -52,7 +52,9 @@ test("Workers panel reflects a worker that registered after mount", async () => 
   expect(orchUrl).toBeTruthy();
 
   const registration = {
-    id: "11111111-2222-3333-4444-555555555555",
+    // Valid v4 UUID — WorkerRegistrationSchema's `id: z.uuid()` enforces
+    // version-tagged UUIDs (3rd group starts with 4, 4th with 8/9/a/b).
+    id: "11111111-1111-4111-8111-111111111111",
     hostname: "polling-test-worker",
     controlPlaneUrl: "http://127.0.0.1:65535",
     os: "linux" as const,
@@ -63,7 +65,9 @@ test("Workers panel reflects a worker that registered after mount", async () => 
     headers: { "content-type": "application/json" },
     body: JSON.stringify(registration),
   });
-  expect(res.ok).toBe(true);
+  // Surface the response body if registration fails — otherwise the bare
+  // `expect(res.ok).toBe(true)` failure tells you nothing about why.
+  expect(res.ok, `POST /workers ${res.status}: ${await res.text()}`).toBe(true);
 
   await window.waitForSelector(`text=${registration.hostname}`, { timeout: 12_000 });
 
