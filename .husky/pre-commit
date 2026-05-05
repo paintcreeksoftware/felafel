@@ -22,3 +22,8 @@ pnpm check-types
 pnpm test
 pnpm lint:md
 pnpm lint:sh
+# `db:check` fails if the Drizzle schema in @felafel/contracts has diverged
+# from the committed migrations under packages/db/migrations/. Catches the
+# "edited schema, forgot to run `db:generate`" failure mode locally before
+# push (and again in CI — see .github/workflows/lint.yml).
+pnpm db:check
