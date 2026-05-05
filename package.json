@@ -18,6 +18,7 @@
     "test:e2e": "turbo run test:e2e",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\" \"#**/out\" \"#**/release\" \"#**/dist\" \"#**/test-results\" \"#**/playwright-report\"",
     "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg",
+    "knip": "knip --no-exit-code",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"
   },
@@ -27,6 +28,7 @@
     "@types/node": "^24.12.0",
     "@vitest/coverage-v8": "^4.1.5",
     "husky": "^9.1.7",
+    "knip": "^6.11.0",
     "markdownlint-cli2": "^0.22.1",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.62.0",
