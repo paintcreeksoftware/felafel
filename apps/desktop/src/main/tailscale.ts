@@ -238,6 +238,27 @@ export interface ServeErrorClassification {
 }
 
 /**
+ * Plain Error decorated with the structured serve-failure classification.
+ * Used by {@link TailscaleManager.publishServe} (and `runServeCommand`)
+ * so callers that want to surface a remediation hint can read
+ * `error.classification.remediation` instead of re-parsing the message.
+ */
+export type ServeFailureError = Error & { classification: ServeErrorClassification };
+
+/**
+ * Type guard for a thrown error that carries a serve-failure classification.
+ * Pairs with the throw inside `runServeCommand`. Implemented as a function
+ * (not a class instanceof) so we don't burn a second class against the
+ * file-class-limit lint rule for what is fundamentally a tagged Error.
+ *
+ * @param error - the unknown caught from a try/catch
+ * @returns true if the error carries a `classification` payload
+ */
+export function isServeFailureError(error: unknown): error is ServeFailureError {
+  return error instanceof Error && "classification" in error;
+}
+
+/**
  * Pure classifier. Reads stderr/stdout from `tailscale serve` and decides
  * which failure mode we're in. Mirrors {@link classifyUpError}'s priority
  * ordering — EACCES wins over everything else because it's the most
@@ -759,7 +780,11 @@ export class TailscaleManager {
     }
     const combined = `${result.stdout}\n${result.stderr}`;
     const cls = classifyServeError(combined, result.exitCode ?? null, result.isCanceled);
-    throw new Error(`tailscale serve (${cls.kind}): ${cls.message}`);
+    const error: ServeFailureError = Object.assign(
+      new Error(`tailscale serve (${cls.kind}): ${cls.message}`),
+      { classification: cls },
+    );
+    throw error;
   }
 }
 
