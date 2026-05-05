@@ -79,6 +79,10 @@ test("Workers panel reflects a worker that registered after mount", async () => 
   expect(res.ok, `POST /workers ${res.status}: ${await res.text()}`).toBe(true);
 
   await window.waitForSelector(`text=${registration.hostname}`, { timeout: 12_000 });
+  // PAI-109: status pill should render alongside the hostname. The
+  // freshly-registered worker is `active`; the pill text is the literal
+  // status string.
+  await window.waitForSelector("text=active", { timeout: 5_000 });
 
   await electronApp.close();
   // Clean up the registration so later tests in the same run (visual.spec

@@ -16,6 +16,10 @@ type Status = OrchestratorStatus["kind"] | "unknown";
  */
 const WORKERS_POLL_MS = 5_000;
 
+/** HTTP status literals used in the Worker forget flow. */
+const STATUS_NO_CONTENT = 204;
+const STATUS_CONFLICT = 409;
+
 /** Degradation shape from `OrchestratorStatus.ready.degradations.tailnetServe`. */
 interface TailnetServeDegradation {
   reason: string;
@@ -49,8 +53,32 @@ function OrchestratorLabel(props: {
   return <span>connecting...</span>;
 }
 
+/**
+ * Inline pill rendering a worker's liveness status. `active` is green —
+ * worker is heartbeating; the orchestrator can dispatch to it. `stale`
+ * is amber — worker stopped heartbeating past the sweep threshold; the
+ * row is still in the DB but the worker is presumed gone.
+ */
+function StatusPill({ status }: { status: Worker["status"] }) {
+  const color =
+    status === "active"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+      : "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-medium ${color}`}
+    >
+      {status}
+    </span>
+  );
+}
+
 /** Resolve which list/empty/error view to render for the worker registry. */
-function WorkersList(props: { workers: Worker[] | null; workersError: string | null }) {
+function WorkersList(props: {
+  workers: Worker[] | null;
+  workersError: string | null;
+  onForget: (worker: Worker) => void;
+}) {
   if (props.workersError) {
     return <p className="text-destructive">{props.workersError}</p>;
   }
@@ -61,10 +89,23 @@ function WorkersList(props: { workers: Worker[] | null; workersError: string | n
     return <p>No workers registered yet.</p>;
   }
   return (
-    <ul className="space-y-1">
+    <ul className="space-y-2">
       {props.workers.map((w) => (
-        <li key={w.id} className="font-mono text-sm">
-          {w.hostname} <span className="text-muted-foreground/70">({w.id})</span>
+        <li key={w.id} className="flex items-center gap-2 text-sm">
+          <StatusPill status={w.status} />
+          <span className="font-mono">{w.hostname}</span>
+          <span className="text-muted-foreground/70 font-mono text-xs">({w.id})</span>
+          {w.status === "stale" && (
+            <button
+              type="button"
+              onClick={() => {
+                props.onForget(w);
+              }}
+              className="text-muted-foreground hover:text-foreground ml-auto text-xs underline underline-offset-2"
+            >
+              forget
+            </button>
+          )}
         </li>
       ))}
     </ul>
@@ -154,7 +195,45 @@ export default function App() {
           </p>
           <section className="text-muted-foreground w-full max-w-md text-base leading-7">
             <h2 className="text-foreground mb-2 text-lg font-medium">Workers</h2>
-            <WorkersList workers={workers} workersError={workersError} />
+            <WorkersList
+              workers={workers}
+              workersError={workersError}
+              onForget={(worker) => {
+                if (!orchUrl) {
+                  return;
+                }
+                const confirmed = window.confirm(
+                  `Forget worker "${worker.hostname}"? This permanently removes the row from the orchestrator's database.`,
+                );
+                if (!confirmed) {
+                  return;
+                }
+                void (async () => {
+                  try {
+                    const client = makeClient(orchUrl);
+                    const res = await client.workers[":id"].$delete({
+                      param: { id: worker.id },
+                    });
+                    // 204 = forget succeeded; the next poll cycle (≤5s)
+                    // will drop the row from the rendered list.
+                    if (res.status === STATUS_NO_CONTENT) {
+                      setWorkersError(null);
+                      return;
+                    }
+                    if (res.status === STATUS_CONFLICT) {
+                      const body = (await res.json()) as { message: string };
+                      setWorkersError(body.message);
+                      return;
+                    }
+                    setWorkersError(`DELETE /workers ${res.status.toString()}`);
+                  } catch (error) {
+                    setWorkersError(
+                      error instanceof Error ? error.message : String(error),
+                    );
+                  }
+                })();
+              }}
+            />
           </section>
         </div>
         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row" />

@@ -9,7 +9,7 @@
 import { and, desc, eq, lt, ne } from "drizzle-orm";
 
 import { type Worker, type WorkerRegistration } from "@felafel/contracts";
-import { workers } from "@felafel/contracts/schema";
+import { runs, workers } from "@felafel/contracts/schema";
 import { type Db } from "@felafel/db/client";
 import { rowToWorker } from "@felafel/db/conversions";
 
@@ -81,6 +81,56 @@ export function upsertWorker(db: Db, reg: WorkerRegistration): Worker {
     throw new Error(`upsert returned no row for worker_id ${reg.id}`);
   }
   return rowToWorker(row);
+}
+
+/**
+ * Outcome of {@link deleteWorker}. A discriminated result so callers can
+ * pattern-match on the case rather than parse error strings — the HTTP
+ * route maps each variant to a distinct status code.
+ */
+export type DeleteWorkerResult =
+  | { outcome: "deleted" }
+  | { outcome: "missing" }
+  | { outcome: "blocked"; referencingRunCount: number };
+
+/**
+ * Hard-delete a worker by its wire UUID. Refuses (`outcome: "blocked"`)
+ * if any rows in `runs` reference this `worker_id` — preserves run
+ * history rather than orphaning FK columns or cascading deletes. The
+ * caller can either kill the referencing runs first or accept that
+ * the worker stays as a forever-stale row for audit purposes.
+ *
+ * SQLite's `PRAGMA foreign_keys` is off in our setup, so the `references()`
+ * declaration in the schema is advisory only — we do the FK check
+ * ourselves. Counting referencing rows up-front (rather than catching
+ * a constraint error) lets us return the count in the result, which the
+ * UI surfaces in the "can't forget yet — N runs reference this worker"
+ * message.
+ *
+ * @param db - Drizzle handle.
+ * @param workerId - the wire UUID, stored in the `worker_id` column.
+ * @returns discriminated result. "deleted" on success, "missing" if no
+ * such row, "blocked" with the referencing run count otherwise.
+ */
+export function deleteWorker(db: Db, workerId: string): DeleteWorkerResult {
+  const exists = db
+    .select({ id: workers.id })
+    .from(workers)
+    .where(eq(workers.workerId, workerId))
+    .get();
+  if (!exists) {
+    return { outcome: "missing" };
+  }
+  const referencing = db
+    .select({ id: runs.id })
+    .from(runs)
+    .where(eq(runs.workerId, workerId))
+    .all();
+  if (referencing.length > 0) {
+    return { outcome: "blocked", referencingRunCount: referencing.length };
+  }
+  db.delete(workers).where(eq(workers.workerId, workerId)).run();
+  return { outcome: "deleted" };
 }
 
 /**
