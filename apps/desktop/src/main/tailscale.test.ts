@@ -5,7 +5,11 @@
 // adjacent integration test file, gated on whether tailscale is installed
 // on the test machine.
 import { describe, expect, it } from "vitest";
-import { classifyUpError, parseStatusJson } from "@felafel/desktop/main/tailscale";
+import {
+  classifyUpError,
+  parseServeConfigJson,
+  parseStatusJson,
+} from "@felafel/desktop/main/tailscale";
 
 describe("parseStatusJson", () => {
   it("returns connected with tailnet and selfName for BackendState=Running", () => {
@@ -142,5 +146,61 @@ describe("classifyUpError", () => {
     const stderr =
       "permission denied; would visit https://login.tailscale.com/a/abc but cannot";
     expect(classifyUpError(stderr, 1, false)).toMatchObject({ kind: "eacces" });
+  });
+});
+
+describe("parseServeConfigJson", () => {
+  it("returns the local port when a TCPForward exists for the requested tailnet port", () => {
+    const stdout = JSON.stringify({
+      TCP: { "9090": { TCPForward: "127.0.0.1:54321" } },
+    });
+    expect(parseServeConfigJson(stdout, 9090)).toEqual({ targetLocalPort: 54321 });
+  });
+
+  it("returns null when no entry exists for the requested port", () => {
+    const stdout = JSON.stringify({
+      TCP: { "8080": { TCPForward: "127.0.0.1:11111" } },
+    });
+    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
+  });
+
+  it("returns null when the TCP table is absent entirely", () => {
+    expect(parseServeConfigJson(JSON.stringify({ Web: {} }), 9090)).toBeNull();
+  });
+
+  it("returns null when TCPForward is missing on the entry", () => {
+    const stdout = JSON.stringify({
+      TCP: { "9090": { HTTPS: true } },
+    });
+    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
+  });
+
+  it("parses an IPv6 TCPForward target by splitting on the last colon", () => {
+    const stdout = JSON.stringify({
+      TCP: { "9090": { TCPForward: "[::1]:60123" } },
+    });
+    expect(parseServeConfigJson(stdout, 9090)).toEqual({ targetLocalPort: 60123 });
+  });
+
+  it("returns null for malformed JSON", () => {
+    expect(parseServeConfigJson("not json {{{", 9090)).toBeNull();
+  });
+
+  it("returns null when TCPForward is missing a port (no colon)", () => {
+    const stdout = JSON.stringify({
+      TCP: { "9090": { TCPForward: "127.0.0.1" } },
+    });
+    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
+  });
+
+  it("returns null when the parsed port is out of range", () => {
+    const stdout = JSON.stringify({
+      TCP: { "9090": { TCPForward: "127.0.0.1:99999" } },
+    });
+    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
+  });
+
+  it("returns null when stdout is empty", () => {
+    expect(parseServeConfigJson("", 9090)).toBeNull();
   });
 });
