@@ -4,13 +4,17 @@
 // The IO functions (findBinary, probeStatus, runUp) are exercised in the
 // adjacent integration test file, gated on whether tailscale is installed
 // on the test machine.
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { execa } from "execa";
 import {
+  TailscaleManager,
   classifyServeError,
   classifyUpError,
   parseServeConfigJson,
   parseStatusJson,
 } from "@felafel/desktop/main/tailscale";
+
+vi.mock("execa");
 
 describe("parseStatusJson", () => {
   it("returns connected with tailnet and selfName for BackendState=Running", () => {
@@ -249,5 +253,76 @@ describe("classifyServeError", () => {
     expect(
       classifyServeError("permission denied while binding port already in use", 1, false),
     ).toMatchObject({ kind: "eacces" });
+  });
+});
+
+describe("TailscaleManager serve methods (with mocked execa)", () => {
+  // FELAFEL_TAILSCALE_FAKE is a stub path so findBinary skips the `which`
+  // lookup. The actual subprocess never runs — vi.mock("execa") above
+  // intercepts every spawn so each test can pre-stage the canned output.
+  const stubBinary = "/usr/bin/fake-tailscale";
+  let manager: TailscaleManager;
+
+  beforeEach(() => {
+    process.env.FELAFEL_TAILSCALE_FAKE = stubBinary;
+    manager = new TailscaleManager();
+    vi.mocked(execa).mockReset();
+  });
+
+  afterEach(() => {
+    delete process.env.FELAFEL_TAILSCALE_FAKE;
+  });
+
+  /**
+   * Stub a single execa call. Returns the success/failure shape the
+   * production code consumes via `result.stdout`, `result.exitCode`,
+   * `result.isCanceled`. Cast through `unknown` because execa's full
+   * `Result` type has dozens of fields the test doesn't care about.
+   */
+  function stubExeca(opts: { stdout?: string; stderr?: string; exitCode?: number }): void {
+    vi.mocked(execa).mockResolvedValueOnce({
+      stdout: opts.stdout ?? "",
+      stderr: opts.stderr ?? "",
+      exitCode: opts.exitCode ?? 0,
+      isCanceled: false,
+    } as unknown as Awaited<ReturnType<typeof execa>>);
+  }
+
+  it("publishServe shells out with --tcp + tcp://127.0.0.1:<local>", async () => {
+    stubExeca({});
+    await manager.publishServe({ tailnetPort: 9090, localPort: 54321 });
+    expect(execa).toHaveBeenCalledWith(
+      stubBinary,
+      ["serve", "--tcp=9090", "tcp://127.0.0.1:54321"],
+      expect.any(Object),
+    );
+  });
+
+  it("unpublishServe shells out with --tcp + 'off'", async () => {
+    stubExeca({});
+    await manager.unpublishServe({ tailnetPort: 9090 });
+    expect(execa).toHaveBeenCalledWith(
+      stubBinary,
+      ["serve", "--tcp=9090", "off"],
+      expect.any(Object),
+    );
+  });
+
+  it("readServePublished returns the local port when serve status reports a TCP forward", async () => {
+    stubExeca({
+      stdout: JSON.stringify({ TCP: { "9090": { TCPForward: "127.0.0.1:54321" } } }),
+    });
+    const result = await manager.readServePublished({ tailnetPort: 9090 });
+    expect(result).toEqual({ targetLocalPort: 54321 });
+  });
+
+  it("readServePublished returns null when serve status reports nothing on the port", async () => {
+    stubExeca({ stdout: JSON.stringify({}) });
+    expect(await manager.readServePublished({ tailnetPort: 9090 })).toBeNull();
+  });
+
+  it("readServePublished returns null when stdout is empty", async () => {
+    stubExeca({ stdout: "" });
+    expect(await manager.readServePublished({ tailnetPort: 9090 })).toBeNull();
   });
 });
