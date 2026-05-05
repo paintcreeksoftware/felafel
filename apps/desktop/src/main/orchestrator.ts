@@ -182,6 +182,15 @@ export class OrchestratorManager {
       return;
     }
     this.process = null;
+    // Tear down the tailnet serve mapping BEFORE killing the child so a
+    // dropped mapping doesn't briefly point at a still-listening loopback
+    // port that the renderer is also closing. Wrapped in try/catch so an
+    // unpublish failure can't block the SIGTERM that follows.
+    try {
+      await this.tailscale.unpublishServe({ tailnetPort: this.resolveTailnetPort() });
+    } catch (error) {
+      console.error("[orchestrator] tailscale unpublish on stop failed:", error);
+    }
     proc.kill("SIGTERM");
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
