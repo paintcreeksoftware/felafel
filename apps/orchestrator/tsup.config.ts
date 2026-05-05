@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineConfig } from "tsup";
 
 // esbuild strips the "node:" prefix from built-in imports during output
@@ -87,5 +88,20 @@ export default defineConfig({
       );
     }
     writeFileSync(path, src);
+
+    // Copy @felafel/db's migrations folder to apps/orchestrator/migrations
+    // so it's a sibling of dist/. The bundled @felafel/db code resolves
+    // `migrationsFolder` via `import.meta.dirname` (which after bundling
+    // points at .../dist), then walks `..` to find migrations. In Docker
+    // the runtime stage handles this with its own COPY step; for
+    // integration tests and `pnpm dev` runs, the bundle output here is
+    // what's executed and it needs the migrations folder beside it.
+    //
+    // rmSync first so a renamed migration (e.g. drizzle-kit producing a
+    // new tag) doesn't leave a stale file under the old name.
+    const dbMigrationsSrc = resolve(__dirname, "..", "..", "packages", "db", "migrations");
+    const orchestratorMigrationsDest = resolve(__dirname, "migrations");
+    rmSync(orchestratorMigrationsDest, { recursive: true, force: true });
+    cpSync(dbMigrationsSrc, orchestratorMigrationsDest, { recursive: true });
   },
 });
