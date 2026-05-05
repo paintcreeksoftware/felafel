@@ -2,9 +2,9 @@
 // Drizzle handle as the first argument (Decision #4 from the plan —
 // functional, not repository classes).
 //
-// `better-sqlite3` is synchronous, so these return values directly with
-// no `await`. That's a deliberate API shape; async-over-sync would be
-// misleading.
+// `node:sqlite`'s DatabaseSync is synchronous, so these return values
+// directly with no `await`. That's a deliberate API shape; async-over-sync
+// would be misleading.
 
 import { and, desc, eq, lt, ne } from "drizzle-orm";
 

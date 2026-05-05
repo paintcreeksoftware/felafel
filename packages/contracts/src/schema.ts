@@ -7,9 +7,10 @@
 //    wire schemas, which @felafel/shared re-exports for non-DB consumers.
 //
 // No driver is imported here — the schema is dialect-decoupled at runtime,
-// and only the SQLite-core column builders come in. The native better-sqlite3
-// dependency stays isolated to @felafel/db so the worker daemon and Electron
-// renderer (which consume @felafel/shared) don't transitively pull it in.
+// and only the SQLite-core column builders come in. The runtime driver
+// (node:sqlite, after PAI-103) lives in @felafel/db so the worker daemon
+// and Electron renderer (which consume @felafel/shared) don't transitively
+// touch it.
 
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
