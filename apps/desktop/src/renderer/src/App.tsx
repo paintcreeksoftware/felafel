@@ -8,6 +8,14 @@ import { TailscalePill } from "@felafel/desktop/components/TailscalePill";
 
 type Status = OrchestratorStatus["kind"] | "unknown";
 
+/**
+ * Cadence for re-polling `GET /workers`. The orchestrator's heartbeat sweep
+ * runs every 30s (apps/orchestrator/src/index.ts), so 5s on the renderer
+ * side picks up newly-registered workers and stale-flag transitions
+ * promptly without flooding the loopback HTTP path.
+ */
+const WORKERS_POLL_MS = 5_000;
+
 /** Degradation shape from `OrchestratorStatus.ready.degradations.tailnetServe`. */
 interface TailnetServeDegradation {
   reason: string;
@@ -102,16 +110,31 @@ export default function App() {
   useEffect(() => {
     if (!orchUrl) {return;}
     const client = makeClient(orchUrl);
-    void (async () => {
+    let cancelled = false;
+    const fetchWorkers = async () => {
       try {
         const res = await client.workers.$get();
         if (!res.ok) {throw new Error(`GET /workers ${res.status}`);}
-        setWorkers((await res.json()) as Worker[]);
+        const next = (await res.json()) as Worker[];
+        // Drop the result if the effect was torn down (orchUrl changed or
+        // unmount) while the request was in flight — otherwise the late
+        // resolve would clobber state owned by the next effect run.
+        if (cancelled) {return;}
+        setWorkers(next);
         setWorkersError(null);
       } catch (error) {
+        if (cancelled) {return;}
         setWorkersError(error instanceof Error ? error.message : String(error));
       }
-    })();
+    };
+    void fetchWorkers();
+    const interval = setInterval(() => {
+      void fetchWorkers();
+    }, WORKERS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [orchUrl]);
 
   return (
