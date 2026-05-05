@@ -1,5 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import pRetry from "p-retry";
 import { type RunComplete } from "@felafel/shared";
+import { CompleteCallbackRetry } from "@felafel/worker/constants";
 import { healthRoute } from "@felafel/worker/routes/health";
 import { runJobRoute } from "@felafel/worker/routes/jobs";
 
@@ -41,13 +43,38 @@ export function buildApp(opts: BuildAppOptions) {
         console.log("received job", runId, JSON.stringify(payload));
         const ack: RunComplete = { ok: true };
         try {
-          await fetch(`${opts.orchestratorUrl}/runs/${runId}/complete`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(ack),
-          });
+          await pRetry(
+            async () => {
+              const res = await fetch(
+                `${opts.orchestratorUrl}/runs/${runId}/complete`,
+                {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify(ack),
+                },
+              );
+              if (!res.ok) {
+                throw new Error(
+                  `POST /runs/${runId}/complete returned ${res.status.toString()}`,
+                );
+              }
+            },
+            {
+              retries: CompleteCallbackRetry.MAX_ATTEMPTS - 1,
+              factor: 2,
+              minTimeout: CompleteCallbackRetry.INITIAL_DELAY_MS,
+              maxTimeout: CompleteCallbackRetry.MAX_DELAY_MS,
+            },
+          );
         } catch (error) {
-          console.error("complete callback error:", error);
+          // After exhausting retries the orchestrator's 5-minute sweep will
+          // flip this run to `failed` with `error: 'dispatch timeout'`. Log
+          // loud + grep-able by runId so we can correlate the symptom on the
+          // orchestrator side back to a real callback failure here.
+          console.error(
+            `complete callback failed permanently (runId=${runId}):`,
+            error,
+          );
         }
       });
       // oxlint-disable-next-line no-magic-numbers -- 202 is the published HTTP "Accepted" status
