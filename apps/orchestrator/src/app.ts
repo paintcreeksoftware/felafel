@@ -76,15 +76,33 @@ export function buildApp(opts: BuildAppOptions) {
         return c.json({ message: "no active worker available" }, 503);
       }
       const run = insertRun(opts.db, payload);
+      // Mark dispatched BEFORE awaiting the worker fetch (PAI-110).
+      // The conceptual moment of "dispatched" is when we hand the job to
+      // the worker, not when the worker finishes responding. Without
+      // this ordering, the worker's complete callback can land during
+      // the await and set status='complete', and the post-await
+      // markRunDispatched would clobber it. The status guards in the
+      // db queries also protect against that, but recording the
+      // timestamp at the right moment is its own correctness win.
+      markRunDispatched(opts.db, run.id, activeWorker.id);
       try {
         await dispatchToWorker(activeWorker, run.id, payload);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        // markRunFailed's guard refuses if the worker already completed
+        // during the await — the returned row will then be 'complete',
+        // which is the truth we want to surface.
         // oxlint-disable-next-line no-magic-numbers -- 200 is the published HTTP "OK" status
         return c.json(markRunFailed(opts.db, run.id, message), 200);
       }
+      // Re-read the run after the await — the worker's complete callback
+      // may have already landed and flipped status to 'complete'/'failed'.
+      const fresh = getRun(opts.db, run.id);
+      if (fresh === undefined) {
+        throw new Error(`run ${run.id} disappeared after dispatch`);
+      }
       // oxlint-disable-next-line no-magic-numbers -- 200 is the published HTTP "OK" status
-      return c.json(markRunDispatched(opts.db, run.id, activeWorker.id), 200);
+      return c.json(fresh, 200);
     })
     .openapi(listRunsRoute, (c) => c.json(listRuns(opts.db)))
     .openapi(getRunRoute, (c) => {
