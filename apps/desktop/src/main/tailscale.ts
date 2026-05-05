@@ -228,6 +228,59 @@ export function parseServeConfigJson(
   }
 }
 
+/** Classification of a `tailscale serve` failure. */
+export interface ServeErrorClassification {
+  kind: "eacces" | "no-daemon" | "port-in-use" | "timeout" | "unknown";
+  message: string;
+}
+
+/**
+ * Pure classifier. Reads stderr/stdout from `tailscale serve` and decides
+ * which failure mode we're in. Mirrors {@link classifyUpError}'s priority
+ * ordering — EACCES wins over everything else because it's the most
+ * actionable.
+ *
+ * @param stderr - combined stderr (stdout can be appended) from the CLI run
+ * @param exitCode - CLI exit code, or null if it timed out
+ * @param timedOut - true when the outer AbortController fired
+ * @returns the classified failure
+ */
+export function classifyServeError(
+  stderr: string,
+  exitCode: number | null,
+  timedOut: boolean,
+): ServeErrorClassification {
+  if (timedOut) {
+    return {
+      kind: "timeout",
+      message: "Tailscale didn't respond — check your network and try again.",
+    };
+  }
+  if (/permission denied|\bEACCES\b/i.test(stderr)) {
+    return {
+      kind: "eacces",
+      message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+    };
+  }
+  if (/(failed to connect.*tailscaled|tailscaled\.sock)/i.test(stderr)) {
+    return {
+      kind: "no-daemon",
+      message: "The tailscaled daemon isn't running on this machine.",
+    };
+  }
+  if (/already (in use|configured|serving)|address.*in use/i.test(stderr)) {
+    return {
+      kind: "port-in-use",
+      message: "That Tailnet port is already published by another process.",
+    };
+  }
+  console.warn("[tailscale] Unmatched stderr from tailscale serve:", stderr.slice(0, STDERR_PREVIEW_MAX_LEN));
+  return {
+    kind: "unknown",
+    message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale serve exited with code ${exitCode}`,
+  };
+}
+
 /** Result of capturing a child-process invocation's output. */
 interface CaptureResult {
   stdout: string;
