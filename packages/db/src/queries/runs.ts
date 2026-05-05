@@ -3,14 +3,16 @@
 // classes). `node:sqlite`'s DatabaseSync is synchronous, so these return
 // values directly with no `await`.
 //
-// Mirrors `apps/orchestrator/src/store/runs.ts` (SqliteRunStore) behavior
-// exactly — including the deliberately permissive state transitions
-// (`markRunDispatched` etc. don't guard on prior status). Adding guards
-// would be a behavior change; if/when we want race-safe transitions,
-// that's a separate ticket.
+// State transitions are guarded against going backwards from a terminal
+// state (PAI-110): markRunDispatched only fires from `pending`,
+// markRunComplete / markRunFailed only fire from `pending` or `dispatched`.
+// If the guard rejects, the function returns the row's current state
+// rather than throwing — the caller can inspect `status` to see what
+// happened. This keeps the API ergonomic while preventing the dispatch /
+// complete write race that could clobber a terminal status.
 
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
 
 import { type Run } from "@felafel/contracts";
 import { runs } from "@felafel/contracts/schema";
@@ -46,23 +48,24 @@ export function insertRun(db: Db, payload: Record<string, unknown>): Run {
 
 /**
  * Flip a run's status to `'dispatched'` and record which worker accepted
- * it. Caller is responsible for invoking this only after a successful
- * outbound dispatch to the worker.
- *
- * Permissive: does NOT guard on prior status. Matches the existing
- * `SqliteRunStore.markDispatched` behavior; race-safety would be a
- * separate ticket.
+ * it. Guarded against going backwards: only fires when current status is
+ * `pending`. If status has already advanced (the worker's complete
+ * callback raced past us — possible when dispatched is recorded after
+ * the fetch await), this is a no-op and the returned row reflects the
+ * current state.
  *
  * @param db - Drizzle handle.
  * @param id - run id (the wire UUID, stored in the `run_id` column).
  * @param workerId - the worker that accepted the dispatch.
- * @returns the updated `Run` record.
+ * @returns the row's current state. `status` may be `'dispatched'`
+ * (transition succeeded) or any other value (transition rejected by
+ * guard; row already moved on).
  */
 export function markRunDispatched(db: Db, id: string, workerId: string): Run {
   const now = new Date().toISOString();
   db.update(runs)
     .set({ status: "dispatched", workerId, dispatchedAt: now })
-    .where(eq(runs.runId, id))
+    .where(and(eq(runs.runId, id), eq(runs.status, "pending")))
     .run();
   const run = getRun(db, id);
   if (!run) {
@@ -76,18 +79,23 @@ export function markRunDispatched(db: Db, id: string, workerId: string): Run {
  * when the job succeeded. Optional `error` carries a warning-level message
  * that doesn't fail the run (rare; reserved for partial-success cases).
  *
- * Permissive on prior status — same as `SqliteRunStore.markComplete`.
+ * Guarded against overwriting a terminal state: only fires when current
+ * status is `pending` or `dispatched`. If the run already settled
+ * (`complete`/`failed`), this is a no-op and the returned row reflects
+ * the existing terminal state.
  *
  * @param db - Drizzle handle.
  * @param id - run id.
  * @param error - optional warning-level message; null in DB if omitted.
- * @returns the updated `Run` record.
+ * @returns the row's current state. `status` may be `'complete'`
+ * (transition succeeded) or `'complete'`/`'failed'` from a prior call
+ * (transition rejected by guard).
  */
 export function markRunComplete(db: Db, id: string, error?: string): Run {
   const now = new Date().toISOString();
   db.update(runs)
     .set({ status: "complete", completedAt: now, error: error ?? null })
-    .where(eq(runs.runId, id))
+    .where(and(eq(runs.runId, id), inArray(runs.status, ["pending", "dispatched"])))
     .run();
   const run = getRun(db, id);
   if (!run) {
@@ -98,21 +106,26 @@ export function markRunComplete(db: Db, id: string, error?: string): Run {
 
 /**
  * Flip a run's status to `'failed'` with a required `error` message. Used
- * both when the worker's ack reports `ok: false` and when the periodic
- * sweep catches a hung dispatch (via `markRunsTimedOutSince`).
+ * both when the worker's ack reports `ok: false` and when the dispatch
+ * fetch from the orchestrator throws.
  *
- * Permissive on prior status — same as `SqliteRunStore.markFailed`.
+ * Guarded against overwriting a terminal state: only fires when current
+ * status is `pending` or `dispatched`. If the run already settled
+ * (`complete`/`failed`), this is a no-op — important when the orchestrator
+ * is in the catch branch of a dispatch fetch that errored *after* the
+ * worker successfully completed and called back.
  *
  * @param db - Drizzle handle.
  * @param id - run id.
  * @param error - human-readable failure reason.
- * @returns the updated `Run` record.
+ * @returns the row's current state. `status` may be `'failed'`
+ * (transition succeeded) or `'complete'` (worker beat us to it).
  */
 export function markRunFailed(db: Db, id: string, error: string): Run {
   const now = new Date().toISOString();
   db.update(runs)
     .set({ status: "failed", completedAt: now, error })
-    .where(eq(runs.runId, id))
+    .where(and(eq(runs.runId, id), inArray(runs.status, ["pending", "dispatched"])))
     .run();
   const run = getRun(db, id);
   if (!run) {
