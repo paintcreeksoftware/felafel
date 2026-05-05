@@ -13,6 +13,7 @@ vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => "/tmp" } }
 interface Privates {
   setupTailnetServe(localPort: number): Promise<void>;
   process: { kill: () => void; once: (ev: string, cb: () => void) => void } | null;
+  publishedTailnetPort: number | null;
 }
 
 function mockTailscale(overrides: Partial<TailscaleManager> = {}): TailscaleManager {
@@ -93,15 +94,13 @@ describe("OrchestratorManager.setupTailnetServe", () => {
   });
 });
 
-describe("OrchestratorManager.stop unpublish error", () => {
-  it("kills the child first, then propagates the unpublish error", async () => {
-    const ts = mockTailscale({
-      unpublishServe: vi.fn().mockRejectedValue(new Error("tailscale serve (eacces): denied")),
-    });
+describe("OrchestratorManager.stop", () => {
+  /** Build a manager with a fake child so stop() has something to kill without a real spawn. */
+  function withFakeProcess(ts: TailscaleManager): {
+    manager: OrchestratorManager & Privates;
+    kill: ReturnType<typeof vi.fn>;
+  } {
     const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
-    // Inject a fake child process so stop() has something to kill without
-    // requiring a real spawn. The fake fires "exit" synchronously so the
-    // SIGTERM-grace timer never trips.
     const kill = vi.fn();
     m.process = {
       kill,
@@ -116,9 +115,28 @@ describe("OrchestratorManager.stop unpublish error", () => {
       },
       /* oxlint-enable prefer-await-to-callbacks */
     };
-    await expect(m.stop()).rejects.toThrow(/eacces/);
+    return { manager: m, kill };
+  }
+
+  it("kills the child first, then propagates the unpublish error", async () => {
+    const ts = mockTailscale({
+      unpublishServe: vi.fn().mockRejectedValue(new Error("tailscale serve (eacces): denied")),
+    });
+    const { manager, kill } = withFakeProcess(ts);
+    // Simulate the post-start state where setupTailnetServe DID publish.
+    manager.publishedTailnetPort = 9090;
+    await expect(manager.stop()).rejects.toThrow(/eacces/);
     // Child WAS killed before the unpublish error propagated — no orphan.
     expect(kill).toHaveBeenCalledWith("SIGTERM");
     expect(ts.unpublishServe).toHaveBeenCalled();
+  });
+
+  it("skips unpublish when nothing was published (Tailscale-less host)", async () => {
+    const ts = mockTailscale();
+    const { manager, kill } = withFakeProcess(ts);
+    // Default state: publishedTailnetPort is null (start() never published).
+    await expect(manager.stop()).resolves.toBeUndefined();
+    expect(kill).toHaveBeenCalledWith("SIGTERM");
+    expect(ts.unpublishServe).not.toHaveBeenCalled();
   });
 });

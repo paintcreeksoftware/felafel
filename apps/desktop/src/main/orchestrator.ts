@@ -58,6 +58,12 @@ interface SpawnInvocation {
 export class OrchestratorManager {
   private process: ChildProcess | null = null;
   private readonly tailscale: TailscaleManager;
+  // Tailnet port we published a `tailscale serve` mapping for during the
+  // last successful start(). Null when start() ran on a Tailscale-less
+  // host or the publish itself failed — stop() uses this to skip the
+  // unpublish call so it doesn't throw "binary not found" on a host
+  // that never had Tailscale to begin with.
+  private publishedTailnetPort: number | null = null;
 
   /**
    * Construct an OrchestratorManager.
@@ -152,6 +158,11 @@ export class OrchestratorManager {
         await this.tailscale.unpublishServe({ tailnetPort });
       }
       await this.tailscale.publishServe({ tailnetPort, localPort });
+      // Record the port we successfully published so stop() knows to
+      // unpublish it. Set only AFTER publish succeeds — if publish
+      // throws, the catch logs but the field stays null so stop()
+      // doesn't try to unpublish something that was never published.
+      this.publishedTailnetPort = tailnetPort;
     } catch (error) {
       console.error(
         `[orchestrator] tailscale serve setup failed (loopback still works, remote dispatch will not):`,
@@ -200,7 +211,16 @@ export class OrchestratorManager {
         resolve();
       });
     });
-    await this.tailscale.unpublishServe({ tailnetPort: this.resolveTailnetPort() });
+    // Only unpublish if we actually published in the matching start().
+    // setupTailnetServe sets `publishedTailnetPort` after a successful
+    // publish; on Tailscale-less hosts or when the publish failed the
+    // field stays null and we skip the unpublish (which would otherwise
+    // throw "binary not found" on a host that never had Tailscale).
+    const tailnetPort = this.publishedTailnetPort;
+    if (tailnetPort !== null) {
+      this.publishedTailnetPort = null;
+      await this.tailscale.unpublishServe({ tailnetPort });
+    }
   }
 
   /**
