@@ -78,6 +78,8 @@ export function startSweep(opts: StartSweepOptions): () => void {
   const runTimeoutMs = opts.runTimeoutMs ?? DEFAULT_RUN_TIMEOUT_MS;
 
   let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let consecutiveFailures = 0;
 
   function tick(): void {
     if (stopped) {
@@ -98,16 +100,36 @@ export function startSweep(opts: StartSweepOptions): () => void {
           `sweep: marked ${workersMarked.toString()} workers stale, ${runsMarked.toString()} runs failed`,
         );
       }
+      consecutiveFailures = 0;
     } catch (error) {
-      console.error("sweep error:", error);
+      consecutiveFailures += 1;
+      console.error(
+        `sweep error (consecutive failures: ${consecutiveFailures.toString()}):`,
+        error,
+      );
     }
+    scheduleNext();
+  }
+
+  function scheduleNext(): void {
+    if (stopped) {
+      return;
+    }
+    const delay = sweepDelayFor({
+      baseMs: intervalMs,
+      consecutiveFailures,
+      thresholdFailures: BACKOFF_THRESHOLD_FAILURES,
+      maxDelayMs: BACKOFF_MAX_DELAY_MS,
+    });
+    timer = setTimeout(tick, delay);
   }
 
   tick();
-  const timer = setInterval(tick, intervalMs);
 
   return () => {
     stopped = true;
-    clearInterval(timer);
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
   };
 }
