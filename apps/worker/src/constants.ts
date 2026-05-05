@@ -11,8 +11,24 @@ export const LOCALHOST = "127.0.0.1";
 export const EnvVars = {
   /** TCP port to bind. Defaults to {@link Defaults.PORT}. */
   PORT: "WORKER_PORT",
-  /** Bind hostname. Defaults to {@link Defaults.HOST} (loopback). */
+  /**
+   * Hostname embedded in the advertised `controlPlaneUrl`. When unset, the
+   * worker auto-detects via `tailscale ip -4`, falling back to
+   * {@link Defaults.HOST} (loopback). Also supplies the default for
+   * {@link EnvVars.BIND_HOST} when the bind host isn't specified separately.
+   */
   HOST: "WORKER_HOST",
+  /**
+   * Hostname passed to `serve({ hostname })`. Defaults to whatever
+   * {@link EnvVars.HOST} resolves to. Set this independently when the
+   * advertised IP is virtual and not bindable on a kernel interface — e.g.,
+   * a Tailscale sidecar in userspace mode (`TS_USERSPACE=true`) where the
+   * `100.x` Tailnet IP exists only inside `tailscaled` and a direct bind
+   * returns `EADDRNOTAVAIL`. In that shape: `WORKER_HOST=100.x`,
+   * `WORKER_BIND_HOST=0.0.0.0`, plus a `tailscale serve` mapping in the
+   * sidecar that forwards the Tailnet port to the worker's loopback bind.
+   */
+  BIND_HOST: "WORKER_BIND_HOST",
   /** Orchestrator base URL. Required at runtime; no default. */
   ORCHESTRATOR_URL: "ORCHESTRATOR_URL",
   /** Path to the persistent identity file. Defaults to the XDG-state location. */

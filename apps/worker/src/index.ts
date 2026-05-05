@@ -7,19 +7,20 @@ import {
   defaultIdentityPath,
 } from "@felafel/worker/constants";
 import { startHeartbeat } from "@felafel/worker/heartbeat";
+import { resolveHosts } from "@felafel/worker/hosts";
 import { loadOrCreateIdentity } from "@felafel/worker/identity";
 import { getTailnetIPv4 } from "@felafel/worker/tailscale";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
-// Bind-host resolution priority:
-//   1. WORKER_HOST env var — explicit override always wins
-//   2. tailscale ip -4 — auto-detect Tailnet IP so the worker
-//      advertises a controlPlaneUrl the orchestrator can dial via Tailnet
-//   3. Defaults.HOST (127.0.0.1) — preserves the same-machine smoke-test
-//      path verbatim when no Tailscale is installed
-const explicitHost = process.env[EnvVars.HOST];
-const tailnetIp = explicitHost ? null : await getTailnetIPv4();
-const host = explicitHost ?? tailnetIp ?? Defaults.HOST;
+const explicitAdvertiseHost = process.env[EnvVars.HOST];
+// Skip the tailscale spawn when WORKER_HOST is set — the autodetect would
+// be discarded by resolveHosts anyway.
+const tailnetIp = explicitAdvertiseHost ? null : await getTailnetIPv4();
+const { advertiseHost, bindHost } = resolveHosts({
+  explicitAdvertiseHost,
+  explicitBindHost: process.env[EnvVars.BIND_HOST],
+  tailnetIp,
+});
 const identityPath =
   process.env[EnvVars.IDENTITY_PATH] ?? defaultIdentityPath();
 const orchestratorUrl = process.env[EnvVars.ORCHESTRATOR_URL];
@@ -37,11 +38,11 @@ const app = buildApp({ orchestratorUrl });
 
 console.log(`worker started: id=${id} hostname=${hostname()}`);
 
-const server = serve({ fetch: app.fetch, port, hostname: host }, (info) => {
+const server = serve({ fetch: app.fetch, port, hostname: bindHost }, (info) => {
   console.log(`worker listening on http://${info.address}:${info.port.toString()}`);
 });
 
-const controlPlaneUrl = `http://${host}:${port.toString()}`;
+const controlPlaneUrl = `http://${advertiseHost}:${port.toString()}`;
 const stopHeartbeat = startHeartbeat({
   identity: id,
   controlPlaneUrl,
