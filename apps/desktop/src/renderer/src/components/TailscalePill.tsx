@@ -40,10 +40,24 @@ interface SubmitError {
   remediation?: string;
 }
 
+/**
+ * Optional orchestrator-side tailnet-serve degradation. When the
+ * Tailscale daemon is connected (so the pill would normally render
+ * green) but Felafel's orchestrator failed to publish via
+ * `tailscale serve`, the pill flips to amber + a tooltip showing
+ * the remediation. Surfacing it here instead of as a separate badge
+ * because for a Felafel user the meaningful question is "is the
+ * Tailscale integration usable for dispatch?" — a green pill plus
+ * a separate "degraded" badge splits one answer across two surfaces.
+ */
+export interface TailscalePillProps {
+  tailnetServeDegradation?: { reason: string; remediation?: string } | null;
+}
+
 const ADMIN_KEYS_URL = "https://login.tailscale.com/admin/settings/keys";
 const INSTALL_URL = "https://tailscale.com/download/linux";
 
-export function TailscalePill() {
+export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillProps = {}) {
   const [status, setStatus] = useState<TailscaleStatus>({ kind: "unknown" });
   const [open, setOpen] = useState(false);
   const [authkey, setAuthkey] = useState("");
@@ -139,7 +153,7 @@ export function TailscalePill() {
     }
   }
 
-  const pill = renderPill(status, pillBusy);
+  const pill = renderPill(status, pillBusy, tailnetServeDegradation);
   const wrappedPill =
     status.kind === "missing-binary" ? <MissingBinaryTooltip>{pill}</MissingBinaryTooltip> : pill;
   const isClickable =
@@ -251,7 +265,11 @@ export function TailscalePill() {
   );
 }
 
-function renderPill(status: TailscaleStatus, busy: "connecting" | "refreshing" | null) {
+function renderPill(
+  status: TailscaleStatus,
+  busy: "connecting" | "refreshing" | null,
+  serveDegradation: { reason: string; remediation?: string } | null,
+) {
   if (busy === "connecting") {
     return (
       <Badge variant="secondary" className="gap-1.5">
@@ -276,6 +294,36 @@ function renderPill(status: TailscaleStatus, busy: "connecting" | "refreshing" |
       );
     }
     case "connected": {
+      // Daemon is up, but if the orchestrator's `tailscale serve` setup
+      // failed, the integration isn't actually usable for remote dispatch.
+      // Render amber + tooltip with remediation instead of plain green —
+      // the green pill alone would be technically accurate for the daemon
+      // but misleading about Felafel's working surface.
+      if (serveDegradation) {
+        return (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="default"
+                  className="gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
+                  data-testid="ts-pill-degraded"
+                >
+                  <WifiHigh className="size-3" /> {status.tailnet} (serve degraded)
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm space-y-2 text-xs">
+                <p>{serveDegradation.reason}</p>
+                {serveDegradation.remediation ? (
+                  <p>
+                    Run: <span className="font-mono">{serveDegradation.remediation}</span>
+                  </p>
+                ) : null}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
       return (
         <Badge
           variant="default"
