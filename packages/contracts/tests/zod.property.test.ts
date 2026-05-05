@@ -15,6 +15,7 @@
 import { test } from "@fast-check/vitest";
 import {
   type Arbitrary,
+  boolean,
   constantFrom,
   date,
   dictionary,
@@ -26,7 +27,13 @@ import {
 } from "fast-check";
 import { describe, expect } from "vitest";
 
-import { WorkerRegistrationSchema, WorkerSchema } from "@felafel/contracts";
+import {
+  JobAssignmentSchema,
+  RunCompleteSchema,
+  RunSchema,
+  WorkerRegistrationSchema,
+  WorkerSchema,
+} from "@felafel/contracts";
 
 /**
  * Bound to 1970-9999 because Zod v4's `z.iso.datetime()` regex pins
@@ -90,9 +97,56 @@ describe("schema arbitraries match their schemas", () => {
   });
 });
 
-// JSON-record helper used by Run/JobAssignment arbitraries in
-// follow-up commits. Defined here so the imports stay grouped.
 const jsonRecord = (): Arbitrary<Record<string, unknown>> =>
   dictionary(string(), jsonValue(), { maxKeys: 5 });
 
-export { isoDatetime, jsonRecord };
+const runArb = (): Arbitrary<unknown> =>
+  record(
+    {
+      id: uuid(),
+      payload: jsonRecord(),
+      status: constantFrom("pending", "dispatched", "complete", "failed"),
+      workerId: uuid(),
+      error: string(),
+      createdAt: isoDatetime(),
+      dispatchedAt: isoDatetime(),
+      completedAt: isoDatetime(),
+    },
+    {
+      requiredKeys: ["id", "payload", "status", "createdAt"],
+    },
+  );
+
+const jobAssignmentArb = (): Arbitrary<unknown> =>
+  record({
+    runId: uuid(),
+    payload: jsonRecord(),
+  });
+
+const runCompleteArb = (): Arbitrary<unknown> =>
+  record(
+    {
+      ok: boolean(),
+      result: jsonRecord(),
+      error: string(),
+    },
+    {
+      requiredKeys: ["ok"],
+    },
+  );
+
+describe("schema arbitraries match their schemas — runs", () => {
+  test.prop([runArb()])("RunSchema accepts every arbitrary", (input) => {
+    expect(RunSchema.safeParse(input).success).toBe(true);
+  });
+
+  test.prop([jobAssignmentArb()])("JobAssignmentSchema accepts every arbitrary", (input) => {
+    expect(JobAssignmentSchema.safeParse(input).success).toBe(true);
+  });
+
+  test.prop([runCompleteArb()])("RunCompleteSchema accepts every arbitrary", (input) => {
+    expect(RunCompleteSchema.safeParse(input).success).toBe(true);
+  });
+});
+
+export { runArb, workerRegistrationArb };
