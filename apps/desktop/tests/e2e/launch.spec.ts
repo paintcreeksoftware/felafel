@@ -34,6 +34,42 @@ test("Electron launches, orchestrator reaches ready", async () => {
   await electronApp.close();
 });
 
+test("Workers panel reflects a worker that registered after mount", async () => {
+  // PAI-108 regression: the renderer used to fetch GET /workers exactly
+  // once on mount (when orchUrl became available). A worker that
+  // registered later never appeared in the UI even though the
+  // orchestrator's DB had it. Fix: poll every 5s. This test asserts the
+  // poll picks up a fresh registration within ~12s (2x the cadence with
+  // headroom for jitter on CI runners).
+  const electronApp = await electron.launch({ args: [mainBundle], cwd: appRoot });
+  const window = await electronApp.firstWindow();
+  await window.waitForSelector("text=No workers registered yet", { timeout: 30_000 });
+
+  // Pull the orchestrator URL out of the UI — the renderer renders it
+  // verbatim next to "ready".
+  const urlEl = window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`).first();
+  const orchUrl = (await urlEl.textContent())?.match(/http:\/\/127\.0\.0\.1:\d{4,5}/)?.[0];
+  expect(orchUrl).toBeTruthy();
+
+  const registration = {
+    id: "11111111-2222-3333-4444-555555555555",
+    hostname: "polling-test-worker",
+    controlPlaneUrl: "http://127.0.0.1:65535",
+    os: "linux" as const,
+    arch: "x64" as const,
+  };
+  const res = await fetch(`${orchUrl ?? ""}/workers`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(registration),
+  });
+  expect(res.ok).toBe(true);
+
+  await window.waitForSelector(`text=${registration.hostname}`, { timeout: 12_000 });
+
+  await electronApp.close();
+});
+
 test("Linux/Windows main window has no application menu", async () => {
   // Regression test for PAI-78: setApplicationMenu(null) was applied to
   // strip electron-vite's stock File/Edit/View menu. The visual snapshot
