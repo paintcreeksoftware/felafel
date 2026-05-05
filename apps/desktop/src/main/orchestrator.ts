@@ -23,6 +23,15 @@ import { type TailscaleManager } from "@felafel/desktop/main/tailscale";
  */
 const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
 
+/**
+ * Default stable Tailnet TCP port the AppImage publishes via `tailscale serve`
+ * when no env override is set. 9090 chosen to match the orchestrator's local
+ * default — a remote worker pointing at `<desktop-tailnet-name>:9090` lands
+ * on the same port number it would in dev. Kept inline here (not in a
+ * `DesktopDefaults` object) until a second desktop-wide default justifies one.
+ */
+const DEFAULT_TAILNET_PORT = 9090;
+
 /** Initial readiness-poll delay, doubled per attempt up to {@link MAX_PROBE_DELAY_MS}. */
 const INITIAL_PROBE_DELAY_MS = 50;
 /** Cap for exponential backoff between readiness probes. */
@@ -109,7 +118,57 @@ export class OrchestratorManager {
     });
 
     await this.waitForServer(url);
+    await this.setupTailnetServe(port);
     return url;
+  }
+
+  /**
+   * Publish the orchestrator's local port to a stable Tailnet TCP port via
+   * `tailscale serve`, if Tailscale is connected. Reaps any stale mapping
+   * left by a prior crashed launch first so a republish doesn't silently
+   * fail with "already in use" pointing at a dead PID.
+   *
+   * No-op when Tailscale isn't connected (missing-binary, needs-login,
+   * etc.) — orchestrator stays loopback-only and remote workers can't
+   * reach it, but local renderers still work.
+   *
+   * Failures are logged and swallowed: the orchestrator child is already
+   * running and serves loopback fine; a `tailscale serve` failure
+   * shouldn't take down the whole desktop. The trade-off is "loopback
+   * works, remote dispatch silently doesn't" — surfacing degraded state
+   * to the renderer/health endpoint is tracked separately by PAI-102.
+   *
+   * @param localPort - the kernel-assigned ephemeral port the orchestrator bound
+   */
+  private async setupTailnetServe(localPort: number): Promise<void> {
+    const status = await this.tailscale.probeStatus();
+    if (status.kind !== "connected") {
+      return;
+    }
+    const tailnetPort = this.resolveTailnetPort();
+    try {
+      const existing = await this.tailscale.readServePublished({ tailnetPort });
+      if (existing && existing.targetLocalPort !== localPort) {
+        await this.tailscale.unpublishServe({ tailnetPort });
+      }
+      await this.tailscale.publishServe({ tailnetPort, localPort });
+    } catch (error) {
+      console.error(
+        `[orchestrator] tailscale serve setup failed (loopback still works, remote dispatch will not):`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Resolve the stable Tailnet port to publish on. Reads the env var if
+   * set, otherwise falls back to {@link DEFAULT_TAILNET_PORT}.
+   *
+   * @returns the resolved port number
+   */
+  private resolveTailnetPort(): number {
+    const raw = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_TAILNET_PORT];
+    return raw ? Number(raw) : DEFAULT_TAILNET_PORT;
   }
 
   /**
