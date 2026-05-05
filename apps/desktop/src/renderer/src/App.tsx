@@ -28,9 +28,10 @@ function OrchestratorLabel(props: {
   if (props.status === "starting") {
     return <span>starting...</span>;
   }
-  if (props.status === "error") {
-    return <span className="text-destructive">error</span>;
-  }
+  // No `status === "error"` branch: the IPC handler sets statusError
+  // alongside status, so the statusError check above always fires first
+  // when status is "error". Leaving an unreachable branch here would be
+  // a bug magnet for anyone refactoring the prop contract later.
   return <span>connecting...</span>;
 }
 
