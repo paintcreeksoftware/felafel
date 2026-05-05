@@ -25,7 +25,7 @@ import pRetry from "p-retry";
 import which from "which";
 import { z } from "zod";
 import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
-import { DesktopEnvVars } from "@felafel/desktop/main/constants";
+import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 
 /** Initial backoff between `tailscale status` retries on transient errors. */
 const PROBE_RETRY_INITIAL_DELAY_MS = 200;
@@ -648,6 +648,70 @@ export class TailscaleManager {
       throw new Error("Tailscale binary not found on PATH");
     }
     return binary;
+  }
+
+  /**
+   * Map a stable Tailnet TCP port to a local loopback port via
+   * `tailscale serve --tcp=<tailnetPort> tcp://127.0.0.1:<localPort>`.
+   * Idempotent — re-publishing the same mapping is a no-op for Tailscale,
+   * and republishing with a different `localPort` overwrites the prior
+   * target.
+   *
+   * Workers on the same Tailnet can then dial
+   * `http://<this-node-magicdns-name>:<tailnetPort>`; Tailscale forwards
+   * to the local target. Lets the orchestrator keep an ephemeral local
+   * bind without sacrificing remote discoverability.
+   *
+   * @param opts.tailnetPort - stable Tailnet-side TCP port
+   * @param opts.localPort - local loopback port the orchestrator picked
+   * @throws when the underlying `tailscale serve` invocation fails for a
+   *   non-recoverable reason (no daemon, permission denied, port in use)
+   */
+  async publishServe(opts: { tailnetPort: number; localPort: number }): Promise<void> {
+    await this.runServeCommand([
+      "serve",
+      `--tcp=${String(opts.tailnetPort)}`,
+      `tcp://${LOCALHOST}:${String(opts.localPort)}`,
+    ]);
+  }
+
+  /**
+   * Tear down the Tailnet→local TCP forward for `tailnetPort`. Idempotent:
+   * a no-op when nothing is published. Should be called on graceful
+   * shutdown so the AppImage doesn't leave a stale mapping pointing at a
+   * dead local port.
+   *
+   * @param opts.tailnetPort - the stable Tailnet port to clear
+   */
+  async unpublishServe(opts: { tailnetPort: number }): Promise<void> {
+    await this.runServeCommand([
+      "serve",
+      `--tcp=${String(opts.tailnetPort)}`,
+      "off",
+    ]);
+  }
+
+  /**
+   * Shared spawn wrapper for `tailscale serve` mutating commands (publish,
+   * unpublish). Handles binary discovery, abort-aware timeout, and error
+   * classification. Throws a descriptive Error on failure so callers can
+   * just `await` and let exceptions propagate.
+   *
+   * @param args - argv to pass after the resolved tailscale binary
+   * @throws when the binary is missing or the CLI returns a classified failure
+   */
+  private async runServeCommand(args: string[]): Promise<void> {
+    const binary = await this.requireBinary();
+    const result = await execa(binary, args, {
+      cancelSignal: AbortSignal.timeout(UP_OUTER_TIMEOUT_MS),
+      reject: false,
+    });
+    if (result.exitCode === 0 && !result.isCanceled) {
+      return;
+    }
+    const combined = `${result.stdout}\n${result.stderr}`;
+    const cls = classifyServeError(combined, result.exitCode ?? null, result.isCanceled);
+    throw new Error(`tailscale serve (${cls.kind}): ${cls.message}`);
   }
 }
 
