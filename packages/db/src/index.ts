@@ -12,3 +12,13 @@ export {
   markWorkersStaleSince,
   upsertWorker,
 } from "@felafel/db/queries/workers";
+
+export {
+  getRun,
+  insertRun,
+  listRuns,
+  markRunComplete,
+  markRunDispatched,
+  markRunFailed,
+  markRunsTimedOutSince,
+} from "@felafel/db/queries/runs";
