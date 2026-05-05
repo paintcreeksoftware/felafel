@@ -1,9 +1,7 @@
 // Wipes the dev-mode orchestrator data dir before the e2e suite runs so
-// every test starts from an empty SQLite DB. Without this, a test that
-// POSTs a worker (PAI-108's polling test) leaves a row that later tests
-// in the same run read back — e.g., visual.spec waits for "No workers
-// registered yet" and hangs until the test timeout when the leftover
-// worker is rendered instead.
+// every run starts from an empty SQLite DB regardless of what local dev
+// work left behind. Per-test cleanup of in-run mutations lives in the
+// individual specs (e.g., launch.spec's polling test).
 //
 // Resolves the same path apps/desktop/src/main/orchestrator.ts uses for
 // dev-mode runs: <repo-root>/.dev-orchestrator-data. The e2e suite boots

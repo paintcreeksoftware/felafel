@@ -6,11 +6,17 @@
 // from inside the Distrobox shell where the host display is available.
 import { _electron as electron, expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { rm } from "node:fs/promises";
 import { join } from "pathe";
 
 const here = import.meta.dirname;
 const appRoot = join(here, "..", "..");
 const mainBundle = join(appRoot, "out", "main", "index.js");
+// Same path the orchestrator uses in dev mode — see
+// apps/desktop/src/main/orchestrator.ts:resolveDataDir. Duplicated rather
+// than imported because the path-alias lint rule covers `src/` only and
+// tests/e2e/ siblings can't use the @felafel/desktop/... alias.
+const devOrchestratorDataDir = join(appRoot, "..", "..", ".dev-orchestrator-data");
 
 test("Electron launches, orchestrator reaches ready", async () => {
   const electronApp = await electron.launch({
@@ -72,6 +78,11 @@ test("Workers panel reflects a worker that registered after mount", async () => 
   await window.waitForSelector(`text=${registration.hostname}`, { timeout: 12_000 });
 
   await electronApp.close();
+  // Clean up the registration so later tests in the same run (visual.spec
+  // expects "No workers registered yet") don't see the leftover row.
+  // electronApp.close() is awaited above, so the orchestrator child has
+  // exited and released its SQLite locks by the time we rm.
+  await rm(devOrchestratorDataDir, { recursive: true, force: true });
 });
 
 test("Linux/Windows main window has no application menu", async () => {
