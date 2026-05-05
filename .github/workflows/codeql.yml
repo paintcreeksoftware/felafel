@@ -1,0 +1,49 @@
+name: codeql
+
+# Static security analysis via GitHub-native CodeQL. Catches taint flows,
+# injection sinks, deserialization issues, hardcoded secrets, and regex DoS
+# patterns that TS strict mode and oxlint don't see. Findings surface in the
+# repo's Security tab; not merge-blocking until the initial backlog is clean
+# (PAI-116). Free for public repos.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Sundays at 06:00 UTC. Catches advisories that land against unchanged
+    # code between PRs — CodeQL's query database moves faster than ours.
+    - cron: "0 6 * * 0"
+
+jobs:
+  analyze:
+    name: analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to upload SARIF results to the Security tab.
+      security-events: write
+      # Required by github/codeql-action for private-repo use; harmless on
+      # public repos. Read access only.
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # All workspaces — apps/* and packages/* — are TS or JS, so a single
+      # `javascript-typescript` analysis covers the whole repo. No matrix
+      # needed until we add a non-JS language.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # security-and-quality is the broader of the two default suites:
+          # security findings + maintainability rules. Filter via the
+          # Security tab's UI rather than narrowing the suite here, so we
+          # don't miss anything new the suite picks up over time.
+          queries: security-and-quality
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
