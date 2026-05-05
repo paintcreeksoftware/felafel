@@ -18,54 +18,21 @@ export default defineConfig({
   outExtension: () => ({ js: ".mjs" }),
   clean: true,
   platform: "node",
-  // Inline EVERY runtime dep into the bundle EXCEPT native modules.
-  // Pure-JS deps (hono, @hono/node-server, zod, drizzle-orm, …) get
-  // inlined because the orchestrator ships as a *sidecar* inside the
-  // desktop AppImage (`electron-builder.yml`'s `extraResources`), and
-  // there's no node_modules tree beside it. Without inlining, the
-  // packaged sidecar crashes with `ERR_MODULE_NOT_FOUND: …`.
+  // Inline EVERY runtime dep into the bundle. The orchestrator ships
+  // as a *sidecar* inside the desktop AppImage (`electron-builder.yml`'s
+  // `extraResources`), and there's no node_modules tree beside it.
+  // Without inlining, the packaged sidecar crashes with
+  // `ERR_MODULE_NOT_FOUND: …`.
   // Workspace deps (@felafel/shared, @felafel/db, @felafel/contracts)
   // are also inlined for the same reason plus the Node 24 type-strip
   // constraint on workspace TS sources after `pnpm deploy`.
   //
-  // EXCEPTION: native modules. `.node` binaries can't be bundled by
-  // Rollup/esbuild — their CJS stubs use `require("fs")` at runtime,
-  // which doesn't work inside an ESM bundle (you get "Dynamic require
-  // of 'fs' is not supported"). better-sqlite3 (introduced via
-  // @felafel/db in PAI-89_6) is the first such dep, hence the
-  // explicit external entry below.
-  //
-  // For the Docker service this works cleanly — pnpm deploy ships
-  // node_modules and Node loads better-sqlite3 normally. For the
-  // AppImage sidecar this surfaces a real follow-up: the asar would
-  // need to ship a glibc-compiled better-sqlite3 binary alongside
-  // dist/index.mjs, which doesn't fit the "self-contained bundle"
-  // shape PAI-90 set up. Tracked separately; the orchestrator-as-Docker
-  // case (the immediate driver for PAI-89_6) works.
-  // Mark better-sqlite3 as external. It's a native module with
-  // `.node` bindings that can't be bundled by Rollup/esbuild — the
-  // CJS stub uses `require("fs")` which doesn't work inside an ESM
-  // bundle ("Dynamic require of 'fs' is not supported"). The bundle
-  // ends up with `import Database from "better-sqlite3"` left as a
-  // runtime require, which Node resolves from node_modules normally.
-  // better-sqlite3 reaches us transitively via @felafel/db; it
-  // doesn't appear in orchestrator's direct package.json deps. tsup
-  // doesn't auto-externalize transitive deps, so listing it here
-  // explicitly is required.
-  external: ["better-sqlite3"],
-
-  // Force-bundle this explicit allowlist (workspace packages + their
-  // transitive pure-JS deps that we want self-contained for the
-  // AppImage sidecar shape). New pure-JS deps should be added here
-  // as they're introduced.
-  //
-  // Why an explicit list instead of `[/.*/]`: the catch-all regex
-  // also matched better-sqlite3 in tsup's matching pass, overriding
-  // `external` and inlining the native module's CJS source. The
-  // negative-lookahead variant `/^(?!better-sqlite3(\/|$)).*/` had
-  // the same problem — tsup's noExternal handling doesn't honor the
-  // pattern's exclusion the way one would expect. Allowlist is
-  // unambiguous.
+  // No `external` entries: with the PAI-103 cutover from better-sqlite3
+  // to node:sqlite (a Node built-in, not an npm dep), the orchestrator
+  // bundle has zero native modules left. If a future native dep ever
+  // returns, the AppImage's extraResources packaging needs a parallel
+  // node_modules path or the dep should be evaluated for replacement
+  // by a built-in / pure-JS alternative first.
   noExternal: [
     "@felafel/shared",
     "@felafel/contracts",
