@@ -325,4 +325,38 @@ describe("TailscaleManager serve methods (with mocked execa)", () => {
     stubExeca({ stdout: "" });
     expect(await manager.readServePublished({ tailnetPort: 9090 })).toBeNull();
   });
+
+  it("publishServe surfaces a classified error when the CLI fails", async () => {
+    stubExeca({
+      stderr: "tailscale: permission denied on /var/run/tailscale/tailscaled.sock",
+      exitCode: 1,
+    });
+    await expect(
+      manager.publishServe({ tailnetPort: 9090, localPort: 54321 }),
+    ).rejects.toThrow(/eacces/);
+  });
+
+  it("publish → read → unpublish round-trips the requested mapping", async () => {
+    // 1. publish
+    stubExeca({});
+    await manager.publishServe({ tailnetPort: 9090, localPort: 54321 });
+
+    // 2. read sees what we just published
+    stubExeca({
+      stdout: JSON.stringify({ TCP: { "9090": { TCPForward: "127.0.0.1:54321" } } }),
+    });
+    expect(await manager.readServePublished({ tailnetPort: 9090 })).toEqual({
+      targetLocalPort: 54321,
+    });
+
+    // 3. unpublish
+    stubExeca({});
+    await manager.unpublishServe({ tailnetPort: 9090 });
+
+    // 4. read no longer sees a mapping
+    stubExeca({ stdout: JSON.stringify({}) });
+    expect(await manager.readServePublished({ tailnetPort: 9090 })).toBeNull();
+
+    expect(vi.mocked(execa)).toHaveBeenCalledTimes(4);
+  });
 });
