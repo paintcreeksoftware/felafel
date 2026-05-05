@@ -13,6 +13,7 @@ import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
 import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants";
+import { type TailscaleManager } from "@felafel/desktop/main/tailscale";
 
 /**
  * Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child
@@ -21,6 +22,15 @@ import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants"
  * only here, hence file-private.
  */
 const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
+
+/**
+ * Default stable Tailnet TCP port the AppImage publishes via `tailscale serve`
+ * when no env override is set. 9090 chosen to match the orchestrator's local
+ * default — a remote worker pointing at `<desktop-tailnet-name>:9090` lands
+ * on the same port number it would in dev. Kept inline here (not in a
+ * `DesktopDefaults` object) until a second desktop-wide default justifies one.
+ */
+const DEFAULT_TAILNET_PORT = 9090;
 
 /** Initial readiness-poll delay, doubled per attempt up to {@link MAX_PROBE_DELAY_MS}. */
 const INITIAL_PROBE_DELAY_MS = 50;
@@ -47,6 +57,26 @@ interface SpawnInvocation {
  */
 export class OrchestratorManager {
   private process: ChildProcess | null = null;
+  private readonly tailscale: TailscaleManager;
+  // Tailnet port we published a `tailscale serve` mapping for during the
+  // last successful start(). Null when start() ran on a Tailscale-less
+  // host or the publish itself failed — stop() uses this to skip the
+  // unpublish call so it doesn't throw "binary not found" on a host
+  // that never had Tailscale to begin with.
+  private publishedTailnetPort: number | null = null;
+
+  /**
+   * Construct an OrchestratorManager.
+   *
+   * @param tailscale - the desktop's TailscaleManager instance. Used in
+   * `start()`/`stop()` to publish/unpublish the orchestrator's stable
+   * Tailnet port via `tailscale serve` when Tailscale is connected. The
+   * dependency is required (not optional) so the wiring is visible at
+   * the construction site instead of being silently disabled when missing.
+   */
+  constructor(tailscale: TailscaleManager) {
+    this.tailscale = tailscale;
+  }
 
   /**
    * Spawn the orchestrator as a child process, wait for `/health` to
@@ -94,7 +124,62 @@ export class OrchestratorManager {
     });
 
     await this.waitForServer(url);
+    await this.setupTailnetServe(port);
     return url;
+  }
+
+  /**
+   * Publish the orchestrator's local port to a stable Tailnet TCP port via
+   * `tailscale serve`, if Tailscale is connected. Reaps any stale mapping
+   * left by a prior crashed launch first so a republish doesn't silently
+   * fail with "already in use" pointing at a dead PID.
+   *
+   * No-op when Tailscale isn't connected (missing-binary, needs-login,
+   * etc.) — orchestrator stays loopback-only and remote workers can't
+   * reach it, but local renderers still work.
+   *
+   * Failures are logged and swallowed: the orchestrator child is already
+   * running and serves loopback fine; a `tailscale serve` failure
+   * shouldn't take down the whole desktop. The trade-off is "loopback
+   * works, remote dispatch silently doesn't" — surfacing degraded state
+   * to the renderer/health endpoint is tracked separately by PAI-102.
+   *
+   * @param localPort - the kernel-assigned ephemeral port the orchestrator bound
+   */
+  private async setupTailnetServe(localPort: number): Promise<void> {
+    const status = await this.tailscale.probeStatus();
+    if (status.kind !== "connected") {
+      return;
+    }
+    const tailnetPort = this.resolveTailnetPort();
+    try {
+      const existing = await this.tailscale.readServePublished({ tailnetPort });
+      if (existing && existing.targetLocalPort !== localPort) {
+        await this.tailscale.unpublishServe({ tailnetPort });
+      }
+      await this.tailscale.publishServe({ tailnetPort, localPort });
+      // Record the port we successfully published so stop() knows to
+      // unpublish it. Set only AFTER publish succeeds — if publish
+      // throws, the catch logs but the field stays null so stop()
+      // doesn't try to unpublish something that was never published.
+      this.publishedTailnetPort = tailnetPort;
+    } catch (error) {
+      console.error(
+        `[orchestrator] tailscale serve setup failed (loopback still works, remote dispatch will not):`,
+        error,
+      );
+    }
+  }
+
+  /**
+   * Resolve the stable Tailnet port to publish on. Reads the env var if
+   * set, otherwise falls back to {@link DEFAULT_TAILNET_PORT}.
+   *
+   * @returns the resolved port number
+   */
+  private resolveTailnetPort(): number {
+    const raw = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_TAILNET_PORT];
+    return raw ? Number(raw) : DEFAULT_TAILNET_PORT;
   }
 
   /**
@@ -108,6 +193,13 @@ export class OrchestratorManager {
       return;
     }
     this.process = null;
+    // Kill the child first — that part is idempotent (kill on a dead PID
+    // is a no-op, the SIGKILL escalation handles the slow-exit case). Then
+    // unpublish the tailnet serve mapping; let any failure propagate so
+    // the caller (desktop main's before-quit handler) sees it instead of
+    // a swallowed log line. The brief window where the mapping points at
+    // a dying loopback port is acceptable — Tailscale clients see a
+    // connection refused, not stale data.
     proc.kill("SIGTERM");
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
@@ -119,6 +211,16 @@ export class OrchestratorManager {
         resolve();
       });
     });
+    // Only unpublish if we actually published in the matching start().
+    // setupTailnetServe sets `publishedTailnetPort` after a successful
+    // publish; on Tailscale-less hosts or when the publish failed the
+    // field stays null and we skip the unpublish (which would otherwise
+    // throw "binary not found" on a host that never had Tailscale).
+    const tailnetPort = this.publishedTailnetPort;
+    if (tailnetPort !== null) {
+      this.publishedTailnetPort = null;
+      await this.tailscale.unpublishServe({ tailnetPort });
+    }
   }
 
   /**

@@ -49,8 +49,8 @@ class DesktopApp {
   // recover the latest state on mount. Mirrors orchestratorUrl above but
   // carries the full discriminated union.
   private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
-  private readonly orchestrator = new OrchestratorManager();
   private readonly tailscale = new TailscaleManager();
+  private readonly orchestrator = new OrchestratorManager(this.tailscale);
 
   /**
    * Wire IPC handlers and Electron lifecycle hooks. Idempotent in practice
@@ -171,7 +171,17 @@ class DesktopApp {
     app.on("before-quit", async (event) => {
       event.preventDefault();
       globalShortcut.unregisterAll();
-      await this.orchestrator.stop();
+      // The handler must reach app.exit(0) no matter what — a thrown
+      // error here would leave the preventDefault()'d quit hanging
+      // forever. orchestrator.stop() now propagates the (rare) tailscale
+      // unpublish failure; this is the right layer to log+continue
+      // because exit-cleanup UX is desktop main's concern, not the
+      // manager's.
+      try {
+        await this.orchestrator.stop();
+      } catch (error) {
+        console.error("[main] orchestrator.stop failed:", error);
+      }
       app.exit(0);
     });
   }
