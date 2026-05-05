@@ -49,8 +49,8 @@ class DesktopApp {
   // recover the latest state on mount. Mirrors orchestratorUrl above but
   // carries the full discriminated union.
   private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
-  private readonly orchestrator = new OrchestratorManager();
   private readonly tailscale = new TailscaleManager();
+  private readonly orchestrator = new OrchestratorManager(this.tailscale);
 
   /**
    * Wire IPC handlers and Electron lifecycle hooks. Idempotent in practice

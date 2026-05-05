@@ -13,6 +13,7 @@ import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
 import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants";
+import { type TailscaleManager } from "@felafel/desktop/main/tailscale";
 
 /**
  * Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child
@@ -47,6 +48,20 @@ interface SpawnInvocation {
  */
 export class OrchestratorManager {
   private process: ChildProcess | null = null;
+  private readonly tailscale: TailscaleManager;
+
+  /**
+   * Construct an OrchestratorManager.
+   *
+   * @param tailscale - the desktop's TailscaleManager instance. Used in
+   * `start()`/`stop()` to publish/unpublish the orchestrator's stable
+   * Tailnet port via `tailscale serve` when Tailscale is connected. The
+   * dependency is required (not optional) so the wiring is visible at
+   * the construction site instead of being silently disabled when missing.
+   */
+  constructor(tailscale: TailscaleManager) {
+    this.tailscale = tailscale;
+  }
 
   /**
    * Spawn the orchestrator as a child process, wait for `/health` to
