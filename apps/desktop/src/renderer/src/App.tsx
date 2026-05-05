@@ -8,11 +8,18 @@ import { TailscalePill } from "@felafel/desktop/components/TailscalePill";
 
 type Status = OrchestratorStatus["kind"] | "unknown";
 
+/** Degradation shape from `OrchestratorStatus.ready.degradations.tailnetServe`. */
+interface TailnetServeDegradation {
+  reason: string;
+  remediation?: string;
+}
+
 /** Resolve which label to render for the orchestrator state. */
 function OrchestratorLabel(props: {
   statusError: string | null;
   status: Status;
   orchUrl: string | null;
+  tailnetServeDegradation: TailnetServeDegradation | null;
 }) {
   if (props.statusError) {
     return <span className="text-destructive">{props.statusError}</span>;
@@ -22,6 +29,9 @@ function OrchestratorLabel(props: {
       <span>
         <span className="font-mono">ready</span>{" "}
         <span className="text-muted-foreground/70 font-mono text-sm">{props.orchUrl}</span>
+        {props.tailnetServeDegradation ? (
+          <ServeDegradationBadge degradation={props.tailnetServeDegradation} />
+        ) : null}
       </span>
     );
   }
@@ -33,6 +43,29 @@ function OrchestratorLabel(props: {
   // when status is "error". Leaving an unreachable branch here would be
   // a bug magnet for anyone refactoring the prop contract later.
   return <span>connecting...</span>;
+}
+
+/**
+ * Inline indicator for a tailnet-serve degradation. Renders an amber badge
+ * after the orchestrator URL so the operator sees that the orchestrator
+ * IS up but remote-worker reachability isn't. The remediation, when set,
+ * is rendered as plain text the user can copy verbatim — most commonly
+ * `sudo tailscale set --operator=$USER` for the EACCES case.
+ */
+function ServeDegradationBadge(props: { degradation: TailnetServeDegradation }) {
+  return (
+    <span
+      className="ml-2 rounded-md bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400"
+      title={
+        props.degradation.remediation
+          ? `${props.degradation.reason}\n\nRun: ${props.degradation.remediation}`
+          : props.degradation.reason
+      }
+      data-testid="serve-degradation-badge"
+    >
+      tailnet serve degraded
+    </span>
+  );
 }
 
 /** Resolve which list/empty/error view to render for the worker registry. */
@@ -61,6 +94,8 @@ export default function App() {
   const [status, setStatus] = useState<Status>("unknown");
   const [orchUrl, setOrchUrl] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [tailnetServeDegradation, setTailnetServeDegradation] =
+    useState<TailnetServeDegradation | null>(null);
   const [workers, setWorkers] = useState<Worker[] | null>(null);
   const [workersError, setWorkersError] = useState<string | null>(null);
 
@@ -70,6 +105,7 @@ export default function App() {
       if (next.kind === "ready") {
         setOrchUrl(next.url);
         setStatusError(null);
+        setTailnetServeDegradation(next.degradations?.tailnetServe ?? null);
       } else if (next.kind === "error") {
         setStatusError(next.message);
       }
@@ -82,6 +118,7 @@ export default function App() {
       setStatus(cached.kind);
       if (cached.kind === "ready") {
         setOrchUrl(cached.url);
+        setTailnetServeDegradation(cached.degradations?.tailnetServe ?? null);
       } else if (cached.kind === "error") {
         setStatusError(cached.message);
       }
@@ -117,7 +154,12 @@ export default function App() {
           </h1>
           <p className="text-muted-foreground max-w-md text-lg leading-8">
             Orchestrator:{" "}
-            <OrchestratorLabel statusError={statusError} status={status} orchUrl={orchUrl} />
+            <OrchestratorLabel
+              statusError={statusError}
+              status={status}
+              orchUrl={orchUrl}
+              tailnetServeDegradation={tailnetServeDegradation}
+            />
           </p>
           <section className="text-muted-foreground w-full max-w-md text-base leading-7">
             <h2 className="text-foreground mb-2 text-lg font-medium">Workers</h2>
