@@ -81,6 +81,27 @@ describe("runs queries", () => {
       expect(dispatched.workerId).toBe(workerA.id);
       expect(dispatched.dispatchedAt).toBeDefined();
     });
+
+    it("does not overwrite a 'complete' status (PAI-110 guard)", () => {
+      // Simulates the smoke-test race: the worker's complete callback
+      // landed before the orchestrator's dispatch await resolved, and the
+      // orchestrator then tries to mark the run dispatched. The guard
+      // should refuse and leave the terminal status intact.
+      const run = insertRun(handle.db, { kind: "noop" });
+      markRunComplete(handle.db, run.id);
+      const result = markRunDispatched(handle.db, run.id, workerA.id);
+      expect(result.status).toBe("complete");
+      expect(result.workerId).toBeUndefined();
+      expect(result.dispatchedAt).toBeUndefined();
+    });
+
+    it("does not overwrite a 'failed' status (PAI-110 guard)", () => {
+      const run = insertRun(handle.db, { kind: "noop" });
+      markRunFailed(handle.db, run.id, "boom");
+      const result = markRunDispatched(handle.db, run.id, workerA.id);
+      expect(result.status).toBe("failed");
+      expect(result.error).toBe("boom");
+    });
   });
 
   describe("markRunComplete", () => {
@@ -98,6 +119,23 @@ describe("runs queries", () => {
       const completed = markRunComplete(handle.db, run.id, "partial-success");
       expect(completed.error).toBe("partial-success");
     });
+
+    it("does not overwrite a 'failed' status (PAI-110 guard)", () => {
+      const run = insertRun(handle.db, { kind: "noop" });
+      markRunFailed(handle.db, run.id, "boom");
+      const result = markRunComplete(handle.db, run.id);
+      expect(result.status).toBe("failed");
+      expect(result.error).toBe("boom");
+    });
+
+    it("is a no-op on an already-complete run", () => {
+      const run = insertRun(handle.db, { kind: "noop" });
+      const first = markRunComplete(handle.db, run.id, "first");
+      const second = markRunComplete(handle.db, run.id, "second");
+      expect(second.status).toBe("complete");
+      expect(second.error).toBe("first");
+      expect(second.completedAt).toBe(first.completedAt);
+    });
   });
 
   describe("markRunFailed", () => {
@@ -107,6 +145,25 @@ describe("runs queries", () => {
       expect(failed.status).toBe("failed");
       expect(failed.error).toBe("boom");
       expect(failed.completedAt).toBeDefined();
+    });
+
+    it("does not overwrite a 'complete' status (PAI-110 guard)", () => {
+      // Mirrors the smoke-test scenario from the orchestrator's catch
+      // branch: the dispatch fetch threw after the worker's complete
+      // callback already landed. The guard ensures we don't lie about
+      // failure when the run actually succeeded.
+      const run = insertRun(handle.db, { kind: "noop" });
+      markRunComplete(handle.db, run.id);
+      const result = markRunFailed(handle.db, run.id, "fetch threw");
+      expect(result.status).toBe("complete");
+      expect(result.error).toBeUndefined();
+    });
+
+    it("allows pending → failed (dispatch error before any worker contact)", () => {
+      const run = insertRun(handle.db, { kind: "noop" });
+      const result = markRunFailed(handle.db, run.id, "no active worker");
+      expect(result.status).toBe("failed");
+      expect(result.error).toBe("no active worker");
     });
   });
 
