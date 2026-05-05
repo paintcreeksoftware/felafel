@@ -3,7 +3,13 @@
 #
 # `extraResources` ships the orchestrator service bundle alongside the app so
 # the main process can spawn it as a sidecar at runtime via Electron's
-# bundled Node (ELECTRON_RUN_AS_NODE).
+# bundled Node (ELECTRON_RUN_AS_NODE). The orchestrator's drizzle migrations
+# folder ships as a SIBLING of orchestrator/ (not nested under it) because
+# the bundled @felafel/db code resolves migrationsFolder via
+# `import.meta.dirname` then walks `..`: at runtime that's
+# `resources/orchestrator/` → `resources/`, so migrations land at
+# `resources/migrations/`. The Docker image does the parallel COPY in
+# its runtime stage.
 appId: software.paintcreek.felafel
 productName: Felafel
 directories:
@@ -18,6 +24,8 @@ files:
 extraResources:
   - from: ../orchestrator/dist/
     to: orchestrator/
+  - from: ../orchestrator/migrations/
+    to: migrations/
 mac:
   target:
     - dmg
