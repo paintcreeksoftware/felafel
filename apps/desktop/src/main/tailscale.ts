@@ -628,5 +628,26 @@ export class TailscaleManager {
     }
     return this.stdinSupportCache;
   }
+
+  /**
+   * Resolve the cached `tailscale` binary path or throw if it isn't on
+   * PATH. Centralizes the fail-fast precondition for every method that
+   * needs to spawn the CLI — a single source of the error message, called
+   * from the spawn sites instead of an `if (!binary)` branch in each.
+   *
+   * Callers that want to short-circuit before any work (e.g. the desktop
+   * main process at startup) can call this once explicitly to verify
+   * Tailscale availability before constructing dependent components.
+   *
+   * @returns absolute path to the `tailscale` binary
+   * @throws when the binary cannot be resolved on PATH
+   */
+  async requireBinary(): Promise<string> {
+    const binary = await this.findBinary();
+    if (!binary) {
+      throw new Error("Tailscale binary not found on PATH");
+    }
+    return binary;
+  }
 }
 
