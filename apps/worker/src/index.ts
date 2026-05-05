@@ -8,9 +8,18 @@ import {
 } from "@felafel/worker/constants";
 import { startHeartbeat } from "@felafel/worker/heartbeat";
 import { loadOrCreateIdentity } from "@felafel/worker/identity";
+import { getTailnetIPv4 } from "@felafel/worker/tailscale";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
-const host = process.env[EnvVars.HOST] ?? Defaults.HOST;
+// Bind-host resolution priority:
+//   1. WORKER_HOST env var — explicit override always wins
+//   2. tailscale ip -4 — auto-detect Tailnet IP so the worker
+//      advertises a controlPlaneUrl the orchestrator can dial via Tailnet
+//   3. Defaults.HOST (127.0.0.1) — preserves the same-machine smoke-test
+//      path verbatim when no Tailscale is installed
+const explicitHost = process.env[EnvVars.HOST];
+const tailnetIp = explicitHost ? null : await getTailnetIPv4();
+const host = explicitHost ?? tailnetIp ?? Defaults.HOST;
 const identityPath =
   process.env[EnvVars.IDENTITY_PATH] ?? defaultIdentityPath();
 const orchestratorUrl = process.env[EnvVars.ORCHESTRATOR_URL];
