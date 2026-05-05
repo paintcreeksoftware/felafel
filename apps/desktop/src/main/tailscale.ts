@@ -232,6 +232,9 @@ export function parseServeConfigJson(
 export interface ServeErrorClassification {
   kind: "eacces" | "no-daemon" | "port-in-use" | "timeout" | "unknown";
   message: string;
+  /** Actionable one-liner the renderer can display verbatim. Currently
+   * populated only for the `eacces` case (the operator-permission setup). */
+  remediation?: string;
 }
 
 /**
@@ -256,10 +259,15 @@ export function classifyServeError(
       message: "Tailscale didn't respond — check your network and try again.",
     };
   }
-  if (/permission denied|\bEACCES\b/i.test(stderr)) {
+  // `tailscale serve`'s actual stderr on first-run-without-operator-setup is
+  // "Access denied: serve config denied" — the older `permission denied` /
+  // `EACCES` patterns are still in for the daemon-socket-EACCES case and
+  // forward compatibility with other Tailscale versions.
+  if (/access denied|permission denied|\bEACCES\b/i.test(stderr)) {
     return {
       kind: "eacces",
       message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+      remediation: "sudo tailscale set --operator=$USER",
     };
   }
   if (/(failed to connect.*tailscaled|tailscaled\.sock)/i.test(stderr)) {

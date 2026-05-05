@@ -225,6 +225,21 @@ describe("classifyServeError", () => {
     ).toMatchObject({ kind: "eacces" });
   });
 
+  it("classifies 'Access denied' stderr as eacces with the operator-setup remediation", () => {
+    // Real stderr from `tailscale serve` v1.96 when the user hasn't yet
+    // run `sudo tailscale set --operator=$USER`. Surfaced during PR #31
+    // smoke test on bare metal.
+    const result = classifyServeError(
+      "sending serve config: Access denied: serve config denied",
+      1,
+      false,
+    );
+    expect(result).toMatchObject({
+      kind: "eacces",
+      remediation: "sudo tailscale set --operator=$USER",
+    });
+  });
+
   it("classifies tailscaled.sock connect failures as no-daemon", () => {
     expect(
       classifyServeError("dial unix /var/run/tailscale/tailscaled.sock: no such file", 1, false),
