@@ -58,6 +58,9 @@ export function archForRegistration(): WorkerRegistration["arch"] {
 
 export const Channels = {
   OrchestratorStatus: "orch:status",
+  /** Request/response: returns the latest cached OrchestratorStatus so a
+   * renderer that mounts after the broadcast fired can still see it. */
+  OrchestratorStatusGet: "orch:status:get",
   OrchestratorUrl: "orch:url",
   TailscaleStatus: "ts:status",
   TailscaleConnect: "ts:connect",
@@ -101,6 +104,10 @@ export type TailscaleConnectResult =
 // implementing this exactly; this interface is what the renderer trusts.
 export interface DesktopApi {
   orchestratorUrl: () => Promise<string>;
+  /** Read the latest cached OrchestratorStatus. Renderers should call this
+   * on mount to recover from broadcasts that fired before the window
+   * existed (e.g. an orchestrator that crashed during startup). */
+  orchestratorStatus: () => Promise<OrchestratorStatus>;
   onOrchestratorStatus: (handler: (status: OrchestratorStatus) => void) => () => void;
   tailscaleStatus: () => Promise<TailscaleStatus>;
   tailscaleRefresh: () => Promise<TailscaleStatus>;

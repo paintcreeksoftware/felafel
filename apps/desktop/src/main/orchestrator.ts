@@ -8,7 +8,7 @@ import { app } from "electron";
 import getPort from "get-port";
 import pRetry from "p-retry";
 import { join } from "pathe";
-import { LOCALHOST } from "@felafel/desktop/main/constants";
+import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 // Single source of truth for the desktop→orchestrator env-var contract lives
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
@@ -129,6 +129,10 @@ export class OrchestratorManager {
    * @returns absolute path to the `.mjs` entrypoint
    */
   private resolveScriptPath(): string {
+    const fake = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_FAKE_BUNDLE];
+    if (fake) {
+      return fake;
+    }
     if (app.isPackaged) {
       return join(process.resourcesPath, "orchestrator", "index.mjs");
     }
