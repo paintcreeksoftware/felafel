@@ -2,7 +2,7 @@
   "name": "@felafel/db",
   "version": "0.0.0",
   "private": true,
-  "description": "Runtime persistence layer for the Felafel orchestrator. Wraps better-sqlite3 + Drizzle ORM behind a single createDb() entry point that opens the SQLite database, applies migrations from this package's migrations/ directory, and returns a typed Drizzle handle. Schema and wire-shape Zod come from @felafel/contracts. Workspace-only; never published.",
+  "description": "Runtime persistence layer for the Felafel orchestrator. Wraps node:sqlite + Drizzle ORM behind a single createDb() entry point that opens the SQLite database, applies migrations from this package's migrations/ directory, and returns a typed Drizzle handle. Schema and wire-shape Zod come from @felafel/contracts. Workspace-only; never published.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -25,13 +25,11 @@
   },
   "dependencies": {
     "@felafel/contracts": "workspace:*",
-    "better-sqlite3": "^11.0.0",
-    "drizzle-orm": "^0.45.0",
+    "drizzle-orm": "1.0.0-rc.2-33e80cd",
     "pathe": "^2.0.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.0.0",
-    "drizzle-kit": "^0.31.0",
+    "drizzle-kit": "1.0.0-rc.2-33e80cd",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"
   }
