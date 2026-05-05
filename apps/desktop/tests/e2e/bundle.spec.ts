@@ -80,14 +80,13 @@ test("desktop preload bundle inlines all package deps", () => {
 });
 
 // Native modules can't be bundled (the .node binary stub uses CJS
-// `require()` calls that ESM bundles can't honor — see PAI-89_6's
-// tsup.config.ts comment on `external: ["better-sqlite3"]` for the
-// failure mode). Each one we add must stay in node_modules at runtime
-// AND ship via electron-builder's `extraResources` for the AppImage
-// sidecar to load it. Allowlisted here so the test stays meaningful as
-// other unintended externalizations regress; new entries should require
-// matching electron-builder + Dockerfile changes.
-const NATIVE_MODULES_ALLOWED_EXTERNAL = new Set(["better-sqlite3"]);
+// `require()` calls that ESM bundles can't honor). After PAI-103
+// (better-sqlite3 → node:sqlite), the orchestrator bundle has zero
+// native modules. If a future native dep returns, allowlist it here
+// AND ship it via electron-builder's `extraResources` for the AppImage
+// sidecar to load it; the empty set keeps the assertion strict so a
+// regression that re-externalizes a non-native dep fails loud.
+const NATIVE_MODULES_ALLOWED_EXTERNAL = new Set<string>();
 
 test("orchestrator sidecar bundle inlines all non-native deps", () => {
   // Shipped via electron-builder.yml's extraResources block, so the

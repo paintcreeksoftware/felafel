@@ -1,5 +1,6 @@
 // Smoke test for createDb. Validates that:
-// 1. The native better-sqlite3 module loads (so the postinstall ran).
+// 1. node:sqlite's DatabaseSync opens (Node 24 with --experimental-sqlite
+//    or 24+ where it's stable; the import itself is the smoke check).
 // 2. The migrations folder resolves correctly from import.meta.dirname
 //    when running under tsx (vitest's transformer).
 // 3. drizzle-kit's generated SQL applies cleanly against an empty DB.

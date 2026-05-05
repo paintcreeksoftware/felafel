@@ -1,7 +1,7 @@
 // Query functions for the `runs` table. Pure functions taking the Drizzle
 // handle as the first argument (Decision #4: functional, not repository
-// classes). `better-sqlite3` is synchronous, so these return values
-// directly with no `await`.
+// classes). `node:sqlite`'s DatabaseSync is synchronous, so these return
+// values directly with no `await`.
 //
 // Mirrors `apps/orchestrator/src/store/runs.ts` (SqliteRunStore) behavior
 // exactly — including the deliberately permissive state transitions

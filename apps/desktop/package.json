@@ -9,7 +9,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "pnpm --filter @felafel/orchestrator build && electron-vite dev",
-    "build": "electron-vite build",
+    "build": "pnpm --filter @felafel/orchestrator build && electron-vite build",
     "package": "electron-builder --config electron-builder.yml",
     "lint": "oxlint --deny-warnings",
     "format": "oxfmt",
