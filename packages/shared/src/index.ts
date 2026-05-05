@@ -69,8 +69,24 @@ export const Channels = {
 
 export type OrchestratorStatus =
   | { kind: "starting" }
-  | { kind: "ready"; url: string }
+  | { kind: "ready"; url: string; degradations?: OrchestratorDegradations }
   | { kind: "error"; message: string };
+
+/**
+ * Optional degradations attached to a `kind: "ready"` orchestrator status.
+ * The orchestrator IS up and serving on loopback (so renderer-→-orchestrator
+ * works), but a secondary capability silently failed at startup. Each entry
+ * carries a one-line `reason` for display + an optional `remediation` the
+ * user can copy-paste verbatim.
+ *
+ * Currently only `tailnetServe` — published when `tailscale serve` setup
+ * fails (most common: EACCES because the user hasn't run
+ * `sudo tailscale set --operator=$USER` once). The orchestrator stays
+ * loopback-reachable but remote workers can't dial in.
+ */
+export interface OrchestratorDegradations {
+  tailnetServe?: { reason: string; remediation?: string };
+}
 
 // Tailscale connectivity state. The main process probes the host's `tailscale`
 // CLI and broadcasts whichever variant matches. The renderer's pill is driven

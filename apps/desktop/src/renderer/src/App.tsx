@@ -8,6 +8,12 @@ import { TailscalePill } from "@felafel/desktop/components/TailscalePill";
 
 type Status = OrchestratorStatus["kind"] | "unknown";
 
+/** Degradation shape from `OrchestratorStatus.ready.degradations.tailnetServe`. */
+interface TailnetServeDegradation {
+  reason: string;
+  remediation?: string;
+}
+
 /** Resolve which label to render for the orchestrator state. */
 function OrchestratorLabel(props: {
   statusError: string | null;
@@ -61,6 +67,8 @@ export default function App() {
   const [status, setStatus] = useState<Status>("unknown");
   const [orchUrl, setOrchUrl] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [tailnetServeDegradation, setTailnetServeDegradation] =
+    useState<TailnetServeDegradation | null>(null);
   const [workers, setWorkers] = useState<Worker[] | null>(null);
   const [workersError, setWorkersError] = useState<string | null>(null);
 
@@ -70,6 +78,7 @@ export default function App() {
       if (next.kind === "ready") {
         setOrchUrl(next.url);
         setStatusError(null);
+        setTailnetServeDegradation(next.degradations?.tailnetServe ?? null);
       } else if (next.kind === "error") {
         setStatusError(next.message);
       }
@@ -82,6 +91,7 @@ export default function App() {
       setStatus(cached.kind);
       if (cached.kind === "ready") {
         setOrchUrl(cached.url);
+        setTailnetServeDegradation(cached.degradations?.tailnetServe ?? null);
       } else if (cached.kind === "error") {
         setStatusError(cached.message);
       }
@@ -107,7 +117,7 @@ export default function App() {
   return (
     <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
       <header className="absolute right-4 top-4 z-10">
-        <TailscalePill />
+        <TailscalePill tailnetServeDegradation={tailnetServeDegradation} />
       </header>
       <main className="bg-background flex min-h-screen w-full max-w-3xl flex-col items-center justify-between px-16 py-32 sm:items-start">
         <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />

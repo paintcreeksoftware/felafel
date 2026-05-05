@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-# Fake `tailscale` CLI that always reports a Running tailnet membership.
-# Used by tests/e2e/tailscale.spec.ts via the FELAFEL_TAILSCALE_FAKE env var
-# so the Playwright run doesn't need a real tailscaled on the host.
+# Fake `tailscale` CLI that always reports a Running tailnet membership AND
+# accepts `tailscale serve` subcommands as no-op successes. Used by
+# tests/e2e/tailscale.spec.ts via the FELAFEL_TAILSCALE_FAKE env var so the
+# Playwright run doesn't need a real tailscaled on the host.
 #
-# Only `status --json` is implemented because that's the only subcommand the
-# renderer's mount-time probe invokes. Other args exit non-zero.
+# Subcommands handled:
+#   status --json       — emits canned BackendState=Running JSON
+#   serve status --json — emits an empty TCP map (no prior mapping); the
+#                         orchestrator's setupTailnetServe therefore won't
+#                         try to reap before publishing
+#   serve --bg ...      — exit 0 with no output; simulates a successful
+#                         `tailscale serve` publish without actually doing
+#                         anything to the host's serve config
+#
+# Anything else exits non-zero; an unmatched subcommand surfacing in CI is
+# a signal that production code has grown a new tailscale invocation that
+# the fixture needs to match.
 set -eu
-case "${1:-}" in
-  status)
+case "${1:-} ${2:-}" in
+  "status --json"|"status ")
     cat <<'JSON'
 {
   "BackendState": "Running",
@@ -15,6 +26,17 @@ case "${1:-}" in
   "Self": { "HostName": "felafel-test", "Online": true }
 }
 JSON
+    ;;
+  "serve status")
+    # Empty serve config — orchestrator's reap-on-startup sees nothing
+    # stale and proceeds straight to publishServe.
+    echo "{}"
+    ;;
+  "serve --bg"|"serve --tcp=9090")
+    # No-op success for the publish path. We don't bother reflecting the
+    # state into a subsequent `serve status --json` because the test only
+    # cares that the pill renders "Connected to" (no degradation).
+    exit 0
     ;;
   *)
     echo "fake tailscale (connected): command not implemented: $*" >&2

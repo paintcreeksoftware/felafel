@@ -13,7 +13,18 @@ import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
 import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants";
-import { type TailscaleManager } from "@felafel/desktop/main/tailscale";
+import { isServeFailureError, type TailscaleManager } from "@felafel/desktop/main/tailscale";
+
+/**
+ * Local mirror of `OrchestratorDegradations["tailnetServe"]` from
+ * @felafel/shared. Imported as a type-only structural duplicate so this
+ * file stays under the per-file dependency cap (~10). The shapes must
+ * stay in sync; tests in shared check the full union remains compatible.
+ */
+interface TailnetServeDegradation {
+  reason: string;
+  remediation?: string;
+}
 
 /**
  * Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child
@@ -64,6 +75,13 @@ export class OrchestratorManager {
   // unpublish call so it doesn't throw "binary not found" on a host
   // that never had Tailscale to begin with.
   private publishedTailnetPort: number | null = null;
+  // Set by setupTailnetServe when a publish attempt fails (most common:
+  // EACCES because the user hasn't run `sudo tailscale set --operator=$USER`).
+  // Read by desktop main after start() to attach to the OrchestratorStatus
+  // ready broadcast so the renderer can display a degraded indicator.
+  // Reset to null on every start() invocation so a fix-then-restart cycle
+  // doesn't carry over a stale degradation.
+  private tailnetServeDegradation: TailnetServeDegradation | null = null;
 
   /**
    * Construct an OrchestratorManager.
@@ -138,15 +156,18 @@ export class OrchestratorManager {
    * etc.) — orchestrator stays loopback-only and remote workers can't
    * reach it, but local renderers still work.
    *
-   * Failures are logged and swallowed: the orchestrator child is already
-   * running and serves loopback fine; a `tailscale serve` failure
-   * shouldn't take down the whole desktop. The trade-off is "loopback
-   * works, remote dispatch silently doesn't" — surfacing degraded state
-   * to the renderer/health endpoint is tracked separately by PAI-102.
+   * Failures are logged AND captured as a degradation
+   * (`tailnetServeDegradation` field, read via {@link getServeDegradation})
+   * so the desktop main process can surface them in the renderer. The
+   * orchestrator child is already running and serves loopback fine; a
+   * `tailscale serve` failure shouldn't take down the whole desktop.
    *
    * @param localPort - the kernel-assigned ephemeral port the orchestrator bound
    */
   private async setupTailnetServe(localPort: number): Promise<void> {
+    // Reset the degradation up front so a previously-failed-then-fixed
+    // start cycle reports clean state on the new run.
+    this.tailnetServeDegradation = null;
     const status = await this.tailscale.probeStatus();
     if (status.kind !== "connected") {
       return;
@@ -168,6 +189,16 @@ export class OrchestratorManager {
         `[orchestrator] tailscale serve setup failed (loopback still works, remote dispatch will not):`,
         error,
       );
+      // Capture structured degradation for the renderer if the thrown
+      // error carries the typed classification (always, when it came
+      // from runServeCommand). Untyped throws fall back to a generic
+      // reason + no remediation.
+      this.tailnetServeDegradation = isServeFailureError(error)
+        ? {
+            reason: error.classification.message,
+            remediation: error.classification.remediation,
+          }
+        : { reason: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -180,6 +211,20 @@ export class OrchestratorManager {
   private resolveTailnetPort(): number {
     const raw = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_TAILNET_PORT];
     return raw ? Number(raw) : DEFAULT_TAILNET_PORT;
+  }
+
+  /**
+   * Read the captured tailnet-serve degradation from the most recent
+   * `start()`. Null when start() succeeded cleanly OR when no Tailscale
+   * setup was attempted (e.g. host has no Tailscale daemon). The desktop
+   * main process reads this AFTER `start()` resolves and attaches it to
+   * the OrchestratorStatus ready broadcast.
+   *
+   * @returns the degradation if `setupTailnetServe` failed during the
+   * last successful start(), else null
+   */
+  getServeDegradation(): TailnetServeDegradation | null {
+    return this.tailnetServeDegradation;
   }
 
   /**

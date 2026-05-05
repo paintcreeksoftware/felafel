@@ -205,7 +205,17 @@ class DesktopApp {
     this.broadcastOrchestrator({ kind: "starting" });
     try {
       const url = await this.orchestrator.start();
-      this.broadcastOrchestrator({ kind: "ready", url });
+      // Read any tailnet-serve degradation captured during start() and
+      // include it in the ready broadcast so the renderer can show a
+      // degraded indicator with a remediation hint (e.g.
+      // `sudo tailscale set --operator=$USER` for the EACCES case).
+      // null when start() ran cleanly.
+      const tailnetServe = this.orchestrator.getServeDegradation();
+      this.broadcastOrchestrator({
+        kind: "ready",
+        url,
+        ...(tailnetServe ? { degradations: { tailnetServe } } : {}),
+      });
     } catch (error) {
       console.error("[main] orchestrator.start failed:", error);
       this.broadcastOrchestrator({
