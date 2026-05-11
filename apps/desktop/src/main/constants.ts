@@ -1,4 +1,13 @@
 /**
+ * The product's display name. Used wherever the running process needs to
+ * identify itself to the OS as something other than "Electron" — the
+ * Linux WM_CLASS via the `--class` Chromium switch, `app.setName`, and
+ * the BrowserWindow title. Mirrors `productName` in `package.json` (the
+ * electron-builder source of truth for packaged installers).
+ */
+export const BRAND_NAME = "Felafel";
+
+/**
  * Platform identifiers as returned by `process.platform`. Use these in
  * platform-conditional code instead of inline string literals so a typo
  * surfaces as a TS error rather than an always-false branch.
