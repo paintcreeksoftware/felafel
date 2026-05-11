@@ -34,6 +34,17 @@ linux:
   target:
     - AppImage
   category: Utility
+  # Without this, electron-builder defaults `executableName` to
+  # `sanitizeFileName(package.json#name).toLowerCase()`, which for our
+  # scoped name `@felafel/desktop` becomes `@felafeldesktop`. That string
+  # then ends up as the .desktop file's `Icon=` field, the .desktop
+  # filename itself, and the install path under `hicolor/<size>/apps/`.
+  # GNOME's icon-theme lookup can't resolve `@felafeldesktop` (the `@` is
+  # not a valid identifier), so the app falls back to a generic icon.
+  # electron-builder has a special case for scoped names in
+  # `linuxPackageName` (appInfo.js:121) but it isn't reused for
+  # `executableName` (linuxPackager.js:16). Explicit override is the fix.
+  executableName: felafel
 win:
   target:
     - nsis
