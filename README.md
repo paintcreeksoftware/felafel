@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./felafel.png" alt="Felafel logo" width="200" />
+</p>
+
 # Felafel
 
 Electron desktop application built on a Turborepo workspace, with an embedded
