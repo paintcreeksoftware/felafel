@@ -15,7 +15,9 @@ import {
   type OrchestratorStatus,
   type TailscaleStatus,
 } from "@felafel/shared";
+import iconPath from "../../build/icon.png?asset";
 import {
+  BRAND_NAME,
   DesktopEnvVars,
   Platform,
   WindowSize,
@@ -57,6 +59,7 @@ class DesktopApp {
    * because this is called once per process.
    */
   start(): void {
+    applyAppIdentity();
     this.removeDefaultMenu();
     this.registerIpcHandlers();
     this.registerAppLifecycle();
@@ -246,6 +249,15 @@ class DesktopApp {
     this.mainWindow = new BrowserWindow({
       width: WindowSize.WIDTH,
       height: WindowSize.HEIGHT,
+      // Title set here (not just in the renderer's <title>) so the OS
+      // sees "Felafel" before the renderer loads — matters for the
+      // initial window-decoration label and for screen-reader / a11y
+      // tools that read the window title pre-paint.
+      title: BRAND_NAME,
+      // Linux taskbar/dock icon hint. macOS ignores this (uses the .icns
+      // from electron-builder); Windows ignores it for the taskbar but
+      // uses it for the window's titlebar icon.
+      icon: iconPath,
       webPreferences: {
         // The preload script runs with Node access in the renderer's
         // context. It's the ONLY way the renderer can talk to main without
@@ -334,4 +346,36 @@ class DesktopApp {
  */
 export function startDesktopApp(): void {
   new DesktopApp().start();
+}
+
+/**
+ * Override Electron's defaults so the running process identifies itself
+ * as "Felafel" instead of "Electron".
+ *
+ * @remarks
+ * Without these calls, the running process inherits the Electron
+ * binary's identity:
+ *
+ * - `app.getName()` returns "electron" (from the executable name),
+ *   which leaks into the macOS application menu and the userData
+ *   directory name.
+ * - On Linux X11/XWayland, the window's `WM_CLASS` defaults to
+ *   `Electron`, which GNOME-derived shells read for the dock tooltip
+ *   and icon-theme lookup. `--class` is a Chromium command-line flag
+ *   forwarded by Electron; it must be appended before `app.whenReady`
+ *   for Chromium to pick it up. On native Wayland this switch is
+ *   ignored — `app_id` is derived from the binary name and Electron
+ *   exposes no runtime override, so the dev-mode dock/menubar
+ *   identity stays "electron" there. Packaged builds get the correct
+ *   `app_id` through electron-builder's generated `.desktop` file.
+ *
+ * Exported as a free function (rather than a private class method) so
+ * the regression test can call it directly without standing up a full
+ * `DesktopApp` instance.
+ */
+export function applyAppIdentity(): void {
+  app.setName(BRAND_NAME);
+  if (process.platform === Platform.LINUX) {
+    app.commandLine.appendSwitch("class", BRAND_NAME);
+  }
 }
