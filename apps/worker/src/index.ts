@@ -1,14 +1,12 @@
+import { type Server } from "node:http";
 import { hostname } from "node:os";
 import { serve } from "@hono/node-server";
 import { buildApp } from "@felafel/worker/app";
-import {
-  Defaults,
-  EnvVars,
-  defaultIdentityPath,
-} from "@felafel/worker/constants";
+import { Defaults, EnvVars, defaultIdentityPath } from "@felafel/worker/constants";
 import { startHeartbeat } from "@felafel/worker/heartbeat";
 import { resolveHosts } from "@felafel/worker/hosts";
 import { loadOrCreateIdentity } from "@felafel/worker/identity";
+import { createShutdownHandler } from "@felafel/worker/shutdown";
 import { getTailnetIPv4 } from "@felafel/worker/tailscale";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
@@ -21,8 +19,7 @@ const { advertiseHost, bindHost } = resolveHosts({
   explicitBindHost: process.env[EnvVars.BIND_HOST],
   tailnetIp,
 });
-const identityPath =
-  process.env[EnvVars.IDENTITY_PATH] ?? defaultIdentityPath();
+const identityPath = process.env[EnvVars.IDENTITY_PATH] ?? defaultIdentityPath();
 const orchestratorUrl = process.env[EnvVars.ORCHESTRATOR_URL];
 const heartbeatMs = Number(
   process.env[EnvVars.HEARTBEAT_INTERVAL_MS] ?? Defaults.HEARTBEAT_INTERVAL_MS,
@@ -50,29 +47,22 @@ const stopHeartbeat = startHeartbeat({
   intervalMs: heartbeatMs,
 });
 
-async function shutdown(signal: string): Promise<void> {
-  console.log(`received ${signal}, shutting down...`);
-  stopHeartbeat();
-  try {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve();
-      });
-    });
-    process.exit(0);
-  } catch (error) {
-    console.error("server close error:", error);
-    process.exit(1);
-  }
+// `@hono/node-server`'s `serve()` returns a union (http | http2 | secure variants).
+// Narrowed here because `closeIdleConnections` / `closeAllConnections` are
+// http-only and we never pass a `createServer` option that would yield http2.
+const shutdown = createShutdownHandler({
+  server: server as Server,
+  stopHeartbeat,
+});
+
+async function runShutdown(signal: string): Promise<void> {
+  const code = await shutdown(signal);
+  process.exit(code);
 }
 
 process.on("SIGTERM", () => {
-  void shutdown("SIGTERM");
+  void runShutdown("SIGTERM");
 });
 process.on("SIGINT", () => {
-  void shutdown("SIGINT");
+  void runShutdown("SIGINT");
 });
