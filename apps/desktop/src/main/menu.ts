@@ -34,7 +34,7 @@ export function applyMainAppMenu(): void {
  *
  * @returns the assembled `Menu` ready to pass to `setApplicationMenu`
  */
-export function buildMinimalMacMenu(): Menu {
+function buildMinimalMacMenu(): Menu {
   return Menu.buildFromTemplate([
     {
       label: app.name,
