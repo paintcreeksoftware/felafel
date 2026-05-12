@@ -217,6 +217,11 @@ const config = [
       "no-nonoctal-decimal-escape": "error",
       "no-undef-init": "error",
       "no-var": "error",
+      "no-inline-comments": "off",
+      "no-plusplus": "off",
+      "no-undefined": "off",
+      "no-void": "off",
+      "no-warning-comments": "off",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
