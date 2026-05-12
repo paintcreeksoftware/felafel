@@ -139,7 +139,10 @@ const config = [
       "id-match": "off", // too prescriptive; no project regex pattern defined
       "new-cap": "error",
       "no-underscore-dangle": "error",
-      // TODO(PAI-141 batch 2: core - Suggestions; continuing identifier naming).
+      // Core — Suggestions / control flow + early-return
+      // Rules that shape how branches and returns are written.
+      "block-scoped-var": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions; continuing control flow).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
