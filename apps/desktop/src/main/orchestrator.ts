@@ -6,9 +6,9 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { app } from "electron";
 import getPort from "get-port";
-import pRetry from "p-retry";
 import { join } from "pathe";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
+import { waitForOrchestratorReady } from "@felafel/desktop/main/orchestrator-readiness";
 // Single source of truth for the desktop→orchestrator env-var contract lives
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
@@ -43,12 +43,6 @@ const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
  */
 const DEFAULT_TAILNET_PORT = 9090;
 
-/** Initial readiness-poll delay, doubled per attempt up to {@link MAX_PROBE_DELAY_MS}. */
-const INITIAL_PROBE_DELAY_MS = 50;
-/** Cap for exponential backoff between readiness probes. */
-const MAX_PROBE_DELAY_MS = 1_000;
-/** Maximum readiness-probe attempts (with exponential backoff between, capped at MAX_PROBE_DELAY_MS). */
-const MAX_PROBE_ATTEMPTS = 12;
 /** Grace period after SIGTERM before escalating to SIGKILL. */
 const SIGTERM_GRACE_MS = 5_000;
 
@@ -148,7 +142,7 @@ export class OrchestratorManager {
       this.process = null;
     });
 
-    await this.waitForServer(url);
+    await waitForOrchestratorReady(url);
     // Remember the bound port so a later renderer-driven refresh can
     // re-attempt the serve publish against the same target without
     // restarting the orchestrator.
@@ -366,28 +360,4 @@ export class OrchestratorManager {
     return { command: "node", args: [script], extraEnv: {} };
   }
 
-  /**
-   * Poll `${url}/health` with exponential backoff until it returns 200 or
-   * the retry budget is exhausted.
-   *
-   * @param url - base URL where the orchestrator is binding
-   * @throws if the orchestrator doesn't reach ready within
-   * {@link MAX_PROBE_ATTEMPTS} attempts
-   */
-  private async waitForServer(url: string): Promise<void> {
-    await pRetry(
-      async () => {
-        const res = await fetch(`${url}/health`);
-        if (!res.ok) {
-          throw new Error(`/health returned ${res.status}`);
-        }
-      },
-      {
-        retries: MAX_PROBE_ATTEMPTS - 1,
-        factor: 2,
-        minTimeout: INITIAL_PROBE_DELAY_MS,
-        maxTimeout: MAX_PROBE_DELAY_MS,
-      },
-    );
-  }
 }
