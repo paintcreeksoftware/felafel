@@ -9,13 +9,13 @@ import { promisify } from "node:util";
  * shutdown before forcing exit. Keeps Ctrl+C responsive even when an
  * in-flight request would otherwise stall {@link Server.close}.
  */
-export const SHUTDOWN_TIMEOUT_MS = 5_000;
+const SHUTDOWN_TIMEOUT_MS = 5_000;
 
 /** Sentinel returned by {@link raceTimeout} when the deadline fires first. */
 const TIMEOUT = Symbol("shutdown-timeout");
 
 /** Dependencies the shutdown handler needs to do its job. */
-export interface ShutdownDeps {
+interface ShutdownDeps {
   /** The HTTP server returned by `@hono/node-server`'s `serve()`. */
   server: Server;
   /** Stops the heartbeat interval; returned by `startHeartbeat`. */
