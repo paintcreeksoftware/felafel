@@ -14,7 +14,7 @@ import { app } from "electron";
 const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
 
 /** Spawn invocation parts: command, argv, and any extra env to layer on top of `process.env`. */
-export interface SpawnInvocation {
+interface SpawnInvocation {
   command: string;
   args: string[];
   extraEnv: Record<string, string>;
