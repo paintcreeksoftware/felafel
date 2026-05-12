@@ -1,12 +1,13 @@
-// Scaffold barrel for @felafel/tailscale. Real exports (TailscaleManager,
-// parseStatusJson, classifyServeError, isServeFailureError, the worker IP
-// helper, etc.) land per PAI-139 when the manager + worker helper + pill
-// move into this package. Sub-path exports for the React pill and the
-// worker IP helper are declared once those files arrive.
-
-/**
- * Marker type so this scaffold barrel has a real export and lint passes.
- * Replaced by the real surface (TailscaleManager, parsers, classifiers,
- * etc.) when PAI-139 implementation lands.
- */
-export type PackageScaffoldMarker = never;
+// Node-side barrel for @felafel/tailscale: the manager class + the pure
+// parsers / classifiers used to interpret `tailscale` CLI output. React
+// pill exports live behind the `./ui` sub-path so node consumers don't
+// pay the React import cost; the worker IP helper lives behind
+// `./worker-ip` for the same reason.
+export {
+  TailscaleManager,
+  classifyServeError,
+  classifyUpError,
+  isServeFailureError,
+  parseServeConfigJson,
+  parseStatusJson,
+} from "@felafel/tailscale/manager";

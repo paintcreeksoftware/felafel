@@ -30,11 +30,6 @@ export const LOCALHOST = "127.0.0.1";
  * of silently returning undefined.
  */
 export const DesktopEnvVars = {
-  /**
-   * Path to a fake `tailscale` CLI script for E2E. When set, the tailscale
-   * manager uses this binary instead of resolving via PATH.
-   */
-  FELAFEL_TAILSCALE_FAKE: "FELAFEL_TAILSCALE_FAKE",
   /** Vite dev server URL injected by electron-vite during `pnpm dev`. */
   ELECTRON_RENDERER_URL: "ELECTRON_RENDERER_URL",
   /**

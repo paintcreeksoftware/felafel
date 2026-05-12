@@ -13,7 +13,7 @@ import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
 import { EnvVars as OrchestratorEnvVars } from "@felafel/orchestrator/constants";
-import { isServeFailureError, type TailscaleManager } from "@felafel/desktop/main/tailscale";
+import { isServeFailureError, type TailscaleManager } from "@felafel/tailscale";
 
 /**
  * Local mirror of `OrchestratorDegradations["tailnetServe"]` from
