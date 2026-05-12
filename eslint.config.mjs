@@ -131,6 +131,7 @@ const config = [
       "camelcase": ["error", { properties: "never", ignoreDestructuring: false, ignoreImports: false, ignoreGlobals: false }],
       "capitalized-comments": "off", // single-line clarifications and TODO/FIXME refs aren't always sentences
       "consistent-this": "off", // `const self = this` is rare in TS
+      "func-name-matching": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing identifier naming).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
