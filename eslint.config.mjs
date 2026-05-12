@@ -133,6 +133,7 @@ const config = [
       "consistent-this": "off", // `const self = this` is rare in TS
       "func-name-matching": "error",
       "func-names": "off", // anonymous arrow functions are everywhere; the stack-trace cost isn't worth the noise
+      "func-style": "off", // both declarations and arrow expressions used freely in this codebase
       // TODO(PAI-141 batch 2: core - Suggestions; continuing identifier naming).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
