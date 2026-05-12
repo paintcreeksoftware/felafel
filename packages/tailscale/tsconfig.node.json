@@ -11,6 +11,6 @@
     "paths": { "@felafel/tailscale/*": ["./src/*"] },
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "vitest.config.ts"],
   "exclude": ["src/ui/**/*"]
 }
