@@ -205,6 +205,10 @@ const config = [
       "no-label-var": "error",
       "no-labels": "error",
       "no-unused-labels": "error",
+      "no-param-reassign": "error",
+      "no-redeclare": "error",
+      "no-shadow": "error",
+      "no-shadow-restricted-names": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
