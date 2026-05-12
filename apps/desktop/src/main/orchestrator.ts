@@ -2,12 +2,12 @@
 // as a Node bundle (apps/orchestrator); the desktop main process spawns it as
 // a child and points the renderer at it over IPC.
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { app } from "electron";
 import getPort from "get-port";
 import { join } from "pathe";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
+import { resolveScriptPath } from "@felafel/desktop/main/orchestrator-paths";
 import { waitForOrchestratorReady } from "@felafel/desktop/main/orchestrator-readiness";
 // Single source of truth for the desktop→orchestrator env-var contract lives
 // next to the reader. Importing it here keeps the spawned-process names
@@ -107,13 +107,7 @@ export class OrchestratorManager {
    * succeed within {@link READINESS_TIMEOUT_MS}
    */
   async start(): Promise<string> {
-    const script = this.resolveScriptPath();
-    if (!existsSync(script)) {
-      throw new Error(
-        `orchestrator bundle missing at ${script}. Run \`pnpm --filter @felafel/orchestrator build\`.`,
-      );
-    }
-
+    const script = resolveScriptPath();
     const dataDir = this.resolveDataDir();
     await mkdir(dataDir, { recursive: true });
 
@@ -299,26 +293,6 @@ export class OrchestratorManager {
       this.publishedTailnetPort = null;
       await this.tailscale.unpublishServe({ tailnetPort });
     }
-  }
-
-  /**
-   * Resolve the orchestrator's bundled entrypoint. In dev: the workspace
-   * package's `dist/index.mjs`. In packaged: the file electron-builder
-   * placed at `process.resourcesPath/orchestrator/index.mjs`.
-   *
-   * @returns absolute path to the `.mjs` entrypoint
-   */
-  private resolveScriptPath(): string {
-    const fake = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_FAKE_BUNDLE];
-    if (fake) {
-      return fake;
-    }
-    if (app.isPackaged) {
-      return join(process.resourcesPath, "orchestrator", "index.mjs");
-    }
-    // moduleDir is apps/desktop/out/main → up three to reach apps/, then into
-    // orchestrator/dist/index.mjs.
-    return join(moduleDir, "..", "..", "..", "orchestrator", "dist", "index.mjs");
   }
 
   /**
