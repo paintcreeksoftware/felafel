@@ -45,3 +45,9 @@ jobs:
       # "edited schema, forgot to run db:generate" failure mode.
       - name: Drizzle schema-drift check
         run: pnpm db:check
+
+      # Verifies every `@felafel/<pkg>/<sub-path>` import has a matching
+      # entry in the target package's package.json#exports. Catches the
+      # tsconfig-paths-vs-package-exports drift that broke PAI-139 #57.
+      - name: Export-coverage check
+        run: pnpm lint:exports
