@@ -164,9 +164,9 @@ const config = [
       // Rules that reject specific syntax. Most are bug-finders worth
       // having on; the off cases are syntactic patterns we explicitly
       // want to keep using.
-      // TODO(no-alert): defer to a follow-up PR — `window.confirm` in
-      //   App.tsx's worker-forget flow needs to be swapped for a React
-      //   Dialog confirmation. Not bundling into the lint cutover.
+      // TODO(PAI-145): https://linear.app/paint-creek-software/issue/PAI-145
+      //   `window.confirm` in App.tsx's worker-forget flow needs a
+      //   React Dialog refactor; flip this rule to error in the same PR.
       "no-array-constructor": "error",
       "no-bitwise": "off",
       "no-caller": "error",
