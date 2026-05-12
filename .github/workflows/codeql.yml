@@ -22,6 +22,10 @@ on:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    # Skip on draft PRs so CI minutes aren't burned on in-progress work.
+    # `pull_request.draft` is unset on `push` / `schedule` events, so
+    # `undefined != true` evaluates true and those runs proceed normally.
+    if: github.event.pull_request.draft != true
     # Runner size impacts CodeQL analysis time. To learn more, please see:
     #   - https://gh.io/recommended-hardware-resources-for-running-codeql
     #   - https://gh.io/supported-runners-and-hardware-resources
