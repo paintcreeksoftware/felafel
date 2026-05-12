@@ -109,6 +109,21 @@ const config = [
       "require-atomic-updates": "error",
       "use-isnan": "error",
       "valid-typeof": "error",
+      // Core — Suggestions / complexity + LOC caps
+      // https://eslint.org/docs/latest/rules/#suggestions
+      // Enabled as the canonical 300-line cap enforcer (retires
+      // PAI-140's custom `scripts/check-file-length.sh` ratchet).
+      // skipBlankLines + skipComments because TSDoc + comments + spacing
+      // are not what reviewers are counting; reviewable code is what
+      // matters.
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-classes-per-file": ["error", 1],
+      "max-depth": ["error", 4],
+      "max-lines-per-function": ["error", { max: 200, skipBlankLines: true, skipComments: true }],
+      "max-nested-callbacks": ["error", 10],
+      "max-params": ["error", 5],
+      "max-statements": ["error", { max: 30 }],
+      "complexity": ["error", { max: 20 }],
       // TODO(PAI-141 batch 2: core - Suggestions).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the

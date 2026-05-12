@@ -67,10 +67,3 @@ jobs:
       # before any rule lights up.
       - name: Lint (eslint scaffold)
         run: pnpm lint:eslint
-
-      # Prints any source file over the 300-line cap (PAI-140). Warn-mode
-      # today — the script exits 0 even when offenders are present, so
-      # this step is informational. Flipped to error-mode in a follow-up
-      # PAI-140 PR once the in-scope offenders are refactored.
-      - name: Source-file LOC cap (warn)
-        run: pnpm lint:loc
