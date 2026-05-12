@@ -193,6 +193,14 @@ const config = [
       "no-new": "error",
       "no-new-wrappers": "error",
       "no-object-constructor": "error",
+      "no-useless-call": "error",
+      "no-useless-catch": "error",
+      "no-useless-computed-key": "error",
+      "no-useless-concat": "error",
+      "no-useless-constructor": "error",
+      "no-useless-escape": "error",
+      "no-useless-rename": "error",
+      "no-useless-return": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
