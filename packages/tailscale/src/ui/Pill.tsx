@@ -6,17 +6,10 @@
 // Pill placement is meant to be top-right of the app shell; App.tsx slots
 // it into a positioned container.
 import { useEffect, useRef, useState } from "react";
-import {
-  CircleX,
-  ExternalLink,
-  LoaderCircle,
-  RefreshCw,
-  WifiHigh,
-  WifiOff,
-} from "lucide-react";
+import { CircleX, ExternalLink, LoaderCircle, RefreshCw } from "lucide-react";
 import { type TailscaleStatus } from "@felafel/shared";
+import { StatusBadge, type PillBusy, type ServeDegradation } from "@felafel/tailscale/ui/StatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@felafel/ui/components/ui/alert";
-import { Badge } from "@felafel/ui/components/ui/badge";
 import { Button } from "@felafel/ui/components/ui/button";
 import {
   Dialog,
@@ -51,7 +44,7 @@ interface SubmitError {
  * a separate "degraded" badge splits one answer across two surfaces.
  */
 interface TailscalePillProps {
-  tailnetServeDegradation?: { reason: string; remediation?: string } | null;
+  tailnetServeDegradation?: ServeDegradation | null;
 }
 
 const ADMIN_KEYS_URL = "https://login.tailscale.com/admin/settings/keys";
@@ -95,7 +88,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
   // Local "connecting" state distinct from `submitting` — the click flow
   // sometimes runs entirely outside the modal (initial session-resume), and
   // we want pill-level spinner feedback for that case.
-  const [pillBusy, setPillBusy] = useState<"connecting" | "refreshing" | null>(null);
+  const [pillBusy, setPillBusy] = useState<PillBusy>(null);
   const submittingRef = useRef(submitting);
   submittingRef.current = submitting;
 
@@ -182,7 +175,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     }
   }
 
-  const pill = renderPill(status, pillBusy, tailnetServeDegradation);
+  const pill = (
+    <StatusBadge status={status} busy={pillBusy} serveDegradation={tailnetServeDegradation} />
+  );
   const wrappedPill =
     status.kind === "missing-binary" ? <MissingBinaryTooltip>{pill}</MissingBinaryTooltip> : pill;
   const isClickable =
@@ -292,99 +287,6 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
       </Dialog>
     </div>
   );
-}
-
-function renderPill(
-  status: TailscaleStatus,
-  busy: "connecting" | "refreshing" | null,
-  serveDegradation: { reason: string; remediation?: string } | null,
-) {
-  if (busy === "connecting") {
-    return (
-      <Badge variant="secondary" className="gap-1.5">
-        <LoaderCircle className="size-3 animate-spin" /> Connecting…
-      </Badge>
-    );
-  }
-  if (busy === "refreshing") {
-    return (
-      <Badge variant="secondary" className="gap-1.5">
-        <LoaderCircle className="size-3 animate-spin" /> Refreshing…
-      </Badge>
-    );
-  }
-  switch (status.kind) {
-    case "unknown":
-    case "probing": {
-      return (
-        <Badge variant="secondary" className="gap-1.5">
-          <LoaderCircle className="size-3 animate-spin" /> Checking…
-        </Badge>
-      );
-    }
-    case "connected": {
-      // Daemon is up, but if the orchestrator's `tailscale serve` setup
-      // failed, the integration isn't actually usable for remote dispatch.
-      // Render amber + tooltip with remediation instead of plain green —
-      // the green pill alone would be technically accurate for the daemon
-      // but misleading about Felafel's working surface.
-      if (serveDegradation) {
-        return (
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="default"
-                  className="gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
-                  data-testid="ts-pill-degraded"
-                >
-                  <WifiHigh className="size-3" /> {status.tailnet} (serve degraded)
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm space-y-2 text-xs">
-                <p>{serveDegradation.reason}</p>
-                {serveDegradation.remediation ? (
-                  <p>
-                    Run: <span className="font-mono">{serveDegradation.remediation}</span>
-                  </p>
-                ) : null}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      }
-      return (
-        <Badge
-          variant="default"
-          className="gap-1.5 border-green-500/30 bg-green-500/15 text-green-700 dark:text-green-300 hover:bg-green-500/15"
-        >
-          <WifiHigh className="size-3" /> Connected to {status.tailnet}
-        </Badge>
-      );
-    }
-    case "disconnected": {
-      return (
-        <Badge variant="outline" className="gap-1.5">
-          <WifiOff className="size-3" />
-          {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
-        </Badge>
-      );
-    }
-    case "error": {
-      return (
-        <Badge variant="outline" className="gap-1.5 border-destructive/40 text-destructive">
-          <CircleX className="size-3" /> Tailscale error
-        </Badge>
-      );
-    }
-    case "missing-binary": {
-      return (
-        <Badge variant="outline" className="gap-1.5 opacity-60">
-          <WifiOff className="size-3" /> Tailscale not installed
-        </Badge>
-      );
-    }
-  }
 }
 
 function MissingBinaryTooltip({ children }: { children: React.ReactNode }) {

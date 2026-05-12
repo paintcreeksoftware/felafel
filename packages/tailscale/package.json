@@ -17,6 +17,7 @@
     "./ui": "./src/ui/index.ts",
     "./up": "./src/up.ts",
     "./ui/Pill": "./src/ui/Pill.tsx",
+    "./ui/StatusBadge": "./src/ui/StatusBadge.tsx",
     "./worker-ip": "./src/worker-ip.ts"
   },
   "scripts": {
