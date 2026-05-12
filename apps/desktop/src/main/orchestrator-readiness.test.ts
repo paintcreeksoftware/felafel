@@ -36,7 +36,7 @@ describe("waitForOrchestratorReady", () => {
   it("rejects after exhausting the retry budget when /health stays non-ok", async () => {
     fetchSpy.mockResolvedValue({ ok: false, status: 503 } as Response);
     const promise = waitForOrchestratorReady("http://127.0.0.1:9090");
-    const assertion = expect(promise).rejects.toThrow(/503/);
+    const assertion = expect(promise).rejects.toThrow(/503/u);
     await vi.runAllTimersAsync();
     await assertion;
   });

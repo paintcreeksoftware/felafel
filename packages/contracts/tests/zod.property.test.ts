@@ -167,7 +167,7 @@ describe("schema rejects malformed input on refined fields", () => {
   test.prop([workerRegistrationArb(), string({ minLength: 1, maxLength: 20 })])(
     "WorkerRegistrationSchema rejects non-UUID id",
     (base, nonUuid) => {
-      pre(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nonUuid));
+      pre(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(nonUuid));
       const result = WorkerRegistrationSchema.safeParse({ ...(base as object), id: nonUuid });
       expect(result.success).toBe(false);
     },

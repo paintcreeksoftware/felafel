@@ -252,8 +252,8 @@ describe("startSweep failure tracking", () => {
       // enough headroom to see the count climb past 1 even on slow CI.
       await sleep(250);
       const messages = errorSpy.mock.calls.map((call) => String(call[0]));
-      expect(messages.some((m) => /consecutive failures: 1\b/.test(m))).toBe(true);
-      expect(messages.some((m) => /consecutive failures: [2-9]\b/.test(m))).toBe(true);
+      expect(messages.some((m) => /consecutive failures: 1\b/u.test(m))).toBe(true);
+      expect(messages.some((m) => /consecutive failures: [2-9]\b/u.test(m))).toBe(true);
     } finally {
       stop();
       errorSpy.mockRestore();

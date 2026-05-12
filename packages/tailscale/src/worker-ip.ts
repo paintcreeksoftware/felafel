@@ -38,7 +38,7 @@ function runTailscale(args: string[]): Promise<string> {
 
 /** IPv4 dotted-quad with each octet 0-255 — strict enough that a stray
  * line in the output (or a non-IPv4 string) doesn't masquerade as an IP. */
-const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/u;
 
 /**
  * Resolve the local machine's Tailnet IPv4 address by shelling out to

@@ -43,7 +43,7 @@ export async function runProbe(binary: string | null): Promise<TailscaleStatus> 
         lastResult = await tryProbeOnce(binary);
         if (
           lastResult.kind === "error" &&
-          /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message)
+          /EAGAIN|ETIMEDOUT|aborted/iu.test(lastResult.message)
         ) {
           throw new Error(lastResult.message);
         }
@@ -93,7 +93,7 @@ async function tryProbeOnce(binary: string): Promise<TailscaleStatus> {
       }
     }
     if (typeof e.stderr === "string") {
-      if (/permission denied|\bEACCES\b/i.test(e.stderr)) {
+      if (/permission denied|\bEACCES\b/iu.test(e.stderr)) {
         return {
           kind: "error",
           message: "Tailscale daemon socket permission denied",

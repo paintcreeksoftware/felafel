@@ -50,7 +50,7 @@ export default defineConfig({
     let src = readFileSync(path, "utf8");
     for (const name of NODE_BUILTINS_NEEDING_PREFIX) {
       src = src.replaceAll(
-        new RegExp(`from\\s+"${name}"`, "g"),
+        new RegExp(`from\\s+"${name}"`, "gu"),
         `from "node:${name}"`,
       );
     }

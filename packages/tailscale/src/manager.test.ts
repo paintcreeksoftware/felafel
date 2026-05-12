@@ -87,7 +87,7 @@ describe("TailscaleManager serve methods (with mocked execa)", () => {
     });
     await expect(
       manager.publishServe({ tailnetPort: 9090, localPort: 54321 }),
-    ).rejects.toThrow(/eacces/);
+    ).rejects.toThrow(/eacces/u);
   });
 
   it("publish → read → unpublish round-trips the requested mapping", async () => {

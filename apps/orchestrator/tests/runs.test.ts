@@ -78,7 +78,7 @@ describe("/runs", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as Run;
     expect(body.status).toBe("failed");
-    expect(body.error).toMatch(/500/);
+    expect(body.error).toMatch(/500/u);
   });
 
   it("GET /runs returns runs newest-first", async () => {

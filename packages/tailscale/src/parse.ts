@@ -64,7 +64,7 @@ export function parseStatusJson(stdout: string): TailscaleStatus {
       case "Running": {
         const suffix = typeof obj.MagicDNSSuffix === "string" ? obj.MagicDNSSuffix : "";
         // Strip leading dot and any trailing .ts.net to keep the display name short.
-        const tailnet = suffix.replace(/^\./, "").replace(/\.ts\.net$/, "") || "tailnet";
+        const tailnet = suffix.replace(/^\./u, "").replace(/\.ts\.net$/u, "") || "tailnet";
         const self = (obj.Self as Record<string, unknown> | undefined) ?? {};
         const selfName = typeof self.HostName === "string" ? self.HostName : "this machine";
         return { kind: "connected", tailnet, selfName };

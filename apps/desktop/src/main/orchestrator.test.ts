@@ -253,7 +253,7 @@ describe("OrchestratorManager.stop", () => {
     const { manager, kill } = withFakeProcess(ts);
     // Simulate the post-start state where setupTailnetServe DID publish.
     manager.publishedTailnetPort = 9090;
-    await expect(manager.stop()).rejects.toThrow(/eacces/);
+    await expect(manager.stop()).rejects.toThrow(/eacces/u);
     // Child WAS killed before the unpublish error propagated — no orphan.
     expect(kill).toHaveBeenCalledWith("SIGTERM");
     expect(ts.unpublishServe).toHaveBeenCalled();
