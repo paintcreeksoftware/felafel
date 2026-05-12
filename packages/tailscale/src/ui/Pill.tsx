@@ -57,6 +57,35 @@ interface TailscalePillProps {
 const ADMIN_KEYS_URL = "https://login.tailscale.com/admin/settings/keys";
 const INSTALL_URL = "https://tailscale.com/download/linux";
 
+/**
+ * Floor on how long the pill's busy spinner stays visible. The connect
+ * + refresh IPC round-trips can finish in tens of milliseconds on the
+ * happy path, which leaves the user with a flicker instead of clear
+ * feedback that the click registered. Held for 500 ms — eye-tracking
+ * literature's lower bound for "the user noticed motion." Real work
+ * that exceeds the floor (e.g. the orchestrator serve re-attempt from
+ * PAI-138's refresh path) tracks reality once it's perceptible.
+ */
+const MIN_VISIBLE_BUSY_MS = 500;
+
+/**
+ * Hold the resolved value of `work` until at least
+ * {@link MIN_VISIBLE_BUSY_MS} has elapsed. Use to wrap an IPC call whose
+ * `pillBusy` state would otherwise flicker too fast to read.
+ *
+ * @param work - the promise whose result should be returned
+ * @returns the resolved value of `work`, never sooner than the floor
+ */
+async function withMinVisibleBusy<T>(work: Promise<T>): Promise<T> {
+  const [result] = await Promise.all([
+    work,
+    new Promise((resolve) => {
+      setTimeout(resolve, MIN_VISIBLE_BUSY_MS);
+    }),
+  ]);
+  return result;
+}
+
 export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillProps = {}) {
   const [status, setStatus] = useState<TailscaleStatus>({ kind: "unknown" });
   const [open, setOpen] = useState(false);
@@ -98,7 +127,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     setPillBusy("connecting");
     setSubmitError(null);
     try {
-      const result = await window.api.tailscaleConnect();
+      const result = await withMinVisibleBusy(window.api.tailscaleConnect());
       if (result.ok) {
         // Success — pill will turn green via the broadcast push. Modal stays
         // closed.
@@ -119,7 +148,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     setPillBusy("refreshing");
     setSubmitError(null);
     try {
-      const next = await window.api.tailscaleRefresh();
+      const next = await withMinVisibleBusy(window.api.tailscaleRefresh());
       setStatus(next);
     } finally {
       setPillBusy(null);
