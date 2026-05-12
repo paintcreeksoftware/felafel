@@ -15,7 +15,6 @@ import { rowToWorker } from "@felafel/db/conversions";
 
 /**
  * List every registered worker, newest registration first.
- *
  * @param db - Drizzle handle, typically `opts.db` in the orchestrator app.
  * @returns all worker rows, parsed through the wire `WorkerSchema`.
  */
@@ -39,7 +38,6 @@ export function listWorkers(db: Db): Worker[] {
  *   the heartbeat path, so re-registration counts as a heartbeat.
  * - `status` is forced back to `"active"` on every call, undoing any
  *   previous `"stale"` flip from the periodic sweep.
- *
  * @param db - Drizzle handle.
  * @param reg - validated registration payload from the worker daemon.
  * @returns the upserted row, parsed through the wire `WorkerSchema`.
@@ -106,7 +104,6 @@ export type DeleteWorkerResult =
  * a constraint error) lets us return the count in the result, which the
  * UI surfaces in the "can't forget yet — N runs reference this worker"
  * message.
- *
  * @param db - Drizzle handle.
  * @param workerId - the wire UUID, stored in the `worker_id` column.
  * @returns discriminated result. "deleted" on success, "missing" if no
@@ -139,7 +136,6 @@ export function deleteWorker(db: Db, workerId: string): DeleteWorkerResult {
  * Skips rows already in `"stale"` to avoid pointless writes (and to make
  * the return value mean "newly stale" rather than "matched the threshold").
  * Used by the orchestrator's periodic sweep.
- *
  * @param db - Drizzle handle.
  * @param threshold - ISO 8601 timestamp; workers with `lastSeenAt < threshold` are flipped.
  * @returns count of rows newly transitioned to `"stale"`.

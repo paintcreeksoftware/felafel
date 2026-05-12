@@ -11,6 +11,9 @@ interface FakeOrchestrator {
   close: () => Promise<void>;
 }
 
+/**
+ *
+ */
 async function startFakeOrchestrator(): Promise<FakeOrchestrator> {
   const received: WorkerRegistration[] = [];
   const app = new Hono().post("/workers", async (c) => {
@@ -40,6 +43,11 @@ async function startFakeOrchestrator(): Promise<FakeOrchestrator> {
   };
 }
 
+/**
+ *
+ * @param check
+ * @param timeoutMs
+ */
 async function waitFor(
   check: () => boolean,
   timeoutMs: number,

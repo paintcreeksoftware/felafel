@@ -21,6 +21,10 @@ serve({ fetch: app.fetch, port, hostname }, (info) => {
   console.log(`orchestrator listening on http://${info.address}:${info.port.toString()}`);
 });
 
+/**
+ *
+ * @param signal
+ */
 function shutdown(signal: string): void {
   console.log(`received ${signal}, shutting down...`);
   stopSweep();

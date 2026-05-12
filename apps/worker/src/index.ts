@@ -55,6 +55,10 @@ const shutdown = createShutdownHandler({
   stopHeartbeat,
 });
 
+/**
+ *
+ * @param signal
+ */
 async function runShutdown(signal: string): Promise<void> {
   const code = await shutdown(signal);
   process.exit(code);

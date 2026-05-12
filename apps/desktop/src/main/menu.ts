@@ -11,7 +11,6 @@ import { Platform } from "@felafel/desktop/main/constants";
 
 /**
  * Replace electron-vite's stock menu bar with the right platform default.
- *
  * @remarks
  * On Linux/Windows the menu is removed entirely; on macOS we install a
  * minimal application menu so standard text-input shortcuts (Cmd-C/V,
@@ -31,7 +30,6 @@ export function applyMainAppMenu(): void {
  * hide, quit) + Edit submenu (the Edit roles are what wires Cmd-C/V/X
  * and Cmd-A into focused inputs on macOS — without them, copy/paste
  * silently stops working in form fields).
- *
  * @returns the assembled `Menu` ready to pass to `setApplicationMenu`
  */
 function buildMinimalMacMenu(): Menu {

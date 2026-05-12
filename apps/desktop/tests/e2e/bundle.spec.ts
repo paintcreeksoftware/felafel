@@ -31,6 +31,7 @@ const builtinSet = new Set(builtinModules);
  * artifact: `electron` itself, anything under `electron/`, anything
  * under `node:`, and Node builtins in the legacy unprefixed form
  * (including subpaths like `fs/promises`).
+ * @param id
  */
 function isAllowedExternal(id: string): boolean {
   if (id === "electron" || id.startsWith("electron/")) {
@@ -50,6 +51,7 @@ function isAllowedExternal(id: string): boolean {
  * bundled libraries like hono carry quoted imports in their own doc
  * comments that aren't real module-level dependencies. Good enough for
  * regression-style assertions; not a full parser.
+ * @param src
  */
 function extractImportSpecifiers(src: string): string[] {
   const matches = src.matchAll(
@@ -60,6 +62,11 @@ function extractImportSpecifiers(src: string): string[] {
     .filter((id): id is string => id !== undefined);
 }
 
+/**
+ *
+ * @param bundlePath
+ * @param allowed
+ */
 function externalizedSpecifiers(bundlePath: string, allowed: ReadonlySet<string> = new Set()): string[] {
   const src = readFileSync(bundlePath, "utf8");
   return [

@@ -25,7 +25,6 @@ const PROBE_SINGLE_ATTEMPT_TIMEOUT_MS = 5_000;
  *
  * Manager owns the in-flight dedup + the `cachedStatus` field; this
  * function just produces the next status.
- *
  * @param binary - resolved path to the `tailscale` binary, or `null` when
  * `which("tailscale")` returned null
  * @returns the resolved status; `kind: "missing-binary"` when binary is null
@@ -67,7 +66,6 @@ export async function runProbe(binary: string | null): Promise<TailscaleStatus> 
  * Single probe attempt. Spawns the CLI with a 5s timeout and parses
  * stdout. Recognized error patterns (EACCES, no daemon) get specialized
  * status; everything else returns `kind: "error"` with the raw message.
- *
  * @param binary - resolved path to the `tailscale` binary
  * @returns one-shot status (no retry logic)
  */

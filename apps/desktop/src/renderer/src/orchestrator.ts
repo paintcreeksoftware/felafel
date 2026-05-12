@@ -14,6 +14,10 @@ declare global {
 
 type OrchestratorClient = ReturnType<typeof hc<AppType>>;
 
+/**
+ *
+ * @param baseUrl
+ */
 export function makeClient(baseUrl: string): OrchestratorClient {
   return hc<AppType>(baseUrl);
 }

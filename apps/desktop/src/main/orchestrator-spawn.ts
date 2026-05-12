@@ -22,7 +22,6 @@ interface SpawnInvocation {
 
 /**
  * Decide how to invoke the orchestrator script.
- *
  * @remarks
  * In a packaged build: Electron's bundled Node via `process.execPath` +
  * `ELECTRON_RUN_AS_NODE` + `--experimental-sqlite`. In dev/tests:
@@ -33,7 +32,6 @@ interface SpawnInvocation {
  * where it's still experimental; once the bundled Node matches Node 24
  * LTS's GA promotion the flag becomes a runtime warning and should be
  * removed.
- *
  * @param script - absolute path to the bundled `.mjs` entry
  * @returns command/argv/env triple to pass to {@link spawn}
  */

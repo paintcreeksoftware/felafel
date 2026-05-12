@@ -8,6 +8,11 @@ import { buildApp } from "@felafel/orchestrator/app";
 import { type Run, type WorkerRegistration } from "@felafel/shared";
 import { type FakeWorker, startFakeWorker } from "./helpers/fake-worker";
 
+/**
+ *
+ * @param controlPlaneUrl
+ * @param overrides
+ */
 function sampleReg(
   controlPlaneUrl: string,
   overrides: Partial<WorkerRegistration> = {},

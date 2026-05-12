@@ -29,7 +29,6 @@ import { TailscaleManager } from "@felafel/tailscale";
  * Top-level desktop main-process owner. Composes the orchestrator +
  * Tailscale managers and wires them up to Electron's lifecycle and IPC
  * channels.
- *
  * @remarks
  * Module-private — instantiated once via {@link startDesktopApp} from
  * `index.ts`. **Not** a formal singleton: there is no `getInstance`
@@ -226,7 +225,6 @@ class DesktopApp {
   /**
    * Cache the orchestrator URL on `ready` and broadcast the status to every
    * open window so the renderer's React state can update.
-   *
    * @param status - the new status to publish
    */
   private broadcastOrchestrator(status: OrchestratorStatus): void {
@@ -246,7 +244,6 @@ class DesktopApp {
    * Forward a Tailscale status update to every open window. Returns the
    * status it received so it composes cleanly with `.then()` chains in the
    * IPC handlers.
-   *
    * @param status - the status received from the manager
    * @returns the same status (passthrough)
    */

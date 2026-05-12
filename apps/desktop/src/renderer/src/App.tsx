@@ -26,7 +26,13 @@ interface TailnetServeDegradation {
   remediation?: string;
 }
 
-/** Resolve which label to render for the orchestrator state. */
+/**
+ * Resolve which label to render for the orchestrator state.
+ * @param props
+ * @param props.statusError
+ * @param props.status
+ * @param props.orchUrl
+ */
 function OrchestratorLabel(props: {
   statusError: string | null;
   status: Status;
@@ -58,6 +64,8 @@ function OrchestratorLabel(props: {
  * worker is heartbeating; the orchestrator can dispatch to it. `stale`
  * is amber — worker stopped heartbeating past the sweep threshold; the
  * row is still in the DB but the worker is presumed gone.
+ * @param root0
+ * @param root0.status
  */
 function StatusPill({ status }: { status: Worker["status"] }) {
   const color =
@@ -77,7 +85,13 @@ function StatusPill({ status }: { status: Worker["status"] }) {
   );
 }
 
-/** Resolve which list/empty/error view to render for the worker registry. */
+/**
+ * Resolve which list/empty/error view to render for the worker registry.
+ * @param props
+ * @param props.workers
+ * @param props.workersError
+ * @param props.onForget
+ */
 function WorkersList(props: {
   workers: Worker[] | null;
   workersError: string | null;
@@ -120,6 +134,9 @@ function WorkersList(props: {
   );
 }
 
+/**
+ *
+ */
 export default function App() {
   const [status, setStatus] = useState<Status>("unknown");
   const [orchUrl, setOrchUrl] = useState<string | null>(null);

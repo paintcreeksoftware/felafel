@@ -1,4 +1,5 @@
-/** IPv4 loopback. Bind here for services that must not be reachable on
+/**
+ * IPv4 loopback. Bind here for services that must not be reachable on
  * the host LAN. Mirrors the same literal duplicated in each app package
  * (worker, orchestrator, desktop) — kept here too so @felafel/tailscale
  * doesn't have to import from any consumer app and create a cycle.

@@ -66,7 +66,6 @@ export const CompleteCallbackRetry = {
  * Base Directory Specification is a freedesktop.org spec; the worker is
  * Linux-only for v0 (homelab + container deployments). Override with the
  * {@link EnvVars.IDENTITY_PATH} env var on other OSes.
- *
  * @returns absolute path under `${XDG_STATE_HOME:-$HOME/.local/state}/felafel-worker/identity`
  */
 export function defaultIdentityPath(): string {

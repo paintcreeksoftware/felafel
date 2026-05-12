@@ -15,6 +15,7 @@
 // ESLint ecosystem in one shot.
 import pluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import { flatConfigs as importXFlatConfigs } from "eslint-plugin-import-x";
+import pluginJsdoc from "eslint-plugin-jsdoc";
 import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
@@ -22,7 +23,6 @@ import pluginReactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import { LAYOUT_FORMATTING_RULES } from "./eslint/layout-formatting.mjs";
 
-/** @type {import("eslint").Linter.Config[]} */
 const config = [
   {
     // Repo-wide ignore patterns. Mirrors what oxlint currently skips
@@ -478,6 +478,30 @@ const config = [
       // and the rule's default wraps eagerly enough to push some
       // existing components past the max-lines-per-function cap.
       "better-tailwindcss/enforce-consistent-line-wrapping": "off",
+    },
+  },
+  // jsdoc — codifies the "TSDoc by default" project memory rule as
+  // a tool check. The `flat/recommended-tsdoc-error` preset uses the
+  // TSDoc syntax dialect (matches what TypeScript itself parses, and
+  // what's documented in the project's TSDoc-by-default rule).
+  pluginJsdoc.configs["flat/recommended-tsdoc-error"],
+  {
+    rules: {
+      // Recommended-tsdoc preset's strictest rules — too aggressive
+      // for the codebase's current TSDoc coverage. The "TSDoc by
+      // default" memory rule is about discipline for new code, not
+      // retrofitting every existing function in one batch.
+      //   - require-returns / require-param-description: many
+      //     existing TSDoc blocks describe what the function does
+      //     without separately spelling out each @returns and @param.
+      //     Forcing the fill-in is hundreds of touch points and adds
+      //     little signal.
+      //   - escape-inline-tags: the rule misfires on the project's
+      //     own `@felafel/*` import paths inside TSDoc comments,
+      //     which aren't tags.
+      "jsdoc/require-returns": "off",
+      "jsdoc/require-param-description": "off",
+      "jsdoc/escape-inline-tags": "off",
     },
   },
 ];

@@ -34,11 +34,10 @@ interface StatusBadgeProps {
  * Render the right pill badge for the current Tailscale status + local
  * busy state. Busy state wins over status because a click is the most
  * recent thing the user did and they want visible feedback.
- *
- * @param props.status - the discriminated TailscaleStatus from main
- * @param props.busy - local "connecting"/"refreshing" state, or null
- * @param props.serveDegradation - orchestrator serve failure, or null
- * @returns the pill JSX
+ * @param root0 - props
+ * @param root0.status - the discriminated TailscaleStatus from main
+ * @param root0.busy - local "connecting"/"refreshing" state, or null
+ * @param root0.serveDegradation - orchestrator serve failure, or null
  */
 export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps) {
   if (busy === "connecting") {

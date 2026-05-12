@@ -26,7 +26,6 @@ export interface BuildAppOptions {
  *   and runs the job asynchronously, then POSTs `RunComplete { ok: true }`
  *   to the orchestrator's `/runs/:id/complete`. v0 logs the payload; PAI-75
  *   swaps in real execution and may post `ok: false` on process failure.
- *
  * @param opts - app configuration; see {@link BuildAppOptions}
  * @returns an OpenAPIHono app instance ready to hand to `@hono/node-server`'s `serve()`
  */

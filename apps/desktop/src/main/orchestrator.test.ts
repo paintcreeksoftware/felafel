@@ -17,6 +17,10 @@ interface Privates {
   currentLocalPort: number | null;
 }
 
+/**
+ *
+ * @param overrides
+ */
 function mockTailscale(overrides: Partial<TailscaleManager> = {}): TailscaleManager {
   return {
     probeStatus: vi.fn().mockResolvedValue({ kind: "missing-binary", path: null }),
@@ -223,7 +227,10 @@ describe("OrchestratorManager.refreshTailnetServe", () => {
 });
 
 describe("OrchestratorManager.stop", () => {
-  /** Build a manager with a fake child so stop() has something to kill without a real spawn. */
+  /**
+   * Build a manager with a fake child so stop() has something to kill without a real spawn.
+   * @param ts
+   */
   function withFakeProcess(ts: TailscaleManager): {
     manager: OrchestratorManager & Privates;
     kill: ReturnType<typeof vi.fn>;

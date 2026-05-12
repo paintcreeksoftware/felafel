@@ -15,13 +15,11 @@ const moduleDir = import.meta.dirname;
 /**
  * Resolve the orchestrator's bundled `.mjs` entrypoint and verify it
  * exists on disk.
- *
  * @remarks
  * In dev: the workspace package's `dist/index.mjs` discovered by
  * walking up from this file's location. In packaged builds: the file
  * electron-builder placed under `process.resourcesPath/orchestrator/`.
  * The `FELAFEL_ORCHESTRATOR_FAKE_BUNDLE` env override exists for tests.
- *
  * @returns absolute path to the orchestrator entrypoint
  * @throws if the entrypoint is missing on disk (build hasn't run)
  */
@@ -35,6 +33,9 @@ export function resolveScriptPath(): string {
   return path;
 }
 
+/**
+ *
+ */
 function computePath(): string {
   const fake = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_FAKE_BUNDLE];
   if (fake) {

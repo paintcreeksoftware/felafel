@@ -18,8 +18,10 @@ export interface UpErrorClassification {
 export interface ServeErrorClassification {
   kind: "eacces" | "no-daemon" | "port-in-use" | "timeout" | "unknown";
   message: string;
-  /** Actionable one-liner the renderer can display verbatim. Currently
-   * populated only for the `eacces` case (the operator-permission setup). */
+  /**
+   * Actionable one-liner the renderer can display verbatim. Currently
+   * populated only for the `eacces` case (the operator-permission setup).
+   */
   remediation?: string;
 }
 
@@ -36,7 +38,6 @@ export type ServeFailureError = Error & { classification: ServeErrorClassificati
  * Pairs with the throw inside `runServeCommand`. Implemented as a function
  * (not a class instanceof) so we don't burn a second class against the
  * file-class-limit lint rule for what is fundamentally a tagged Error.
- *
  * @param error - the unknown caught from a try/catch
  * @returns true if the error carries a `classification` payload
  */
@@ -52,7 +53,6 @@ export function isServeFailureError(error: unknown): error is ServeFailureError 
  * the `.*` can backtrack across repeated "failed to connect" prefixes.
  * Tailscale CLI stderr isn't attacker-controlled, but the string-includes
  * form is faster, clearer, and immune to the rule.
- *
  * @param stderr - lowercased combined stderr from a `tailscale` invocation
  * @returns true if the stderr fingerprints the "daemon not running" case
  */
@@ -68,7 +68,6 @@ export function matchesNoDaemonStderr(stderr: string): boolean {
  * Pure classifier. Reads stderr/stdout from `tailscale up` and decides which
  * failure mode we're in. Priority order matters — EACCES is most actionable
  * so it wins over auth-url even if both somehow appear.
- *
  * @param stderr - combined stderr (stdout can be appended) from the CLI run
  * @param exitCode - CLI exit code, or null if it timed out
  * @param timedOut - true when the outer AbortController fired
@@ -123,7 +122,6 @@ export function classifyUpError(
  * which failure mode we're in. Mirrors {@link classifyUpError}'s priority
  * ordering — EACCES wins over everything else because it's the most
  * actionable.
- *
  * @param stderr - combined stderr (stdout can be appended) from the CLI run
  * @param exitCode - CLI exit code, or null if it timed out
  * @param timedOut - true when the outer AbortController fired

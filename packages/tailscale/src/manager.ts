@@ -35,7 +35,7 @@ export class TailscaleManager {
    * Resolve the `tailscale` binary on PATH. Falls back to the
    * `FELAFEL_TAILSCALE_FAKE` env var when set so E2E tests can inject a
    * fixture script at the boundary instead of mocking spawn.
-   *
+   * @param opts
    * @param opts.refresh - bypass the cache and re-resolve
    * @returns absolute path to the binary, or null if not found
    */
@@ -64,7 +64,6 @@ export class TailscaleManager {
    * the same in-flight promise. Retries up to 3× with 200/500/1500ms
    * backoff on transient errors (EAGAIN, AbortError, etc.); deterministic
    * errors (EACCES, missing-binary) return immediately without retry.
-   *
    * @returns the latest status; also updates the cache returned by
    * {@link getCachedStatus}
    */
@@ -97,7 +96,6 @@ export class TailscaleManager {
    * Run `tailscale up`. Without a key, attempts session resume (5s timeout).
    * With a key, pipes the key via stdin (30s timeout). Outer 60s
    * AbortController is a safety net.
-   *
    * @param authkey - optional Tailscale pre-auth key
    * @returns connect result; `ok: false, kind: "needs-key"` carries an
    * auth URL the renderer can show to the user
@@ -119,6 +117,7 @@ export class TailscaleManager {
    * `.finally`. The actual spawn + classify flow lives in `up.ts` — this
    * method just resolves the binary, short-circuits when missing, and
    * delegates.
+   * @param authkey
    */
   private async runUpAndClear(authkey: string | undefined): Promise<TailscaleConnectResult> {
     try {
@@ -141,7 +140,6 @@ export class TailscaleManager {
    * Callers that want to short-circuit before any work (e.g. the desktop
    * main process at startup) can call this once explicitly to verify
    * Tailscale availability before constructing dependent components.
-   *
    * @returns absolute path to the `tailscale` binary
    * @throws when the binary cannot be resolved on PATH
    */
@@ -171,7 +169,7 @@ export class TailscaleManager {
    * `setupTailnetServe`'s reap-on-startup catches that on next launch
    * by reading the existing mapping and unpublishing it before
    * re-publishing the new ephemeral port.
-   *
+   * @param opts
    * @param opts.tailnetPort - stable Tailnet-side TCP port
    * @param opts.localPort - local loopback port the orchestrator picked
    * @throws when the underlying `tailscale serve` invocation fails for a
@@ -192,7 +190,7 @@ export class TailscaleManager {
    * a no-op when nothing is published. Should be called on graceful
    * shutdown so the AppImage doesn't leave a stale mapping pointing at a
    * dead local port.
-   *
+   * @param opts
    * @param opts.tailnetPort - the stable Tailnet port to clear
    */
   async unpublishServe(opts: { tailnetPort: number }): Promise<void> {
@@ -215,7 +213,7 @@ export class TailscaleManager {
    * {@link probeStatus}) before calling — this method throws if the binary
    * is missing rather than silently returning null. Null is reserved for
    * the genuine "no mapping configured" case.
-   *
+   * @param opts
    * @param opts.tailnetPort - the Tailnet port to look up
    * @returns `{ targetLocalPort }` when a TCP forward exists, else null
    * @throws when the `tailscale` binary is missing on PATH

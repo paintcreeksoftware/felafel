@@ -32,6 +32,10 @@ describe("TailscaleManager serve methods (with mocked execa)", () => {
    * production code consumes via `result.stdout`, `result.exitCode`,
    * `result.isCanceled`. Cast through `unknown` because execa's full
    * `Result` type has dozens of fields the test doesn't care about.
+   * @param opts
+   * @param opts.stdout
+   * @param opts.stderr
+   * @param opts.exitCode
    */
   function stubExeca(opts: { stdout?: string; stderr?: string; exitCode?: number }): void {
     vi.mocked(execa).mockResolvedValueOnce({

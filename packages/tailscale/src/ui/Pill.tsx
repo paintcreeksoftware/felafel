@@ -59,7 +59,6 @@ const MIN_VISIBLE_BUSY_MS = 500;
  * Hold the resolved value of `work` until at least
  * {@link MIN_VISIBLE_BUSY_MS} has elapsed. Use to wrap an IPC call whose
  * `pillBusy` state would otherwise flicker too fast to read.
- *
  * @param work - the promise whose result should be returned
  * @returns the resolved value of `work`, never sooner than the floor
  */
@@ -73,6 +72,11 @@ async function withMinVisibleBusy<T>(work: Promise<T>): Promise<T> {
   return result;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.tailnetServeDegradation
+ */
 export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillProps = {}) {
   const [status, setStatus] = useState<TailscaleStatus>({ kind: "unknown" });
   const [open, setOpen] = useState(false);
@@ -115,6 +119,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     };
   }, []);
 
+  /**
+   *
+   */
   async function handlePillClick() {
     if (status.kind === "missing-binary") {return;}
     if (pillBusy || submittingRef.current) {return;}
@@ -137,6 +144,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     }
   }
 
+  /**
+   *
+   */
   async function handleRefresh() {
     if (pillBusy || submittingRef.current) {return;}
     setPillBusy("refreshing");
@@ -149,6 +159,10 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     }
   }
 
+  /**
+   *
+   * @param event
+   */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting || !authkey.trim()) {return;}

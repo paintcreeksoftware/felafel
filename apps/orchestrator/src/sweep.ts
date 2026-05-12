@@ -24,7 +24,7 @@ const BACKOFF_FACTOR = 2;
  * given the current consecutive-failure count. Below the threshold the
  * loop runs at its normal cadence; past it the delay doubles per
  * additional failure, capped at {@link BACKOFF_MAX_DELAY_MS}.
- *
+ * @param opts
  * @param opts.baseMs - normal inter-tick delay
  * @param opts.consecutiveFailures - failure count since last success
  * @param opts.thresholdFailures - failures tolerated before backoff
@@ -67,7 +67,6 @@ interface StartSweepOptions {
  *   `status='failed'` with `error='dispatch timeout'`.
  *
  * Errors during a tick are logged and swallowed; the loop continues.
- *
  * @param opts - sweep configuration; see {@link StartSweepOptions}
  * @returns a stop function that halts the loop
  */
@@ -81,6 +80,9 @@ export function startSweep(opts: StartSweepOptions): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let consecutiveFailures = 0;
 
+  /**
+   *
+   */
   function tick(): void {
     if (stopped) {
       return;
@@ -111,6 +113,9 @@ export function startSweep(opts: StartSweepOptions): () => void {
     scheduleNext();
   }
 
+  /**
+   *
+   */
   function scheduleNext(): void {
     if (stopped) {
       return;

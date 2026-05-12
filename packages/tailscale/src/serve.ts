@@ -21,7 +21,6 @@ const SERVE_READ_TIMEOUT_MS = 5_000;
  * a `ServeFailureError` (Error decorated with a `classification` payload)
  * so callers can `await` and let exceptions propagate while still being
  * able to inspect the failure mode via `isServeFailureError`.
- *
  * @param binary - resolved path to the `tailscale` binary
  * @param args - argv to pass after the binary
  * @throws ServeFailureError when the CLI returns a classified failure
@@ -47,7 +46,6 @@ export async function runServeMutation(binary: string, args: string[]): Promise<
  * Read the current `tailscale serve` config and return what's mapped to
  * `tailnetPort`, or null if nothing is mapped. Used at startup to detect
  * a stale mapping left by a prior crashed launch.
- *
  * @param binary - resolved path to the `tailscale` binary
  * @param tailnetPort - the Tailnet-side port to look up
  * @returns `{ targetLocalPort }` if a TCP forward exists, else null

@@ -16,7 +16,6 @@ const FELAFEL_PREFIX = "@felafel/";
 
 /**
  * Discover every `@felafel/*` workspace by scanning apps/* + packages/*.
- *
  * @returns Map keyed by full package name (e.g. `@felafel/tailscale`),
  * valued by `{ exports }` from the package's package.json.
  */
@@ -43,7 +42,6 @@ function discoverWorkspaces() {
  * True when `subPath` (the portion after `@felafel/<pkg>/`) is reachable
  * through any entry in `exportsMap`. Supports the Node spec's `*` wildcard
  * — `./foo/*` matches any path starting with `foo/`.
- *
  * @param subPath - empty string for a bare `@felafel/<pkg>` import,
  * otherwise the path segment after the package name and slash.
  * @param exportsMap - the `exports` object from the target package.json.
@@ -59,7 +57,6 @@ function matchesAnyExport(subPath, exportsMap) {
 
 /**
  * Test one `exports` map entry against the sub-path being resolved.
- *
  * @param subPath - the sub-path being resolved.
  * @param exportKey - one entry from the package.json#exports map.
  */
@@ -80,7 +77,6 @@ function matchesExportKey(subPath, exportKey) {
 
 /**
  * Extract every bare-specifier `@felafel/...` import from one source string.
- *
  * @param source - the file contents to scan.
  */
 function extractFelafelImports(source) {
@@ -105,6 +101,9 @@ function listSourceFiles() {
     .filter((p) => !p.endsWith(".d.ts"));
 }
 
+/**
+ *
+ */
 function main() {
   const workspaces = discoverWorkspaces();
   const offenders = [];

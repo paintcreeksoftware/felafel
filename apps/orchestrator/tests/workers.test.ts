@@ -12,6 +12,10 @@ import {
 import { buildApp } from "@felafel/orchestrator/app";
 import { type Worker, type WorkerRegistration } from "@felafel/shared";
 
+/**
+ *
+ * @param overrides
+ */
 function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
   return {
     id: randomUUID(),
@@ -21,6 +25,11 @@ function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistrat
   };
 }
 
+/**
+ *
+ * @param app
+ * @param reg
+ */
 async function postWorker(
   app: ReturnType<typeof buildApp>,
   reg: WorkerRegistration,

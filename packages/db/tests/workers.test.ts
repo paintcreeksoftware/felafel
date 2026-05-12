@@ -28,6 +28,10 @@ import {
 const workerUuidA = "11111111-2222-4333-8444-555555555555";
 const workerUuidB = "99999999-8888-4777-a666-555555555555";
 
+/**
+ *
+ * @param overrides
+ */
 function reg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
   return {
     id: workerUuidA,

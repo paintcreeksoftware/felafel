@@ -31,6 +31,10 @@ export interface BuildAppOptions {
   db: Db;
 }
 
+/**
+ *
+ * @param opts
+ */
 export function buildApp(opts: BuildAppOptions) {
   // The orchestrator binds to 127.0.0.1 only (or, in container mode, behind a
   // Tailnet ACL), so the network layer already gates access. Allowing all

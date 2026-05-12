@@ -21,7 +21,6 @@ const defaultRespond = (): Response =>
  * Stand up a tiny in-process Hono server that pretends to be a worker —
  * accepts `POST /jobs/run`, records the payload, and returns whatever the
  * caller's `setResponder` last installed (defaults to 202 accepted).
- *
  * @returns a {@link FakeWorker} handle. Caller must call `close()` to
  * release the bound port.
  */

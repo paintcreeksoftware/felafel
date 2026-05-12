@@ -47,7 +47,6 @@ const DEFAULT_MIGRATIONS_FOLDER = resolve(import.meta.dirname, "..", "migrations
  * Drizzle issues is logged to stdout. That's the default we want during
  * development, testing, and the early production phase; revisit (gate on
  * env var) once log volume becomes a concern.
- *
  * @param dataDir - filesystem directory for `orchestrator.sqlite`; created if missing.
  * @param migrationsFolder - override the default migrations folder. Tests pass an explicit path; production callers should rely on the default.
  * @returns Drizzle handle plus a `close()` cleanup hook.

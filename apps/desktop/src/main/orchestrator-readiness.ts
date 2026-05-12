@@ -16,7 +16,6 @@ const MAX_PROBE_ATTEMPTS = 12;
 /**
  * Poll `${url}/health` with exponential backoff until it returns 200 or
  * the retry budget is exhausted.
- *
  * @param url - base URL where the orchestrator is binding
  * @throws if the orchestrator doesn't reach ready within
  * {@link MAX_PROBE_ATTEMPTS} attempts

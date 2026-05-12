@@ -18,6 +18,9 @@ afterEach(() => {
  * Stub the next `execFile("tailscale", ["ip", "-4"], ...)` call. Mimics
  * Node's callback-style execFile signature so promisify-wrapped callers
  * resolve/reject correctly.
+ * @param opts
+ * @param opts.stdout
+ * @param opts.error
  */
 function stubExecFile(opts: {
   stdout?: string;

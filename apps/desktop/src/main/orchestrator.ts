@@ -68,7 +68,6 @@ export class OrchestratorManager {
 
   /**
    * Construct an OrchestratorManager.
-   *
    * @param tailscale - the desktop's TailscaleManager instance. Used in
    * `start()`/`stop()` to publish/unpublish the orchestrator's stable
    * Tailnet port via `tailscale serve` when Tailscale is connected. The
@@ -82,7 +81,6 @@ export class OrchestratorManager {
   /**
    * Spawn the orchestrator as a child process, wait for `/health` to
    * respond, and return the URL the renderer/main can use to reach it.
-   *
    * @returns absolute URL of the running orchestrator (e.g.
    * `http://127.0.0.1:9123`)
    * @throws if the bundle is missing on disk or the readiness probe doesn't
@@ -137,7 +135,6 @@ export class OrchestratorManager {
    *
    * No-op (returns the existing degradation unchanged) when called
    * before `start()` has bound a port or after `stop()` has cleared it.
-   *
    * @returns the (possibly updated) tailnet-serve degradation — null
    * when the fresh attempt succeeded, populated when it failed
    */
@@ -165,7 +162,6 @@ export class OrchestratorManager {
    * so the desktop main process can surface them in the renderer. The
    * orchestrator child is already running and serves loopback fine; a
    * `tailscale serve` failure shouldn't take down the whole desktop.
-   *
    * @param localPort - the kernel-assigned ephemeral port the orchestrator bound
    */
   private async setupTailnetServe(localPort: number): Promise<void> {
@@ -209,7 +205,6 @@ export class OrchestratorManager {
   /**
    * Resolve the stable Tailnet port to publish on. Reads the env var if
    * set, otherwise falls back to {@link DEFAULT_TAILNET_PORT}.
-   *
    * @returns the resolved port number
    */
   private resolveTailnetPort(): number {
@@ -223,7 +218,6 @@ export class OrchestratorManager {
    * setup was attempted (e.g. host has no Tailscale daemon). The desktop
    * main process reads this AFTER `start()` resolves and attaches it to
    * the OrchestratorStatus ready broadcast.
-   *
    * @returns the degradation if `setupTailnetServe` failed during the
    * last successful start(), else null
    */

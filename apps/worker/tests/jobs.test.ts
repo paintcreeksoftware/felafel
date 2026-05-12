@@ -19,7 +19,7 @@ interface FakeOrchestrator {
  * `/runs/:id/complete` succeeds on every attempt; pass `failuresBeforeSuccess`
  * to make the first N attempts return 503 so tests can exercise the
  * worker's bounded-retry behavior on transient orchestrator unavailability.
- *
+ * @param opts
  * @param opts.failuresBeforeSuccess - count of leading 503s; the (N+1)th
  *   attempt and beyond return 200. Defaults to 0 (always-success).
  * @returns the live fake with attempt count + close handle
@@ -63,6 +63,11 @@ async function startFakeOrchestrator(
   };
 }
 
+/**
+ *
+ * @param check
+ * @param timeoutMs
+ */
 async function waitFor(
   check: () => boolean,
   timeoutMs: number,

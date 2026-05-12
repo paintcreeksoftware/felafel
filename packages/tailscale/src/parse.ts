@@ -48,7 +48,6 @@ const ServeConfigSchema = z.object({
  * onto the discriminated `TailscaleStatus` union. The CLI emits valid JSON on
  * stdout even when exiting non-zero (e.g. NeedsLogin), so callers should pass
  * the stdout regardless of exit code.
- *
  * @param stdout - raw stdout from `tailscale status --json`
  * @returns discriminated status; `kind: "error"` if the JSON is malformed
  */
@@ -98,7 +97,6 @@ export function parseStatusJson(stdout: string): TailscaleStatus {
  * TCP forwards by port-number-as-string and stores the local target as
  * `TCPForward: "host:port"`. Anything else (HTTPS termination, Web routes,
  * Funnel) is ignored — we only care about raw TCP forwarding here.
- *
  * @param stdout - raw stdout from `tailscale serve status --json`
  * @param tailnetPort - the Tailnet-side port we want the mapping for
  * @returns `{ targetLocalPort }` if a TCP forward exists for this port, else null
