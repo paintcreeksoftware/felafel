@@ -259,6 +259,21 @@ const config = [
       "one-var": ["error", "never"],
       "strict": ["error", "never"],
       "vars-on-top": "error",
+      // Core — Suggestions / restricted-* (project-specific bans)
+      // Most of the family is off because we have nothing
+      // project-specific to ban. no-restricted-imports ports the
+      // oxlint config that's been enforcing "no relative imports +
+      // no .js extension" across the repo.
+      "no-restricted-exports": "off",
+      "no-restricted-globals": "off",
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["./*", "../*"], message: "Use the @felafel/<pkg>/... alias, not relative paths." },
+          { group: ["*.js"], message: "Drop the .js extension; bundler resolution handles it." },
+        ],
+      }],
+      "no-restricted-properties": "off",
+      "no-restricted-syntax": "off",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
@@ -283,9 +298,23 @@ const config = [
     // Test-file overrides — mirrors the `.oxlintrc.json` overrides
     // section. Empty arrow functions are a standard test idiom
     // (`mockImplementation(() => {})`, stream `.on("data", () => {})`).
+    // Colocated test helpers (`./helpers/fake-worker`) are also a
+    // standard pattern; the no-relative-import rule applies to
+    // production code, not test plumbing.
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
     rules: {
       "no-empty-function": "off",
+      "no-restricted-imports": "off",
+    },
+  },
+  {
+    // Vite asset imports — `iconPath from "../../build/icon.png?asset"`
+    // is the canonical Vite syntax for static file references. The
+    // `?asset` query marks it as a file path, not a module import;
+    // there's no @felafel/* alias for build artifacts.
+    files: ["apps/desktop/src/main/window.ts"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ];
