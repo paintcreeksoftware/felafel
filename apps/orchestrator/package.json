@@ -8,7 +8,10 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./app": "./src/app.ts",
-    "./constants": "./src/constants.ts"
+    "./constants": "./src/constants.ts",
+    "./dispatch": "./src/dispatch.ts",
+    "./routes/*": "./src/routes/*.ts",
+    "./sweep": "./src/sweep.ts"
   },
   "scripts": {
     "dev": "tsup --watch",
