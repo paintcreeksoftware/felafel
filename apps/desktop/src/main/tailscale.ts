@@ -124,7 +124,7 @@ export function parseStatusJson(stdout: string): TailscaleStatus {
 }
 
 /** Classification of a `tailscale up` failure. */
-export interface UpErrorClassification {
+interface UpErrorClassification {
   kind: "eacces" | "needs-login" | "invalid-key" | "no-daemon" | "timeout" | "unknown";
   message: string;
   /** Auth URL extracted from stderr when `kind === "needs-login"`. */
@@ -229,7 +229,7 @@ export function parseServeConfigJson(
 }
 
 /** Classification of a `tailscale serve` failure. */
-export interface ServeErrorClassification {
+interface ServeErrorClassification {
   kind: "eacces" | "no-daemon" | "port-in-use" | "timeout" | "unknown";
   message: string;
   /** Actionable one-liner the renderer can display verbatim. Currently
@@ -243,7 +243,7 @@ export interface ServeErrorClassification {
  * so callers that want to surface a remediation hint can read
  * `error.classification.remediation` instead of re-parsing the message.
  */
-export type ServeFailureError = Error & { classification: ServeErrorClassification };
+type ServeFailureError = Error & { classification: ServeErrorClassification };
 
 /**
  * Type guard for a thrown error that carries a serve-failure classification.

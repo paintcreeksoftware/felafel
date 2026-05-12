@@ -50,7 +50,7 @@ interface SubmitError {
  * Tailscale integration usable for dispatch?" — a green pill plus
  * a separate "degraded" badge splits one answer across two surfaces.
  */
-export interface TailscalePillProps {
+interface TailscalePillProps {
   tailnetServeDegradation?: { reason: string; remediation?: string } | null;
 }
 
