@@ -45,6 +45,26 @@ export function isServeFailureError(error: unknown): error is ServeFailureError 
 }
 
 /**
+ * Match the "tailscaled daemon isn't running" stderr fingerprint without
+ * a polynomial regex. Earlier revisions used
+ * `/(failed to connect.*tailscaled|tailscaled\.sock)/i`, which CodeQL
+ * (correctly) flags as ReDoS-vulnerable on `failed to connect…tailscaled`:
+ * the `.*` can backtrack across repeated "failed to connect" prefixes.
+ * Tailscale CLI stderr isn't attacker-controlled, but the string-includes
+ * form is faster, clearer, and immune to the rule.
+ *
+ * @param stderr - lowercased combined stderr from a `tailscale` invocation
+ * @returns true if the stderr fingerprints the "daemon not running" case
+ */
+function matchesNoDaemonStderr(stderr: string): boolean {
+  const s = stderr.toLowerCase();
+  return (
+    s.includes("tailscaled.sock") ||
+    (s.includes("failed to connect") && s.includes("tailscaled"))
+  );
+}
+
+/**
  * Pure classifier. Reads stderr/stdout from `tailscale up` and decides which
  * failure mode we're in. Priority order matters — EACCES is most actionable
  * so it wins over auth-url even if both somehow appear.
@@ -71,7 +91,7 @@ export function classifyUpError(
       message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
     };
   }
-  if (/(failed to connect.*tailscaled|tailscaled\.sock)/i.test(stderr)) {
+  if (matchesNoDaemonStderr(stderr)) {
     return {
       kind: "no-daemon",
       message: "The tailscaled daemon isn't running on this machine.",
@@ -131,13 +151,21 @@ export function classifyServeError(
       remediation: "sudo tailscale set --operator=$USER",
     };
   }
-  if (/(failed to connect.*tailscaled|tailscaled\.sock)/i.test(stderr)) {
+  if (matchesNoDaemonStderr(stderr)) {
     return {
       kind: "no-daemon",
       message: "The tailscaled daemon isn't running on this machine.",
     };
   }
-  if (/already (in use|configured|serving)|address.*in use/i.test(stderr)) {
+  // Split into a bounded alternation + an explicit `address`/`in use`
+  // co-occurrence check. The previous combined regex tripped CodeQL's
+  // js/polynomial-redos rule on `address.*in use` (the `.*` could
+  // backtrack across many "address" substrings).
+  const stderrLower = stderr.toLowerCase();
+  if (
+    /already (in use|configured|serving)/i.test(stderr) ||
+    (stderrLower.includes("address") && stderrLower.includes("in use"))
+  ) {
     return {
       kind: "port-in-use",
       message: "That Tailnet port is already published by another process.",
