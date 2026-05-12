@@ -12,6 +12,9 @@ permissions:
 
 jobs:
   e2e:
+    # Skip on draft PRs so CI minutes aren't burned on in-progress work.
+    # `pull_request.draft` is unset on push events, so pushes to main proceed.
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     # The official Playwright image bakes in browsers + every required system
     # library + xvfb. Without it the previous workflow spent ~16 of its ~17
