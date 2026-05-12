@@ -257,8 +257,8 @@ const config = [
       "accessor-pairs": "error",
       "grouped-accessor-pairs": "error",
       "one-var": ["error", "never"],
-      "strict": "off",
-      "vars-on-top": "off",
+      "strict": ["error", "never"],
+      "vars-on-top": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
