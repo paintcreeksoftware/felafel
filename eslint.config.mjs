@@ -14,6 +14,7 @@
 // PRs so this scaffold stays installable without pulling the whole
 // ESLint ecosystem in one shot.
 import tseslint from "typescript-eslint";
+import { LAYOUT_FORMATTING_RULES } from "./eslint/layout-formatting.mjs";
 
 /** @type {import("eslint").Linter.Config[]} */
 const config = [
@@ -334,10 +335,12 @@ const config = [
         { selector: "TSEnumDeclaration", message: "Use a `const` object with `as const` instead of an enum — keeps the runtime shape predictable and matches the `Platform` / `EnvVars` pattern." },
         { selector: "ExportNamedDeclaration > VariableDeclaration[kind='let']", message: "Export `const`, not `let`. A mutable export defeats import-side reasoning." },
       ],
-      // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
-      // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
-      //   since oxfmt owns formatting, but enumerated explicitly per the
-      //   "every rule must be specified" cutover rule).
+      // Core — Layout & Formatting (https://eslint.org/docs/latest/rules/#layout--formatting)
+      // ALL OFF — oxfmt owns formatting in this project; the 70 rules
+      // are enumerated in `eslint/layout-formatting.mjs` and spread in
+      // here as a single statement to keep this file under the
+      // max-lines cap.
+      ...LAYOUT_FORMATTING_RULES,
       // TODO(PAI-141 batch 4: @typescript-eslint). Plugin install lands
       //   with that batch.
       // TODO(PAI-141 batch 5: react + react-hooks + react-refresh).
@@ -373,6 +376,16 @@ const config = [
     // (the bundler resolves `?asset` against the build/ directory at
     // build time — there's no workspace-alias form).
     files: ["apps/desktop/src/main/window.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
+  {
+    // Root-level lint config files. The root package isn't a
+    // `@felafel/<pkg>` workspace member, so there's no alias form to
+    // import the extracted rule-cluster modules in `eslint/` — the
+    // import has to be relative.
+    files: ["eslint.config.mjs", "eslint/**/*.mjs"],
     rules: {
       "no-restricted-imports": "off",
     },
