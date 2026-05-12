@@ -127,14 +127,19 @@ class DesktopApp {
     ipcMain.handle(Channels.OrchestratorStatusGet, () => this.orchestratorStatus);
 
     // Tailscale handlers. ts:status returns the cached value (instant);
-    // ts:refresh forces a re-probe and broadcasts. ts:connect runs
-    // `tailscale up` and kicks off a fire-and-forget re-probe so the
-    // steady-state status arrives via broadcast even though the Promise
-    // resolves with the immediate `up` outcome.
+    // ts:refresh forces a re-probe AND re-attempts the orchestrator's
+    // tailnet-serve setup so a runtime `--operator` change is reflected
+    // in the pill (status probe is operator-blind; serve is what the
+    // operator setting gates). ts:connect runs `tailscale up` and kicks
+    // off a fire-and-forget re-probe so the steady-state status arrives
+    // via broadcast even though the Promise resolves with the immediate
+    // `up` outcome.
     ipcMain.handle(Channels.TailscaleStatus, () => this.tailscale.getCachedStatus());
     ipcMain.handle(Channels.TailscaleRefresh, async () => {
       const status = await this.tailscale.probeStatus();
-      return this.broadcastTailscale(status);
+      this.broadcastTailscale(status);
+      await this.refreshOrchestratorServeAndBroadcast();
+      return status;
     });
     ipcMain.handle(Channels.TailscaleConnect, async (_event, key?: string) => {
       const result = await this.tailscale.runUp(key);
@@ -150,6 +155,27 @@ class DesktopApp {
   private async broadcastProbeStatus(): Promise<void> {
     const status = await this.tailscale.probeStatus();
     this.broadcastTailscale(status);
+  }
+
+  /**
+   * Re-run the orchestrator's tailnet-serve setup and rebroadcast
+   * `OrchestratorStatus` with the fresh degradation. Called from the
+   * Tailscale refresh handler so a user who fixes their `--operator`
+   * setting (or breaks it) sees the pill update without an orchestrator
+   * restart. No-op when the orchestrator isn't in the `ready` state —
+   * the broadcast would otherwise replace a `starting`/`error` status
+   * with a stale `ready` one.
+   */
+  private async refreshOrchestratorServeAndBroadcast(): Promise<void> {
+    const tailnetServe = await this.orchestrator.refreshTailnetServe();
+    if (this.orchestratorStatus.kind !== "ready") {
+      return;
+    }
+    this.broadcastOrchestrator({
+      kind: "ready",
+      url: this.orchestratorStatus.url,
+      ...(tailnetServe ? { degradations: { tailnetServe } } : {}),
+    });
   }
 
   /**
