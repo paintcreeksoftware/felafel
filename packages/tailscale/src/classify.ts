@@ -105,7 +105,7 @@ export function classifyUpError(
       authUrl: authUrlMatch[0],
     };
   }
-  if (/invalid (auth )?key|unauthorized/i.test(stderr)) {
+  if (/invalid (?:auth )?key|unauthorized/i.test(stderr)) {
     return {
       kind: "invalid-key",
       message: "Tailscale rejected the auth key — check it isn't expired or revoked.",
@@ -163,7 +163,7 @@ export function classifyServeError(
   // backtrack across many "address" substrings).
   const stderrLower = stderr.toLowerCase();
   if (
-    /already (in use|configured|serving)/i.test(stderr) ||
+    /already (?:in use|configured|serving)/i.test(stderr) ||
     (stderrLower.includes("address") && stderrLower.includes("in use"))
   ) {
     return {

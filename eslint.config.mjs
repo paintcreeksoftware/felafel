@@ -232,9 +232,9 @@ const config = [
       // Rules that prefer the modern alternative when one exists.
       "prefer-arrow-callback": "error",
       "prefer-const": "error",
-      "prefer-destructuring": "off",
+      "prefer-destructuring": "error",
       "prefer-exponentiation-operator": "error",
-      "prefer-named-capture-group": "off",
+      "prefer-named-capture-group": "error",
       "prefer-numeric-literals": "error",
       "prefer-object-has-own": "error",
       "prefer-object-spread": "error",

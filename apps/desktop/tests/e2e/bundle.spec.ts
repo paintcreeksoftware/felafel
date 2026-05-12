@@ -53,9 +53,11 @@ function isAllowedExternal(id: string): boolean {
  */
 function extractImportSpecifiers(src: string): string[] {
   const matches = src.matchAll(
-    /^(?:import|export)\s+(?:.*?\s+from\s+)?["']([^"']+)["']/gm,
+    /^(?:import|export)\s+(?:.*?\s+from\s+)?["'](?<spec>[^"']+)["']/gm,
   );
-  return [...matches].map((m) => m[1]).filter((id): id is string => id !== undefined);
+  return [...matches]
+    .map((m) => m.groups?.spec)
+    .filter((id): id is string => id !== undefined);
 }
 
 function externalizedSpecifiers(bundlePath: string, allowed: ReadonlySet<string> = new Set()): string[] {

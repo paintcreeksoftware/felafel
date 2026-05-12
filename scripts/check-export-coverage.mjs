@@ -85,9 +85,11 @@ function matchesExportKey(subPath, exportKey) {
  */
 function extractFelafelImports(source) {
   const found = [];
-  const re = /(?:from|import)\s*\(?\s*["'](@felafel\/[^"']+)["']/g;
+  const re = /(?:from|import)\s*\(?\s*["'](?<spec>@felafel\/[^"']+)["']/g;
   for (const match of source.matchAll(re)) {
-    found.push(match[1]);
+    if (match.groups?.spec) {
+      found.push(match.groups.spec);
+    }
   }
   return found;
 }
@@ -99,7 +101,7 @@ function listSourceFiles() {
   const out = execSync("git ls-files apps packages", { cwd: REPO_ROOT, encoding: "utf8" });
   return out
     .split("\n")
-    .filter((p) => /\.(ts|tsx|js|mjs|cjs)$/.test(p))
+    .filter((p) => /\.(?:ts|tsx|js|mjs|cjs)$/.test(p))
     .filter((p) => !p.endsWith(".d.ts"));
 }
 
