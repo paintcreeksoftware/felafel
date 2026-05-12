@@ -4,10 +4,9 @@
 // pay the React import cost; the worker IP helper lives behind
 // `./worker-ip` for the same reason.
 export {
-  TailscaleManager,
   classifyServeError,
   classifyUpError,
   isServeFailureError,
-  parseServeConfigJson,
-  parseStatusJson,
-} from "@felafel/tailscale/manager";
+} from "@felafel/tailscale/classify";
+export { TailscaleManager } from "@felafel/tailscale/manager";
+export { parseServeConfigJson, parseStatusJson } from "@felafel/tailscale/parse";
