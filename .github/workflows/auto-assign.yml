@@ -1,0 +1,23 @@
+name: auto-assign
+
+# Assign every new PR to yingw787 so it shows up in their assigned-PRs
+# view immediately. Covers PRs from any source (humans, Dependabot,
+# Claude Code agents, etc.) so the convention isn't dependent on the
+# opener remembering --assignee.
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign PR to yingw787
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-assignee yingw787
