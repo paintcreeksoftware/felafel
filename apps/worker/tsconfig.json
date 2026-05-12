@@ -4,5 +4,5 @@
     "rootDir": ".",
     "paths": { "@felafel/worker/*": ["./src/*"] }
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*", "tsup.config.ts", "vitest.config.ts"]
 }

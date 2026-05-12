@@ -38,7 +38,12 @@ export function buildApp(opts: BuildAppOptions) {
       // the job in the next tick so the orchestrator's outbound request
       // returns fast. PAI-75 will swap the console.log for actual
       // execution against PAI-72's workstation container.
-      setImmediate(async () => {
+      // Wrap async body in a void IIFE — setImmediate's callback type
+      // is void-returning, so handing it an async function is a
+      // misused-promise. The detached body still does its work; we
+      // explicitly mark the floating promise as intentional.
+      setImmediate(() => {
+        void (async () => {
         console.log("received job", runId, JSON.stringify(payload));
         const ack: RunComplete = { ok: true };
         try {
@@ -75,6 +80,7 @@ export function buildApp(opts: BuildAppOptions) {
             error,
           );
         }
+        })();
       });
       // oxlint-disable-next-line no-magic-numbers -- 202 is the published HTTP "Accepted" status
       return c.json({ accepted: true } as const, 202);

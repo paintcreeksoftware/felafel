@@ -31,7 +31,7 @@ export async function startFakeWorker(): Promise<FakeWorker> {
   ) => Response | Promise<Response> = defaultRespond;
 
   const app = new Hono().post("/jobs/run", async (c) => {
-    const body = (await c.req.json()) as JobAssignment;
+    const body = await c.req.json<JobAssignment>();
     received.push(body);
     return respond(body);
   });

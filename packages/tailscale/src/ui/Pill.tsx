@@ -208,7 +208,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
       {isClickable ? (
         <button
           type="button"
-          onClick={handlePillClick}
+          onClick={() => {
+            void handlePillClick();
+          }}
           className="cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Connect to Tailscale"
         >
@@ -220,7 +222,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleRefresh}
+        onClick={() => {
+          void handleRefresh();
+        }}
         disabled={pillBusy !== null || status.kind === "missing-binary"}
         aria-label="Refresh Tailscale status"
         className="size-7"
@@ -245,7 +249,11 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(event) => {
+              void handleSubmit(event);
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Connect to Tailscale</DialogTitle>
               <DialogDescription>

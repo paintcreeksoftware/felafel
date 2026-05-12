@@ -142,9 +142,15 @@ class DesktopApp {
     // preventDefault + manual exit lets us await orchestrator shutdown
     // before the process actually goes away — otherwise SIGTERM races with
     // app.exit().
-    app.on("before-quit", async (event) => {
+    app.on("before-quit", (event) => {
       event.preventDefault();
       globalShortcut.unregisterAll();
+      // Wrapped to satisfy `@typescript-eslint/no-misused-promises`:
+      // Electron's `before-quit` handler is typed as void-returning,
+      // so the async body runs detached and we exit explicitly at the
+      // end. The `event.preventDefault()` above is what holds the
+      // quit open until `app.exit(0)` fires below.
+      void (async () => {
       // The handler must reach app.exit(0) no matter what — a thrown
       // error here would leave the preventDefault()'d quit hanging
       // forever. orchestrator.stop() now propagates the (rare) tailscale
@@ -157,6 +163,7 @@ class DesktopApp {
         console.error("[main] orchestrator.stop failed:", error);
       }
       app.exit(0);
+      })();
     });
   }
 

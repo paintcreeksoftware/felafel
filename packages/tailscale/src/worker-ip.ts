@@ -27,7 +27,12 @@ function runTailscale(args: string[]): Promise<string> {
     // oxlint-disable-next-line prefer-await-to-callbacks -- wrapping callback-style execFile
     execFile("tailscale", args, { timeout: PROBE_TIMEOUT_MS }, (err, stdout) => {
       if (err) {
-        reject(err);
+        // execFile types `err` as `ExecFileException | null` (an Error
+        // subtype) but TS doesn't narrow it across the callback boundary —
+        // help `prefer-promise-reject-errors` see the Error shape. JSON
+        // stringify the non-Error branch so a stray plain-object failure
+        // doesn't collapse to `[object Object]`.
+        reject(err instanceof Error ? err : new Error(JSON.stringify(err)));
         return;
       }
       resolve(stdout);

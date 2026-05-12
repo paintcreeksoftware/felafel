@@ -45,7 +45,12 @@ export default defineConfig({
     "pathe",
     "zod",
   ],
-  onSuccess: () => {
+  onSuccess: async () => {
+    // tsup's onSuccess signature requires a Promise return. All the
+    // I/O below is sync (we read/write the bundle in-place + copy a
+    // small migrations dir); satisfy require-await with a no-op await
+    // rather than restructuring the body to chase the async signature.
+    await Promise.resolve();
     const path = "dist/index.mjs";
     let src = readFileSync(path, "utf8");
     for (const name of NODE_BUILTINS_NEEDING_PREFIX) {

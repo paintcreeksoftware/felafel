@@ -66,7 +66,7 @@ export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => P
     // socket prevented close() from ever invoking its callback.
     server.closeIdleConnections();
 
-    const closeAsync = promisify(server.close.bind(server)) as () => Promise<void>;
+    const closeAsync = promisify(server.close.bind(server));
 
     try {
       const result = await raceTimeout(closeAsync(), SHUTDOWN_TIMEOUT_MS);

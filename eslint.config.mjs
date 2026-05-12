@@ -409,13 +409,26 @@ const config = [
   // plugins we trust the recommended preset and document only the
   // overrides.
   // ──────────────────────────────────────────────────────────────────
-  // @typescript-eslint — non-type-aware recommended. The type-aware
-  // tier (`recommendedTypeChecked`) is deferred to a follow-up PR
-  // because it needs tsconfig surgery (the auto-discovered project
-  // service doesn't see every .ts file under the current layout) and
-  // surfaces ~80 real violations we'd want to fix one-by-one, which
-  // is its own scoped change.
-  ...tseslint.configs.recommended,
+  // @typescript-eslint — type-aware. `projectService: true` lets the
+  // parser auto-discover each workspace's tsconfig.json. Scoped to
+  // .ts/.tsx via the `files` field on the preset entries themselves.
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // The .mjs/.cjs/.js root configs + scripts can't participate in
+    // type-aware lint — they aren't in any tsconfig — so disable the
+    // type-checked subset for them.
+    files: ["**/*.{js,mjs,cjs}"],
+    ...tseslint.configs.disableTypeChecked,
+  },
   // React family: react + react-hooks + react-refresh. Scoped to
   // **/*.{jsx,tsx} via the `files` field — the orchestrator + worker
   // are pure Node code, no JSX. New-JSX-transform project (no
@@ -487,6 +500,18 @@ const config = [
   // Strict — per the lint-determinism memory rule, if a rule fires
   // we fix the code, not soften the rule.
   pluginJsdoc.configs["flat/recommended-tsdoc-error"],
+  {
+    // Test files opt out of type-aware lint entirely. vi.mocked()
+    // and `expect(mock.method)` patterns are inherently loose-typed —
+    // the type-aware rules are right to flag this in production code,
+    // but the same pattern in tests is the canonical vitest/jest API.
+    // Categorical exclusion. This block MUST live at the end of the
+    // config array — flat config later-wins, and the
+    // recommendedTypeChecked spread further up sets these rules to
+    // error.
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
+    ...tseslint.configs.disableTypeChecked,
+  },
 ];
 
 export default config;
