@@ -168,6 +168,7 @@ const config = [
       //   App.tsx's worker-forget flow needs to be swapped for a React
       //   Dialog confirmation. Not bundling into the lint cutover.
       "no-array-constructor": "error",
+      "no-bitwise": "off",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
