@@ -75,6 +75,13 @@ export class OrchestratorManager {
   // unpublish call so it doesn't throw "binary not found" on a host
   // that never had Tailscale to begin with.
   private publishedTailnetPort: number | null = null;
+  // Kernel-assigned local port the orchestrator child is currently bound
+  // to. Set in start() after waitForServer; cleared in stop(). Read by
+  // refreshTailnetServe() so a renderer-driven refresh can re-attempt
+  // the serve publish against the same target port without restarting
+  // the orchestrator. Null outside the running window so refresh
+  // becomes a no-op before start() and after stop().
+  private currentLocalPort: number | null = null;
   // Set by setupTailnetServe when a publish attempt fails (most common:
   // EACCES because the user hasn't run `sudo tailscale set --operator=$USER`).
   // Read by desktop main after start() to attach to the OrchestratorStatus
@@ -142,8 +149,36 @@ export class OrchestratorManager {
     });
 
     await this.waitForServer(url);
+    // Remember the bound port so a later renderer-driven refresh can
+    // re-attempt the serve publish against the same target without
+    // restarting the orchestrator.
+    this.currentLocalPort = port;
     await this.setupTailnetServe(port);
     return url;
+  }
+
+  /**
+   * Re-run the tailnet-serve setup against the currently running
+   * orchestrator. Used by the renderer's Tailscale refresh button so a
+   * change to the host's `--operator` setting becomes visible without
+   * an orchestrator restart: `tailscale status --json` is operator-blind,
+   * but `tailscale serve` (which `setupTailnetServe` invokes) is exactly
+   * what the operator setting gates, so a fresh attempt is the right
+   * signal.
+   *
+   * No-op (returns the existing degradation unchanged) when called
+   * before `start()` has bound a port or after `stop()` has cleared it.
+   *
+   * @returns the (possibly updated) tailnet-serve degradation — null
+   * when the fresh attempt succeeded, populated when it failed
+   */
+  async refreshTailnetServe(): Promise<TailnetServeDegradation | null> {
+    const localPort = this.currentLocalPort;
+    if (localPort === null) {
+      return this.tailnetServeDegradation;
+    }
+    await this.setupTailnetServe(localPort);
+    return this.tailnetServeDegradation;
   }
 
   /**
@@ -238,6 +273,10 @@ export class OrchestratorManager {
       return;
     }
     this.process = null;
+    // Clear the bound-port memo so any refresh that races with shutdown
+    // sees "no orchestrator" rather than attempting a publish against a
+    // port the child is no longer listening on.
+    this.currentLocalPort = null;
     // Kill the child first — that part is idempotent (kill on a dead PID
     // is a no-op, the SIGKILL escalation handles the slow-exit case). Then
     // unpublish the tailnet serve mapping; let any failure propagate so

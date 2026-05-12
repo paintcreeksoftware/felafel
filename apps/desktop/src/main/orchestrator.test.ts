@@ -14,6 +14,7 @@ interface Privates {
   setupTailnetServe(localPort: number): Promise<void>;
   process: { kill: () => void; once: (ev: string, cb: () => void) => void } | null;
   publishedTailnetPort: number | null;
+  currentLocalPort: number | null;
 }
 
 function mockTailscale(overrides: Partial<TailscaleManager> = {}): TailscaleManager {
@@ -157,6 +158,67 @@ describe("OrchestratorManager.getServeDegradation", () => {
     // Second run succeeds → degradation reset to null.
     await m.setupTailnetServe(54321);
     expect(m.getServeDegradation()).toBeNull();
+  });
+});
+
+describe("OrchestratorManager.refreshTailnetServe", () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    errorSpy.mockRestore();
+  });
+
+  it("is a no-op (returns current degradation) before start() bound a port", async () => {
+    const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    expect(m.currentLocalPort).toBeNull();
+    expect(await m.refreshTailnetServe()).toBeNull();
+    expect(ts.publishServe).not.toHaveBeenCalled();
+  });
+
+  it("re-attempts serve setup when start() has bound a port", async () => {
+    const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    m.currentLocalPort = 54321;
+    await m.refreshTailnetServe();
+    expect(ts.publishServe).toHaveBeenCalledWith({ tailnetPort: 9090, localPort: 54321 });
+  });
+
+  // The PAI-138 regression: this exercises both directions of the
+  // operator-change flow. publishServe throws EACCES on first call
+  // (operator=root mid-session) and succeeds on the second (recovery
+  // via `sudo tailscale set --operator=$USER`). refreshTailnetServe
+  // must surface the degradation on the first refresh AND clear it on
+  // the next — both were broken before this commit because the
+  // Tailscale refresh handler only re-probed status.
+  it("flips degradation across operator change → recovery", async () => {
+    const taggedError: Error & {
+      classification: { kind: string; message: string; remediation?: string };
+    } = Object.assign(new Error("tailscale serve (eacces): denied"), {
+      classification: {
+        kind: "eacces",
+        message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+        remediation: "sudo tailscale set --operator=$USER",
+      },
+    });
+    const ts = mockTailscale({
+      probeStatus: vi.fn().mockResolvedValue(connectedStatus),
+      publishServe: vi
+        .fn()
+        .mockRejectedValueOnce(taggedError)
+        .mockResolvedValueOnce(),
+    });
+    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    m.currentLocalPort = 54321;
+    const first = await m.refreshTailnetServe();
+    expect(first).toEqual({
+      reason: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
+      remediation: "sudo tailscale set --operator=$USER",
+    });
+    const second = await m.refreshTailnetServe();
+    expect(second).toBeNull();
   });
 });
 
