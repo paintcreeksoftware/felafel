@@ -6,6 +6,15 @@
 export const LOCALHOST = "127.0.0.1";
 
 /**
+ * Cap on stderr / stdout preview length when classifying or logging a
+ * failed `tailscale` invocation. 500 chars is enough to fingerprint a
+ * failure mode in logs without flooding the renderer's error UI with
+ * pages of raw CLI output. Used by both the pure classifiers and the
+ * parsers' malformed-JSON fallback path.
+ */
+export const STDERR_PREVIEW_MAX_LEN = 500;
+
+/**
  * Environment variable names read by @felafel/tailscale. Centralized so
  * a typo at the read site surfaces as a TypeScript error against the
  * keyof literal type, not as a silent undefined.
