@@ -23,6 +23,7 @@ import {
   WindowSize,
 } from "@felafel/desktop/main/constants";
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
+import { buildMinimalMacMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { TailscaleManager } from "@felafel/tailscale";
 
@@ -75,47 +76,10 @@ class DesktopApp {
    */
   private removeDefaultMenu(): void {
     if (process.platform === Platform.MACOS) {
-      Menu.setApplicationMenu(this.buildMinimalMacMenu());
+      Menu.setApplicationMenu(buildMinimalMacMenu());
     } else {
       Menu.setApplicationMenu(null);
     }
-  }
-
-  /**
-   * Build the minimum-viable macOS application menu: app submenu (about,
-   * hide, quit) + Edit submenu (the Edit roles are what wires Cmd-C/V/X
-   * and Cmd-A into focused inputs on macOS — without them, copy/paste
-   * silently stops working in form fields).
-   *
-   * @returns the assembled `Menu` ready to pass to `setApplicationMenu`
-   */
-  private buildMinimalMacMenu(): Menu {
-    return Menu.buildFromTemplate([
-      {
-        label: app.name,
-        submenu: [
-          { role: "about" },
-          { type: "separator" },
-          { role: "hide" },
-          { role: "hideOthers" },
-          { role: "unhide" },
-          { type: "separator" },
-          { role: "quit" },
-        ],
-      },
-      {
-        label: "Edit",
-        submenu: [
-          { role: "undo" },
-          { role: "redo" },
-          { type: "separator" },
-          { role: "cut" },
-          { role: "copy" },
-          { role: "paste" },
-          { role: "selectAll" },
-        ],
-      },
-    ]);
   }
 
   /**
