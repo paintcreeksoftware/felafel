@@ -13,6 +13,7 @@
 // Plugins beyond `typescript-eslint/parser` are added in their batch
 // PRs so this scaffold stays installable without pulling the whole
 // ESLint ecosystem in one shot.
+import { flatConfigs as importXFlatConfigs } from "eslint-plugin-import-x";
 import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
@@ -438,6 +439,20 @@ const config = [
   {
     files: ["**/*.{jsx,tsx}"],
     ...pluginJsxA11y.flatConfigs.recommended,
+  },
+  // import-x — import correctness. We use `flatConfigs.recommended`
+  // for the bug-catcher rules (no-duplicates, no-self-import,
+  // no-cycle, etc.) but turn off `import-x/no-unresolved`: TypeScript
+  // already reports unresolved imports via `tsc --noEmit`, and
+  // import-x's TS-aware resolver has a version-skew bug right now
+  // ("typescript with invalid interface loaded as resolver"). Letting
+  // TS own resolution checks avoids the duplicate config and the
+  // resolver compat headache.
+  importXFlatConfigs.recommended,
+  {
+    rules: {
+      "import-x/no-unresolved": "off",
+    },
   },
 ];
 
