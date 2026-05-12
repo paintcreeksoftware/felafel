@@ -177,6 +177,7 @@ const config = [
       "no-empty": "error",
       "no-empty-function": "error",
       "no-empty-static-block": "error",
+      "no-eq-null": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
