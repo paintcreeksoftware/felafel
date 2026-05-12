@@ -1,7 +1,7 @@
 // Tier 1 — unit tests for the pure error classifiers in classify.ts.
 // Runs in milliseconds, no `tailscale` binary required.
 import { describe, expect, it } from "vitest";
-import { classifyUpError } from "@felafel/tailscale/classify";
+import { classifyServeError, classifyUpError } from "@felafel/tailscale/classify";
 
 describe("classifyUpError", () => {
   it("returns timeout when timedOut=true regardless of stderr content", () => {
@@ -59,5 +59,66 @@ describe("classifyUpError", () => {
     const stderr =
       "permission denied; would visit https://login.tailscale.com/a/abc but cannot";
     expect(classifyUpError(stderr, 1, false)).toMatchObject({ kind: "eacces" });
+  });
+});
+
+describe("classifyServeError", () => {
+  it("returns timeout when timedOut=true regardless of stderr content", () => {
+    expect(classifyServeError("permission denied", 1, true)).toMatchObject({ kind: "timeout" });
+  });
+
+  it("classifies 'permission denied' stderr as eacces", () => {
+    expect(
+      classifyServeError(
+        "tailscale: permission denied on /var/run/tailscale/tailscaled.sock",
+        1,
+        false,
+      ),
+    ).toMatchObject({ kind: "eacces" });
+  });
+
+  it("classifies 'Access denied' stderr as eacces with the operator-setup remediation", () => {
+    // Real stderr from `tailscale serve` v1.96 when the user hasn't yet
+    // run `sudo tailscale set --operator=$USER`. Surfaced during PR #31
+    // smoke test on bare metal.
+    const result = classifyServeError(
+      "sending serve config: Access denied: serve config denied",
+      1,
+      false,
+    );
+    expect(result).toMatchObject({
+      kind: "eacces",
+      remediation: "sudo tailscale set --operator=$USER",
+    });
+  });
+
+  it("classifies tailscaled.sock connect failures as no-daemon", () => {
+    expect(
+      classifyServeError("dial unix /var/run/tailscale/tailscaled.sock: no such file", 1, false),
+    ).toMatchObject({ kind: "no-daemon" });
+  });
+
+  it("classifies 'address already in use' as port-in-use", () => {
+    expect(classifyServeError("listen tcp :9090: address already in use", 1, false)).toMatchObject({
+      kind: "port-in-use",
+    });
+  });
+
+  it("classifies 'already serving on port' as port-in-use", () => {
+    expect(classifyServeError("port 9090 already serving", 1, false)).toMatchObject({
+      kind: "port-in-use",
+    });
+  });
+
+  it("falls through to unknown for unmatched stderr", () => {
+    expect(classifyServeError("something completely unexpected", 7, false)).toMatchObject({
+      kind: "unknown",
+    });
+  });
+
+  it("EACCES wins over port-in-use when both phrases appear", () => {
+    expect(
+      classifyServeError("permission denied while binding port already in use", 1, false),
+    ).toMatchObject({ kind: "eacces" });
   });
 });
