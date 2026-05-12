@@ -124,7 +124,22 @@ const config = [
       "max-params": ["error", 5],
       "max-statements": ["error", { max: 30 }],
       "complexity": ["error", { max: 20 }],
-      // TODO(PAI-141 batch 2: core - Suggestions).
+      // Core — Suggestions / identifier naming
+      // The "what an identifier can be named" cluster. The on rules
+      // catch cheap-to-enforce conventions; the off rules are either
+      // covered by TS or too prescriptive for real code.
+      "camelcase": ["error", { properties: "never", ignoreDestructuring: false, ignoreImports: false, ignoreGlobals: false }],
+      "capitalized-comments": "off", // single-line clarifications and TODO/FIXME refs aren't always sentences
+      "consistent-this": "off", // `const self = this` is rare in TS
+      "func-name-matching": "error",
+      "func-names": "off", // anonymous arrow functions are everywhere; the stack-trace cost isn't worth the noise
+      "func-style": "off", // both declarations and arrow expressions used freely in this codebase
+      "id-denylist": "off", // no project-specific identifier bans defined yet
+      "id-length": "off", // `i`, `j`, `e` (event) valid in narrow scopes
+      "id-match": "off", // too prescriptive; no project regex pattern defined
+      "new-cap": "error",
+      "no-underscore-dangle": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions; continuing identifier naming).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
