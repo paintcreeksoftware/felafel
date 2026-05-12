@@ -13,6 +13,9 @@
 // Plugins beyond `typescript-eslint/parser` are added in their batch
 // PRs so this scaffold stays installable without pulling the whole
 // ESLint ecosystem in one shot.
+import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
+import pluginReactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import { LAYOUT_FORMATTING_RULES } from "./eslint/layout-formatting.mjs";
 
@@ -406,6 +409,28 @@ const config = [
   // surfaces ~80 real violations we'd want to fix one-by-one, which
   // is its own scoped change.
   ...tseslint.configs.recommended,
+  // React family: react + react-hooks + react-refresh. Scoped to
+  // **/*.{jsx,tsx} via the `files` field — the orchestrator + worker
+  // are pure Node code, no JSX. New-JSX-transform project (no
+  // `import React` at top of every file), so `jsx-runtime` config is
+  // layered after `recommended` to turn off `react/react-in-jsx-scope`.
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginReact.configs.flat.recommended,
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginReact.configs.flat["jsx-runtime"],
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    plugins: { "react-hooks": pluginReactHooks },
+    rules: pluginReactHooks.configs.recommended.rules,
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginReactRefresh.configs.vite,
+  },
 ];
 
 export default config;

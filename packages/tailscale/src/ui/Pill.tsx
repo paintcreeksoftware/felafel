@@ -83,8 +83,15 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
   // sometimes runs entirely outside the modal (initial session-resume), and
   // we want pill-level spinner feedback for that case.
   const [pillBusy, setPillBusy] = useState<PillBusy>(null);
+  // Keep a ref to the latest `submitting` state so the pill-click /
+  // refresh handlers can read it without taking it as a dep (which
+  // would re-create the closures on every keystroke into the auth-key
+  // input). The sync runs post-commit via useEffect — mutating during
+  // render is the anti-pattern react-hooks/refs catches.
   const submittingRef = useRef(submitting);
-  submittingRef.current = submitting;
+  useEffect(() => {
+    submittingRef.current = submitting;
+  });
 
   useEffect(() => {
     let cancelled = false;
