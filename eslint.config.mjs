@@ -160,7 +160,15 @@ const config = [
       "no-ternary": "off",
       "no-unneeded-ternary": ["error", { defaultAssignment: false }],
       "yoda": ["error", "never"],
-      // TODO(PAI-141 batch 2: core - Suggestions; continuing control flow).
+      // Core — Suggestions / forbid syntax (no-*)
+      // Rules that reject specific syntax. Most are bug-finders worth
+      // having on; the off cases are syntactic patterns we explicitly
+      // want to keep using.
+      // TODO(no-alert): defer to a follow-up PR — `window.confirm` in
+      //   App.tsx's worker-forget flow needs to be swapped for a React
+      //   Dialog confirmation. Not bundling into the lint cutover.
+      "no-array-constructor": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
