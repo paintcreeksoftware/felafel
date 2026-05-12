@@ -8,7 +8,7 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, shell } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, shell } from "electron";
 import { join } from "pathe";
 import {
   Channels,
@@ -23,7 +23,7 @@ import {
   WindowSize,
 } from "@felafel/desktop/main/constants";
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
-import { buildMinimalMacMenu } from "@felafel/desktop/main/menu";
+import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { TailscaleManager } from "@felafel/tailscale";
 
@@ -62,24 +62,9 @@ class DesktopApp {
    */
   start(): void {
     applyAppIdentity();
-    this.removeDefaultMenu();
+    applyMainAppMenu();
     this.registerIpcHandlers();
     this.registerAppLifecycle();
-  }
-
-  /**
-   * Strip electron-vite's stock menu bar. On Linux/Windows the menu is
-   * removed entirely; on macOS we keep a minimal application menu so
-   * standard text-input shortcuts (Cmd-C/V, Cmd-Q) keep working — passing
-   * `null` on macOS leaves a degraded built-in that's worse than a small
-   * custom one.
-   */
-  private removeDefaultMenu(): void {
-    if (process.platform === Platform.MACOS) {
-      Menu.setApplicationMenu(buildMinimalMacMenu());
-    } else {
-      Menu.setApplicationMenu(null);
-    }
   }
 
   /**

@@ -1,11 +1,30 @@
-// Electron application menu wiring for the desktop app. Currently
-// contains the macOS minimal-menu builder; `applyMainAppMenu` (the
-// public driver that decides whether to install the menu) lands in
-// the next commit on this branch.
+// Electron application menu wiring for the desktop app. The desktop
+// app ships a minimal macOS app menu (so Cmd-C/V/X/A keep working in
+// form fields, which requires the Edit role to be registered with the
+// OS) and no menu at all on Linux/Windows where the platform doesn't
+// expect one.
 //
 // Extracted out of desktop.ts so the desktop file stays focused on
 // composition and lifecycle wiring.
 import { app, Menu } from "electron";
+import { Platform } from "@felafel/desktop/main/constants";
+
+/**
+ * Replace electron-vite's stock menu bar with the right platform default.
+ *
+ * @remarks
+ * On Linux/Windows the menu is removed entirely; on macOS we install a
+ * minimal application menu so standard text-input shortcuts (Cmd-C/V,
+ * Cmd-Q) keep working. Passing `null` on macOS leaves a degraded
+ * built-in that's worse than a small custom one.
+ */
+export function applyMainAppMenu(): void {
+  if (process.platform === Platform.MACOS) {
+    Menu.setApplicationMenu(buildMinimalMacMenu());
+  } else {
+    Menu.setApplicationMenu(null);
+  }
+}
 
 /**
  * Build the minimum-viable macOS application menu: app submenu (about,
