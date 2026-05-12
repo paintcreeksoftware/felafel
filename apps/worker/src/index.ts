@@ -7,7 +7,7 @@ import { startHeartbeat } from "@felafel/worker/heartbeat";
 import { resolveHosts } from "@felafel/worker/hosts";
 import { loadOrCreateIdentity } from "@felafel/worker/identity";
 import { createShutdownHandler } from "@felafel/worker/shutdown";
-import { getTailnetIPv4 } from "@felafel/worker/tailscale";
+import { getTailnetIPv4 } from "@felafel/tailscale/worker-ip";
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
 const explicitAdvertiseHost = process.env[EnvVars.HOST];

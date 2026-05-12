@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@felafel/shared": "workspace:*",
+    "@felafel/tailscale": "workspace:*",
     "@hono/node-server": "^1.18.0",
     "@hono/zod-openapi": "^1.1.0",
     "hono": "^4.10.0",

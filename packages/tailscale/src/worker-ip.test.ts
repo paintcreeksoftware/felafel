@@ -2,7 +2,7 @@
 // doesn't depend on a real `tailscale` binary or daemon.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ChildProcess, execFile } from "node:child_process";
-import { getTailnetIPv4 } from "@felafel/worker/tailscale";
+import { getTailnetIPv4 } from "@felafel/tailscale/worker-ip";
 
 vi.mock("node:child_process", () => ({
   execFile: vi.fn(),
