@@ -9,8 +9,7 @@
     "rootDir": "src",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "jsx": "react-jsx",
-    "paths": { "@felafel/tailscale/*": ["./src/*"] },
-    "types": ["vite/client"]
+    "paths": { "@felafel/tailscale/*": ["./src/*"] }
   },
   "include": ["src/ui/**/*"]
 }
