@@ -1,0 +1,16 @@
+// Renderer-side TypeScript: the React Pill component lives behind the
+// `./ui` sub-path so node consumers don't pay the React import cost.
+// DOM lib + react-jsx mode here so JSX compiles and `window.api` (from
+// the desktop renderer's preload bridge) typechecks.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "react-jsx",
+    "paths": { "@felafel/tailscale/*": ["./src/*"] },
+    "types": ["vite/client"]
+  },
+  "include": ["src/ui/**/*"]
+}

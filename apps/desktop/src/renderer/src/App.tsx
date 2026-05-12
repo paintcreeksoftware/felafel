@@ -4,7 +4,7 @@ import {
   type OrchestratorStatus,
   type Worker,
 } from "@felafel/desktop/orchestrator";
-import { TailscalePill } from "@felafel/desktop/components/TailscalePill";
+import { TailscalePill } from "@felafel/tailscale/ui";
 
 type Status = OrchestratorStatus["kind"] | "unknown";
 
