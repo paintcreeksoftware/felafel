@@ -56,7 +56,7 @@ export function isServeFailureError(error: unknown): error is ServeFailureError 
  * @param stderr - lowercased combined stderr from a `tailscale` invocation
  * @returns true if the stderr fingerprints the "daemon not running" case
  */
-function matchesNoDaemonStderr(stderr: string): boolean {
+export function matchesNoDaemonStderr(stderr: string): boolean {
   const s = stderr.toLowerCase();
   return (
     s.includes("tailscaled.sock") ||
