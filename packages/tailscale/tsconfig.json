@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "paths": { "@felafel/tailscale/*": ["./src/*"] },
+    "types": ["node"]
+  },
+  "include": ["src/**/*"]
+}
