@@ -25,6 +25,7 @@ import {
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
 import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
+import { loadRenderer } from "@felafel/desktop/main/window";
 import { TailscaleManager } from "@felafel/tailscale";
 
 const moduleDir = import.meta.dirname;
@@ -256,12 +257,7 @@ class DesktopApp {
       return { action: "deny" };
     });
 
-    // Dev (rendererUrl set): load Vite's HTTP dev server so HMR works.
-    // Production: load the bundled renderer from disk.
-    const rendererUrl = process.env[DesktopEnvVars.ELECTRON_RENDERER_URL];
-    await (rendererUrl
-      ? this.mainWindow.loadURL(rendererUrl)
-      : this.mainWindow.loadFile(join(moduleDir, "../renderer/index.html")));
+    await loadRenderer(this.mainWindow);
   }
 
   /**
