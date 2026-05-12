@@ -163,12 +163,23 @@ Distrobox shell.
 | --- | --- | --- |
 | `pnpm dev` | **Distrobox shell** (needs display) | electron-vite dev mode; opens the Electron window on your host |
 | `pnpm lint` | Dev Container or Distrobox | oxlint across every workspace package |
+| `pnpm lint:md` | Dev Container or Distrobox | markdownlint over every `*.md` (excluding `node_modules`, build output, snapshots) |
+| `pnpm lint:sh` | Dev Container or Distrobox | shellcheck over `setup.sh` + the husky hook scripts |
 | `pnpm lint:exports` | Dev Container or Distrobox | Verify every `@felafel/<pkg>/<sub-path>` import has a matching entry in the target package's `package.json#exports` (catches the tsconfig-paths-vs-package-exports drift) |
 | `pnpm lint:scripts` | Dev Container or Distrobox | oxlint over root-level `.mjs` files (`commitlint.config.mjs`, `scripts/*.mjs`) that fall outside the per-package lint scope |
 | `pnpm lint:loc` | Dev Container or Distrobox | Print any source file over the 300-line cap. Warn-mode today; flipped to error-mode in a follow-up PR per [PAI-140](https://linear.app/paint-creek-software/issue/PAI-140) |
 | `pnpm check-types` | Dev Container or Distrobox | `tsc --noEmit` across every workspace package |
+| `pnpm test` | Dev Container or Distrobox | vitest unit suites across every workspace package |
+| `pnpm db:check` | Dev Container or Distrobox | Drizzle schema-vs-migrations drift check; fails if the schema in `@felafel/contracts` got edited without `db:generate` |
+| `pnpm knip` | Dev Container or Distrobox | Dead-code + unused-export detection across the repo |
 | `pnpm build` | Dev Container or Distrobox | Bundle main + preload + renderer into `apps/desktop/out/` |
 | `pnpm package` | Dev Container or Distrobox | Run electron-builder; produces installer in `apps/desktop/release/` |
+
+Every `lint:*` / `check-types` / `test` / `db:check` / `knip` entry above
+also runs automatically via the husky pre-commit hook
+([`.husky/pre-commit`](.husky/pre-commit)) and the merge-gating lint
+workflow ([`.github/workflows/lint.yml`](.github/workflows/lint.yml)).
+The table doubles as a discoverability index for the pipeline.
 
 `pnpm dev` is the only command that *requires* the Distrobox shell — everything
 else works in either environment, but the Dev Container is the natural home for
