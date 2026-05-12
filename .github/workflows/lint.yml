@@ -36,7 +36,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint (oxlint)
+      # `pnpm lint` runs `turbo run lint` (parallel per-package ESLint)
+      # followed by `pnpm lint:root` for the non-workspace files
+      # (commitlint.config.mjs + eslint/ + scripts/).
+      - name: Lint
         run: pnpm lint
 
       - name: Type-check
@@ -59,16 +62,3 @@ jobs:
       # tsconfig-paths-vs-package-exports drift that broke PAI-139 #57.
       - name: Export-coverage check
         run: pnpm lint:exports
-
-      # Lints root-level .mjs files (commitlint.config.mjs + scripts/*.mjs)
-      # that fall outside every workspace's per-package oxlint scope.
-      # Retired when PAI-141's eslint cutover folds this in.
-      - name: Lint root-level scripts
-        run: pnpm lint:scripts
-
-      # eslint cutover scaffold (PAI-141 PR 1). Framework only; rules
-      # arrive plugin-by-plugin in subsequent PAI-141_N PRs. Wired
-      # alongside oxlint so the parse/glob coverage is visible in CI
-      # before any rule lights up.
-      - name: Lint (eslint scaffold)
-        run: pnpm lint:eslint

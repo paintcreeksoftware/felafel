@@ -5,8 +5,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "rootDir": "src",
     "paths": { "@felafel/db/*": ["./src/*"] }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*", "drizzle.config.ts", "vitest.config.ts"]
 }

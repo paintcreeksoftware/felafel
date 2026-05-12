@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "lint": "oxlint --deny-warnings",
+    "lint": "eslint . --max-warnings=0",
     "format": "oxfmt",
     "check-types": "tsc --noEmit"
   },

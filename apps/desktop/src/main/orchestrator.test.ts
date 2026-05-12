@@ -17,6 +17,13 @@ interface Privates {
   currentLocalPort: number | null;
 }
 
+/**
+ * Build a TailscaleManager test double with safe defaults that the
+ * orchestrator's start path can call without blowing up. Override any
+ * individual method via `overrides`.
+ * @param overrides - per-test method replacements
+ * @returns a stubbed TailscaleManager
+ */
 function mockTailscale(overrides: Partial<TailscaleManager> = {}): TailscaleManager {
   return {
     probeStatus: vi.fn().mockResolvedValue({ kind: "missing-binary", path: null }),
@@ -223,7 +230,11 @@ describe("OrchestratorManager.refreshTailnetServe", () => {
 });
 
 describe("OrchestratorManager.stop", () => {
-  /** Build a manager with a fake child so stop() has something to kill without a real spawn. */
+  /**
+   * Build a manager with a fake child so stop() has something to kill without a real spawn.
+   * @param ts - TailscaleManager stub the manager will receive
+   * @returns the manager + its kill spy
+   */
   function withFakeProcess(ts: TailscaleManager): {
     manager: OrchestratorManager & Privates;
     kill: ReturnType<typeof vi.fn>;

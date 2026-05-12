@@ -19,8 +19,8 @@ const INSTALL_URL = "https://tailscale.com/download/linux";
  * Wrap the given pill in a tooltip that explains the missing-binary state
  * and surfaces install hints. Used only when {@link TailscaleStatus.kind}
  * is `"missing-binary"`.
- *
- * @param children - the pill JSX to anchor the tooltip on
+ * @param root0 - props
+ * @param root0.children - the pill JSX to anchor the tooltip on
  * @returns the wrapped pill
  */
 export function MissingBinaryTooltip({ children }: { children: React.ReactNode }) {
@@ -28,7 +28,7 @@ export function MissingBinaryTooltip({ children }: { children: React.ReactNode }
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs to be focusable */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs to be focusable for keyboard a11y */}
           <span tabIndex={0}>{children}</span>
         </TooltipTrigger>
         <TooltipContent className="max-w-sm space-y-2 text-xs">

@@ -28,6 +28,12 @@ import {
 const workerUuidA = "11111111-2222-4333-8444-555555555555";
 const workerUuidB = "99999999-8888-4777-a666-555555555555";
 
+/**
+ * Build a WorkerRegistration test fixture pinned to `workerUuidA`;
+ * spreads `overrides` last so individual tests can pin fields.
+ * @param overrides - field-level overrides for the registration
+ * @returns a complete WorkerRegistration ready to upsert
+ */
 function reg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
   return {
     id: workerUuidA,

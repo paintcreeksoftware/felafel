@@ -59,7 +59,6 @@ const MIN_VISIBLE_BUSY_MS = 500;
  * Hold the resolved value of `work` until at least
  * {@link MIN_VISIBLE_BUSY_MS} has elapsed. Use to wrap an IPC call whose
  * `pillBusy` state would otherwise flicker too fast to read.
- *
  * @param work - the promise whose result should be returned
  * @returns the resolved value of `work`, never sooner than the floor
  */
@@ -73,6 +72,15 @@ async function withMinVisibleBusy<T>(work: Promise<T>): Promise<T> {
   return result;
 }
 
+/**
+ * Top-level Tailscale connection pill. Subscribes to the
+ * TailscaleStatus push channel, renders the right colored badge, and
+ * surfaces the paste-in pre-auth-key flow when the daemon is not yet
+ * connected.
+ * @param root0 - props
+ * @param root0.tailnetServeDegradation - orchestrator-side serve failure to surface, or null
+ * @returns the pill JSX
+ */
 export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillProps = {}) {
   const [status, setStatus] = useState<TailscaleStatus>({ kind: "unknown" });
   const [open, setOpen] = useState(false);
@@ -83,8 +91,15 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
   // sometimes runs entirely outside the modal (initial session-resume), and
   // we want pill-level spinner feedback for that case.
   const [pillBusy, setPillBusy] = useState<PillBusy>(null);
+  // Keep a ref to the latest `submitting` state so the pill-click /
+  // refresh handlers can read it without taking it as a dep (which
+  // would re-create the closures on every keystroke into the auth-key
+  // input). The sync runs post-commit via useEffect — mutating during
+  // render is the anti-pattern react-hooks/refs catches.
   const submittingRef = useRef(submitting);
-  submittingRef.current = submitting;
+  useEffect(() => {
+    submittingRef.current = submitting;
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +123,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     };
   }, []);
 
+  /**
+   *
+   */
   async function handlePillClick() {
     if (status.kind === "missing-binary") {return;}
     if (pillBusy || submittingRef.current) {return;}
@@ -130,6 +148,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     }
   }
 
+  /**
+   *
+   */
   async function handleRefresh() {
     if (pillBusy || submittingRef.current) {return;}
     setPillBusy("refreshing");
@@ -142,6 +163,11 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     }
   }
 
+  /**
+   * Submit the paste-in pre-auth key to main. On success, the broadcast
+   * push closes the modal; on failure, show the remediation inline.
+   * @param event - the form-submit event from the auth-key dialog
+   */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting || !authkey.trim()) {return;}
@@ -182,8 +208,10 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
       {isClickable ? (
         <button
           type="button"
-          onClick={handlePillClick}
-          className="cursor-pointer focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 rounded-full"
+          onClick={() => {
+            void handlePillClick();
+          }}
+          className="cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Connect to Tailscale"
         >
           {wrappedPill}
@@ -194,7 +222,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleRefresh}
+        onClick={() => {
+          void handleRefresh();
+        }}
         disabled={pillBusy !== null || status.kind === "missing-binary"}
         aria-label="Refresh Tailscale status"
         className="size-7"
@@ -219,7 +249,11 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(event) => {
+              void handleSubmit(event);
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Connect to Tailscale</DialogTitle>
               <DialogDescription>
@@ -244,7 +278,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
                 href={ADMIN_KEYS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
                 Open admin keys page <ExternalLink className="size-3" />
               </a>

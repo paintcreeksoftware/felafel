@@ -15,6 +15,9 @@ const here = import.meta.dirname;
 const desktopRoot = join(here, "..", "..");
 const devDataDir = join(desktopRoot, ".dev-orchestrator-data");
 
+/**
+ *
+ */
 export default async function globalSetup(): Promise<void> {
   await rm(devDataDir, { recursive: true, force: true });
 }

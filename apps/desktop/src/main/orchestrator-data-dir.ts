@@ -13,12 +13,10 @@ const moduleDir = import.meta.dirname;
 
 /**
  * Resolve the orchestrator's data directory and ensure it exists.
- *
  * @remarks
  * In packaged builds: nested under Electron's `userData` so per-user
  * state survives reinstall. In dev: a gitignored repo-local folder so
  * an editor reload doesn't blow away the dev DB.
- *
  * @returns absolute path to the data directory (created if missing)
  */
 export async function ensureDataDir(): Promise<string> {
@@ -27,6 +25,12 @@ export async function ensureDataDir(): Promise<string> {
   return dir;
 }
 
+/**
+ * Resolve the orchestrator data directory: a packaged app's userData
+ * dir under Electron, or a `.dev-orchestrator-data/` sibling of the
+ * repo when running in dev mode.
+ * @returns absolute filesystem path for the orchestrator's data root
+ */
 function resolveDataDir(): string {
   if (app.isPackaged) {
     return join(app.getPath("userData"), "orchestrator");

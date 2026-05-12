@@ -1,22 +1,22 @@
-// Scaffold eslint flat config for the oxlint → eslint cutover tracked
-// in PAI-141. Intentionally enumerates rules explicitly with no
-// `extends` and no inherited preset, per the ticket's "no implicit
-// recommended sets" requirement.
-//
-// PR 1 (this file) wires up the TS parser and the file globs only —
-// every rule starts implicitly off. Follow-up PAI-141_N batch PRs flip
-// rules on in cohesive batches (core, typescript, react, a11y, import,
-// tailwindcss, jsdoc, unicorn). The motivating rule —
-// `better-tailwindcss/no-unregistered-classes` — lands in the
-// tailwindcss batch.
-//
-// Plugins beyond `typescript-eslint/parser` are added in their batch
-// PRs so this scaffold stays installable without pulling the whole
-// ESLint ecosystem in one shot.
+// Flat ESLint config — the only lint surface in this repo after the
+// PAI-141 cutover replaced oxlint. Core rules are enumerated
+// explicitly (per the cutover policy of "no inherited recommended
+// sets" for ESLint core). Plugins use their `recommended` preset +
+// targeted overrides where the recommended preset is wrong for the
+// project (one canonical way to write code; if a rule fires we fix
+// the code or remove the rule, no per-site disable shortcuts).
+import { join } from "node:path";
+import pluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
+import { flatConfigs as importXFlatConfigs } from "eslint-plugin-import-x";
+import pluginJsdoc from "eslint-plugin-jsdoc";
+import pluginJsxA11y from "eslint-plugin-jsx-a11y";
+import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
+import pluginReactRefresh from "eslint-plugin-react-refresh";
+import pluginUnicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 import { LAYOUT_FORMATTING_RULES } from "./eslint/layout-formatting.mjs";
 
-/** @type {import("eslint").Linter.Config[]} */
 const config = [
   {
     // Repo-wide ignore patterns. Mirrors what oxlint currently skips
@@ -165,9 +165,6 @@ const config = [
       // Rules that reject specific syntax. Most are bug-finders worth
       // having on; the off cases are syntactic patterns we explicitly
       // want to keep using.
-      // TODO(PAI-145): https://linear.app/paint-creek-software/issue/PAI-145
-      //   `window.confirm` in App.tsx's worker-forget flow needs a
-      //   React Dialog refactor; flip this rule to error in the same PR.
       "no-array-constructor": "error",
       "no-bitwise": "off",
       "no-caller": "error",
@@ -341,20 +338,6 @@ const config = [
       // here as a single statement to keep this file under the
       // max-lines cap.
       ...LAYOUT_FORMATTING_RULES,
-      // TODO(PAI-141 batch 4: @typescript-eslint). Plugin install lands
-      //   with that batch.
-      // TODO(PAI-141 batch 5: react + react-hooks + react-refresh).
-      // TODO(PAI-141 batch 6: jsx-a11y).
-      // TODO(PAI-141 batch 7: import-x).
-      // TODO(PAI-141 batch 8: better-tailwindcss) — motivating plugin;
-      //   no-unregistered-classes catches the Tailwind class typos
-      //   that slipped past oxlint on PAI-138.
-      // TODO(PAI-141 batch 9: jsdoc) — codify the TSDoc-by-default
-      //   project rule as a tool check.
-      // TODO(PAI-141 batch 10: unicorn).
-      // TODO(PAI-141 batch 11: cutover — drop oxlint, .oxlintrc.json,
-      //   per-package "lint" scripts, root "lint" → alias to lint:eslint.
-      //   oxfmt stays.
     },
   },
   {
@@ -384,10 +367,181 @@ const config = [
     // Root-level lint config files. The root package isn't a
     // `@felafel/<pkg>` workspace member, so there's no alias form to
     // import the extracted rule-cluster modules in `eslint/` — the
-    // import has to be relative.
+    // import has to be relative. Also exempt from the file-length
+    // caps: a lint config that enumerates rule clusters for 9 plugins
+    // is legitimately longer than 300 lines, and "split this file"
+    // doesn't make a lint config easier to reason about.
     files: ["eslint.config.mjs", "eslint/**/*.mjs"],
     rules: {
       "no-restricted-imports": "off",
+      "max-lines": "off",
+    },
+  },
+  // ──────────────────────────────────────────────────────────────────
+  // Plugin tier (PAI-141 batches 4-10). Each plugin is wired up with
+  // its `recommended` preset + targeted overrides — that's the
+  // conventional ESLint flow and is honest about who owns the rule
+  // curation (the plugin authors, not us). The "every rule must be
+  // specified" requirement applies to the core-rules layer above; for
+  // plugins we trust the recommended preset and document only the
+  // overrides.
+  // ──────────────────────────────────────────────────────────────────
+  // @typescript-eslint — type-aware. `projectService: true` lets the
+  // parser auto-discover each workspace's tsconfig.json. Scoped to
+  // .ts/.tsx via the `files` field on the preset entries themselves.
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // The .mjs/.cjs/.js root configs + scripts can't participate in
+    // type-aware lint — they aren't in any tsconfig — so disable the
+    // type-checked subset for them.
+    files: ["**/*.{js,mjs,cjs}"],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  // React family: react + react-hooks + react-refresh. Scoped to
+  // **/*.{jsx,tsx} via the `files` field — the orchestrator + worker
+  // are pure Node code, no JSX. New-JSX-transform project (no
+  // `import React` at top of every file), so `jsx-runtime` config is
+  // layered after `recommended` to turn off `react/react-in-jsx-scope`.
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginReact.configs.flat.recommended,
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginReact.configs.flat["jsx-runtime"],
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    plugins: { "react-hooks": pluginReactHooks },
+    rules: pluginReactHooks.configs.recommended.rules,
+  },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginReactRefresh.configs.vite,
+  },
+  // jsx-a11y — accessibility checks on JSX. Scoped to JSX/TSX. The
+  // plugin's `flatConfigs.recommended` is the curated subset that
+  // catches real accessibility issues without becoming noise.
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginJsxA11y.flatConfigs.recommended,
+  },
+  // import-x — import correctness. We use `flatConfigs.recommended`
+  // for the bug-catcher rules (no-duplicates, no-self-import,
+  // no-cycle, etc.) but turn off `import-x/no-unresolved`: TypeScript
+  // already reports unresolved imports via `tsc --noEmit`, and
+  // import-x's TS-aware resolver has a version-skew bug right now
+  // ("typescript with invalid interface loaded as resolver"). Letting
+  // TS own resolution checks avoids the duplicate config and the
+  // resolver compat headache.
+  importXFlatConfigs.recommended,
+  {
+    rules: {
+      "import-x/no-unresolved": "off",
+    },
+  },
+  // better-tailwindcss — the motivating plugin for the PAI-141
+  // cutover. `no-unknown-classes` catches Tailwind class typos that
+  // oxlint missed on PAI-138. Tailwind v4 CSS-first setup means the
+  // plugin gets pointed at the v4 entry CSS via `settings.entryPoint`
+  // instead of a tailwind.config.{js,ts} (which doesn't exist in v4).
+  {
+    files: ["**/*.{jsx,tsx}"],
+    plugins: { "better-tailwindcss": pluginBetterTailwindcss },
+    settings: {
+      "better-tailwindcss": {
+        // Absolute path so per-package ESLint runs (turbo executes
+        // `eslint .` from each package's cwd) still resolve the
+        // Tailwind v4 CSS entry. Relative paths would resolve from
+        // the cwd, not from this file.
+        entryPoint: join(import.meta.dirname, "packages/ui/src/styles/globals.css"),
+      },
+    },
+    rules: {
+      ...pluginBetterTailwindcss.configs["recommended-error"].rules,
+      // Stylistic; class-string wrapping is a personal preference
+      // and the rule's default wraps eagerly enough to push some
+      // existing components past the max-lines-per-function cap.
+      "better-tailwindcss/enforce-consistent-line-wrapping": "off",
+    },
+  },
+  // jsdoc — codifies the "TSDoc by default" project memory rule as
+  // a tool check. The `flat/recommended-tsdoc-error` preset uses the
+  // TSDoc syntax dialect (matches what TypeScript itself parses, and
+  // what's documented in the project's TSDoc-by-default rule).
+  // Strict — per the lint-determinism memory rule, if a rule fires
+  // we fix the code, not soften the rule.
+  pluginJsdoc.configs["flat/recommended-tsdoc-error"],
+  // unicorn — opinionated bug-catcher + modernization grab-bag.
+  // Uses flat/recommended (the conservative curated set), not flat/all
+  // (which includes stylistic preferences that conflict with oxfmt).
+  pluginUnicorn.configs["flat/recommended"],
+  {
+    // Categorical carve-outs from unicorn — these rules are
+    // wrong for this codebase as a class, not as per-site exceptions.
+    rules: {
+      // The codebase uses `null` as a sentinel pervasively
+      // (TailscaleStatus discriminated unions, DB nullable columns,
+      // cache miss markers). Rewriting 70+ sites to undefined would
+      // weaken the semantic distinction between "not yet set" and
+      // "explicitly absent".
+      "unicorn/no-null": "off",
+      // `props`, `args`, `err`, `req`, `res`, `ctx` are standard names
+      // in the React / Node / Hono ecosystems this codebase lives in.
+      // The "preferred" expansions (`properties`, `arguments`,
+      // `error`, `request`, `response`, `context`) are anti-idiomatic
+      // for these libraries' documentation and surrounding ecosystem.
+      "unicorn/prevent-abbreviations": "off",
+      // Pure formatting — oxfmt owns formatting.
+      "unicorn/numeric-separators-style": "off",
+      // `process.exit` is legitimate for graceful-shutdown paths in
+      // the worker + orchestrator long-running services. The rule's
+      // anti-pattern is "exit from a library function"; the project
+      // only uses it at the service entry-point + shutdown handler.
+      "unicorn/no-process-exit": "off",
+      // The project mixes naming conventions deliberately: PascalCase
+      // for React components (`App.tsx`, `Pill.tsx`), kebab-case for
+      // most other modules, lowercase for tests (`bundle.spec.ts`).
+      // Forcing a single case across all of them would be a mass
+      // rename that doesn't improve the code.
+      "unicorn/filename-case": "off",
+      // `globalThis` is correct in cross-environment code (Node + DOM)
+      // but adds noise to renderer-only code where `window` is the
+      // documented surface for `window.api`. The rule doesn't make
+      // the distinction.
+      "unicorn/prefer-global-this": "off",
+      // Named imports for node builtins (`import { join } from
+      // "node:path"`) are clearer about the project's actual API
+      // surface than default imports. Categorical project preference.
+      "unicorn/import-style": "off",
+      // Single-site flag in a regex-escape helper. `"\\$&"` is the
+      // canonical regex-replacement-string spelling; the
+      // `String.raw` rewrite isn't a bug-catcher.
+      "unicorn/prefer-string-raw": "off",
+    },
+  },
+  {
+    // Test-file overrides that need to win over every plugin block
+    // above. Flat config later-wins, and the recommendedTypeChecked
+    // / unicorn / etc. spreads further up set their rules to error
+    // for all .ts/.tsx — including tests. Disabling here categorically.
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
+    ...tseslint.configs.disableTypeChecked,
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      // Test helpers (stubExeca, withFakeProcess, etc.) are
+      // deliberately scoped inside `describe()` for colocation. The
+      // rule's hoist-to-outer-scope rewrite would weaken readability.
+      "unicorn/consistent-function-scoping": "off",
     },
   },
 ];

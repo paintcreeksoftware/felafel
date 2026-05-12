@@ -34,10 +34,10 @@ interface StatusBadgeProps {
  * Render the right pill badge for the current Tailscale status + local
  * busy state. Busy state wins over status because a click is the most
  * recent thing the user did and they want visible feedback.
- *
- * @param props.status - the discriminated TailscaleStatus from main
- * @param props.busy - local "connecting"/"refreshing" state, or null
- * @param props.serveDegradation - orchestrator serve failure, or null
+ * @param root0 - props
+ * @param root0.status - the discriminated TailscaleStatus from main
+ * @param root0.busy - local "connecting"/"refreshing" state, or null
+ * @param root0.serveDegradation - orchestrator serve failure, or null
  * @returns the pill JSX
  */
 export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps) {
@@ -77,7 +77,11 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
               <TooltipTrigger asChild>
                 <Badge
                   variant="default"
-                  className="gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
+                  className="
+                    gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700
+                    hover:bg-amber-500/15
+                    dark:text-amber-300
+                  "
                   data-testid="ts-pill-degraded"
                 >
                   <WifiHigh className="size-3" /> {status.tailnet} (serve degraded)
@@ -98,7 +102,11 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
       return (
         <Badge
           variant="default"
-          className="gap-1.5 border-green-500/30 bg-green-500/15 text-green-700 dark:text-green-300 hover:bg-green-500/15"
+          className="
+            gap-1.5 border-green-500/30 bg-green-500/15 text-green-700
+            hover:bg-green-500/15
+            dark:text-green-300
+          "
         >
           <WifiHigh className="size-3" /> Connected to {status.tailnet}
         </Badge>
@@ -114,7 +122,9 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
     }
     case "error": {
       return (
-        <Badge variant="outline" className="gap-1.5 border-destructive/40 text-destructive">
+        <Badge variant="outline" className="
+          gap-1.5 border-destructive/40 text-destructive
+        ">
           <CircleX className="size-3" /> Tailscale error
         </Badge>
       );

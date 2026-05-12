@@ -4,7 +4,9 @@
 // renderer bundle.
 import { hc } from "hono/client";
 import { type AppType } from "@felafel/orchestrator/app";
-import { type DesktopApi, type OrchestratorStatus, type Worker } from "@felafel/shared";
+import { type DesktopApi } from "@felafel/shared";
+
+export type { OrchestratorStatus, Worker } from "@felafel/shared";
 
 declare global {
   interface Window {
@@ -14,8 +16,11 @@ declare global {
 
 type OrchestratorClient = ReturnType<typeof hc<AppType>>;
 
+/**
+ * Build a typed Hono RPC client for the orchestrator.
+ * @param baseUrl - orchestrator origin (e.g. `http://127.0.0.1:9090`)
+ * @returns the typed Hono client
+ */
 export function makeClient(baseUrl: string): OrchestratorClient {
   return hc<AppType>(baseUrl);
 }
-
-export type { OrchestratorStatus, Worker };

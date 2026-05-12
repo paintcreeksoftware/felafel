@@ -23,7 +23,6 @@ import { type runs, type workers } from "@felafel/contracts/schema";
  * Renames `row.workerId` → `wire.id`, JSON-parses `row.labels`, normalizes
  * nullable columns to `undefined`, and runs the result through `WorkerSchema`
  * for end-to-end validation.
- *
  * @param row - row as returned by `db.select().from(workers).get()`.
  * @returns the validated wire `Worker` object.
  * @throws {ZodError} if any column violates the wire contract (e.g. invalid UUID, malformed labels JSON).
@@ -49,7 +48,6 @@ export function rowToWorker(row: typeof workers.$inferSelect): Worker {
  *
  * Renames `row.runId` → `wire.id`, JSON-parses `row.payload`, normalizes
  * nullable columns to `undefined`, and runs the result through `RunSchema`.
- *
  * @param row - row as returned by `db.select().from(runs).get()`.
  * @returns the validated wire `Run` object.
  * @throws {ZodError} if any column violates the wire contract (e.g. malformed payload JSON, invalid UUID).

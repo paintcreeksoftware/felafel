@@ -29,7 +29,6 @@ import { TailscaleManager } from "@felafel/tailscale";
  * Top-level desktop main-process owner. Composes the orchestrator +
  * Tailscale managers and wires them up to Electron's lifecycle and IPC
  * channels.
- *
  * @remarks
  * Module-private — instantiated once via {@link startDesktopApp} from
  * `index.ts`. **Not** a formal singleton: there is no `getInstance`
@@ -143,9 +142,15 @@ class DesktopApp {
     // preventDefault + manual exit lets us await orchestrator shutdown
     // before the process actually goes away — otherwise SIGTERM races with
     // app.exit().
-    app.on("before-quit", async (event) => {
+    app.on("before-quit", (event) => {
       event.preventDefault();
       globalShortcut.unregisterAll();
+      // Wrapped to satisfy `@typescript-eslint/no-misused-promises`:
+      // Electron's `before-quit` handler is typed as void-returning,
+      // so the async body runs detached and we exit explicitly at the
+      // end. The `event.preventDefault()` above is what holds the
+      // quit open until `app.exit(0)` fires below.
+      void (async () => {
       // The handler must reach app.exit(0) no matter what — a thrown
       // error here would leave the preventDefault()'d quit hanging
       // forever. orchestrator.stop() now propagates the (rare) tailscale
@@ -158,6 +163,7 @@ class DesktopApp {
         console.error("[main] orchestrator.stop failed:", error);
       }
       app.exit(0);
+      })();
     });
   }
 
@@ -226,7 +232,6 @@ class DesktopApp {
   /**
    * Cache the orchestrator URL on `ready` and broadcast the status to every
    * open window so the renderer's React state can update.
-   *
    * @param status - the new status to publish
    */
   private broadcastOrchestrator(status: OrchestratorStatus): void {
@@ -246,7 +251,6 @@ class DesktopApp {
    * Forward a Tailscale status update to every open window. Returns the
    * status it received so it composes cleanly with `.then()` chains in the
    * IPC handlers.
-   *
    * @param status - the status received from the manager
    * @returns the same status (passthrough)
    */

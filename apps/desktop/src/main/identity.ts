@@ -12,7 +12,6 @@ import { BRAND_NAME, Platform } from "@felafel/desktop/main/constants";
 /**
  * Override Electron's defaults so the running process identifies itself
  * as "Felafel" instead of "Electron".
- *
  * @remarks
  * Without these calls, the running process inherits the Electron
  * binary's identity:

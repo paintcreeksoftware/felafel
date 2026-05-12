@@ -19,7 +19,6 @@ const PROBE_TIMEOUT_MS = 5_000;
  * being attached to the underlying function — fine for the real Node
  * builtin, surprising when the function is mocked in tests (the mock
  * loses the symbol and promisify returns a different shape).
- *
  * @param args - argv passed to `execFile` after the binary name
  * @returns stdout string on exit code 0; rejects on non-zero or spawn error
  */
@@ -28,7 +27,12 @@ function runTailscale(args: string[]): Promise<string> {
     // oxlint-disable-next-line prefer-await-to-callbacks -- wrapping callback-style execFile
     execFile("tailscale", args, { timeout: PROBE_TIMEOUT_MS }, (err, stdout) => {
       if (err) {
-        reject(err);
+        // execFile types `err` as `ExecFileException | null` (an Error
+        // subtype) but TS doesn't narrow it across the callback boundary —
+        // help `prefer-promise-reject-errors` see the Error shape. JSON
+        // stringify the non-Error branch so a stray plain-object failure
+        // doesn't collapse to `[object Object]`.
+        reject(err instanceof Error ? err : new Error(JSON.stringify(err)));
         return;
       }
       resolve(stdout);
@@ -36,8 +40,10 @@ function runTailscale(args: string[]): Promise<string> {
   });
 }
 
-/** IPv4 dotted-quad with each octet 0-255 — strict enough that a stray
- * line in the output (or a non-IPv4 string) doesn't masquerade as an IP. */
+/**
+ * IPv4 dotted-quad with each octet 0-255 — strict enough that a stray
+ * line in the output (or a non-IPv4 string) doesn't masquerade as an IP.
+ */
 const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/u;
 
 /**
@@ -49,7 +55,6 @@ const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d
  *
  * Trims the first line of stdout (the CLI prints the IP and a trailing
  * newline) and validates it against a strict IPv4 dotted-quad regex.
- *
  * @returns the Tailnet IPv4 address, or null when unavailable for any reason
  */
 export async function getTailnetIPv4(): Promise<string | null> {

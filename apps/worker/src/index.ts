@@ -55,6 +55,12 @@ const shutdown = createShutdownHandler({
   stopHeartbeat,
 });
 
+/**
+ * Run the worker's shutdown sequence then exit the process. The
+ * separate wrapper lets process-signal handlers stay synchronous
+ * while the actual shutdown is async.
+ * @param signal - the POSIX signal name that triggered shutdown
+ */
 async function runShutdown(signal: string): Promise<void> {
   const code = await shutdown(signal);
   process.exit(code);

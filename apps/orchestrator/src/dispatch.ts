@@ -12,7 +12,6 @@ const DISPATCH_TIMEOUT_MS = 5_000;
  * Throws a plain `Error` with a human-readable message on non-2xx, network
  * failure, or timeout — the message is safe to surface as the Run's
  * `error` field.
- *
  * @param worker - the worker selected by the dispatch logic
  * @param runId - server-generated run id
  * @param payload - opaque job payload, forwarded as-is

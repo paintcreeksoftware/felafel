@@ -1,6 +1,7 @@
-/** IPv4 loopback. Bind here for services that must not be reachable on
+/**
+ * IPv4 loopback. Bind here for services that must not be reachable on
  * the host LAN. Mirrors the same literal duplicated in each app package
- * (worker, orchestrator, desktop) — kept here too so @felafel/tailscale
+ * (worker, orchestrator, desktop) — kept here too so `@felafel/tailscale`
  * doesn't have to import from any consumer app and create a cycle.
  */
 export const LOCALHOST = "127.0.0.1";
@@ -15,7 +16,7 @@ export const LOCALHOST = "127.0.0.1";
 export const STDERR_PREVIEW_MAX_LEN = 500;
 
 /**
- * Environment variable names read by @felafel/tailscale. Centralized so
+ * Environment variable names read by `@felafel/tailscale`. Centralized so
  * a typo at the read site surfaces as a TypeScript error against the
  * keyof literal type, not as a silent undefined.
  */

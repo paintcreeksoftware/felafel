@@ -10,7 +10,6 @@ const UuidSchema = z.uuid();
  * fresh UUID v4 if no identity file exists yet. The same UUID is then used
  * for the worker's lifetime across restarts — re-registration is detected
  * by the orchestrator as upsert-by-id.
- *
  * @param path - absolute path to the identity file. Parent directories are
  * created as needed.
  * @returns the worker's identity UUID

@@ -48,7 +48,10 @@ export interface UpFlowCache {
   stdinSupportPromise: Promise<boolean> | undefined;
 }
 
-/** Construct a fresh `UpFlowCache` for a new manager instance. */
+/**
+ * Construct a fresh `UpFlowCache` for a new manager instance.
+ * @returns an empty UpFlowCache
+ */
 export function makeUpFlowCache(): UpFlowCache {
   return { stdinSupportPromise: undefined };
 }
@@ -58,7 +61,6 @@ export function makeUpFlowCache(): UpFlowCache {
  * classify the outcome, return a typed result. Manager owns the
  * in-flight dedup + the binary-not-found short-circuit; this function
  * only runs when both preconditions are satisfied.
- *
  * @param binary - resolved path to the `tailscale` binary
  * @param authkey - optional pre-auth key; piped via stdin when supported
  * @param cache - manager-owned cache for the --authkey-stdin probe
@@ -111,7 +113,6 @@ export async function runUpFlow(
  * Decide which CLI args + optional stdin to use for `tailscale up`. Branches
  * on whether the caller supplied a pre-auth key and whether the installed
  * CLI accepts `--authkey-stdin` (preferred for security).
- *
  * @param binary - resolved path to the `tailscale` binary
  * @param authkey - optional pre-auth key
  * @param cache - manager-owned cache for the --authkey-stdin probe
@@ -147,9 +148,10 @@ async function buildUpInvocation(
  * returns a `timedOut` outcome with empty capture so the caller's classifier
  * can distinguish timeout from CLI error. Other errors are wrapped into the
  * `ok: false` branch so the caller can fail with a typed message.
- *
  * @param binary - resolved tailscale binary path
  * @param invocation - argv and optional stdin from {@link buildUpInvocation}
+ * @param invocation.args - CLI args after the `tailscale` binary
+ * @param invocation.stdin - optional stdin (e.g. the auth key)
  * @param signal - abort signal hooked up to the outer timeout
  * @returns discriminated success/failure
  */
@@ -202,7 +204,6 @@ async function attemptUpSpawn(
 /**
  * Detect whether the installed Tailscale CLI supports `--authkey-stdin`.
  * Cached on the per-manager `UpFlowCache` after first probe.
- *
  * @param binary - resolved path to the `tailscale` binary
  * @param cache - manager-owned cache for the probe result
  * @returns true if the help text mentions the flag

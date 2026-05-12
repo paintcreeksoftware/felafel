@@ -14,7 +14,6 @@ const moduleDir = import.meta.dirname;
  * Construct the main BrowserWindow with Felafel's canonical config:
  * the OS-visible title set pre-paint, the Linux icon hint, the preload
  * script path, and the renderer-isolation flags.
- *
  * @returns the constructed (but not-yet-loaded) BrowserWindow
  */
 export function buildBrowserWindow(): BrowserWindow {
@@ -47,7 +46,6 @@ export function buildBrowserWindow(): BrowserWindow {
  * external https URLs hand off to the OS default browser, anything else is
  * denied. Prevents a malicious renderer from opening `file://` or
  * `javascript:` URLs in a new Electron window.
- *
  * @param win - the window whose openHandler is wired
  */
 export function wireExternalLinkAllowlist(win: BrowserWindow): void {
@@ -63,7 +61,6 @@ export function wireExternalLinkAllowlist(win: BrowserWindow): void {
  * Load the renderer into the given window: the Vite dev-server URL when
  * `ELECTRON_RENDERER_URL` is set (dev mode, HMR), otherwise the bundled
  * renderer HTML on disk (packaged builds).
- *
  * @param win - the window to load into
  */
 export async function loadRenderer(win: BrowserWindow): Promise<void> {

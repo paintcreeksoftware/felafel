@@ -12,6 +12,12 @@ import {
 import { buildApp } from "@felafel/orchestrator/app";
 import { type Worker, type WorkerRegistration } from "@felafel/shared";
 
+/**
+ * Build a WorkerRegistration test fixture with safe defaults; spreads
+ * `overrides` last so individual tests can pin fields.
+ * @param overrides - field-level overrides for the registration
+ * @returns a complete WorkerRegistration ready to POST
+ */
 function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
   return {
     id: randomUUID(),
@@ -21,6 +27,12 @@ function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistrat
   };
 }
 
+/**
+ * POST a worker registration to the app under test.
+ * @param app - the Hono app handle from `buildApp`
+ * @param reg - the WorkerRegistration payload to send
+ * @returns the Response from the POST
+ */
 async function postWorker(
   app: ReturnType<typeof buildApp>,
   reg: WorkerRegistration,
@@ -76,7 +88,8 @@ describe("/workers", () => {
     const body = (await res.json()) as Worker;
     expect(body.hostname).toBe("second");
 
-    const list = (await (await app.request("/workers")).json()) as Worker[];
+    const listRes = await app.request("/workers");
+    const list = (await listRes.json()) as Worker[];
     expect(list).toHaveLength(1);
     expect(list[0]?.hostname).toBe("second");
   });
@@ -93,7 +106,8 @@ describe("/workers", () => {
     const reopened = createDb(dataDir);
     try {
       const app = buildApp({ db: reopened.db });
-      const list = (await (await app.request("/workers")).json()) as Worker[];
+      const listRes = await app.request("/workers");
+      const list = (await listRes.json()) as Worker[];
       expect(list).toHaveLength(1);
       expect(list[0]?.id).toBe(reg.id);
     } finally {
@@ -129,7 +143,8 @@ describe("/workers", () => {
     const res = await app.request(`/workers/${reg.id}`, { method: "DELETE" });
     expect(res.status).toBe(204);
 
-    const list = (await (await app.request("/workers")).json()) as Worker[];
+    const listRes = await app.request("/workers");
+    const list = (await listRes.json()) as Worker[];
     expect(list).toHaveLength(0);
   });
 
@@ -160,7 +175,8 @@ describe("/workers", () => {
     expect(body.message).toContain("cannot delete");
 
     // Worker still exists.
-    const list = (await (await app.request("/workers")).json()) as Worker[];
+    const listRes = await app.request("/workers");
+    const list = (await listRes.json()) as Worker[];
     expect(list).toHaveLength(1);
   });
 });

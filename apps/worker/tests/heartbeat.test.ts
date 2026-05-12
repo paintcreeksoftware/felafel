@@ -11,6 +11,12 @@ interface FakeOrchestrator {
   close: () => Promise<void>;
 }
 
+/**
+ * Stand up a Hono fake orchestrator on an OS-assigned port that
+ * captures every WorkerRegistration POST. Tests assert against
+ * `received` to verify the worker's heartbeat shape.
+ * @returns the live fake with received-list + close handle
+ */
 async function startFakeOrchestrator(): Promise<FakeOrchestrator> {
   const received: WorkerRegistration[] = [];
   const app = new Hono().post("/workers", async (c) => {
@@ -40,6 +46,13 @@ async function startFakeOrchestrator(): Promise<FakeOrchestrator> {
   };
 }
 
+/**
+ * Poll `check` every 10ms until it returns true or `timeoutMs`
+ * elapses. Used to wait for the worker's heartbeat loop to deliver a
+ * registration without coupling tests to its internal cadence.
+ * @param check - predicate evaluated each poll
+ * @param timeoutMs - how long to wait before throwing
+ */
 async function waitFor(
   check: () => boolean,
   timeoutMs: number,

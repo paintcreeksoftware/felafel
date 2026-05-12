@@ -26,7 +26,6 @@ interface ShutdownDeps {
  * Race `promise` against a deadline. Resolves with the promise's value, or
  * with {@link TIMEOUT} if the deadline fires first. The timer is `.unref()`'d
  * so it never keeps the event loop alive on its own.
- *
  * @param promise - the work to race
  * @param ms - deadline in milliseconds
  * @returns the promise's resolved value or {@link TIMEOUT}
@@ -53,7 +52,6 @@ function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIM
  * The handler does **not** call `process.exit` — it returns the exit code
  * so the caller controls process lifetime. This keeps the function
  * unit-testable in-process.
- *
  * @param deps - the server to close and the heartbeat stopper
  * @returns a function that takes the triggering signal name and resolves
  *   with the exit code (0 on clean close, 1 on close error or timeout)
@@ -68,7 +66,7 @@ export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => P
     // socket prevented close() from ever invoking its callback.
     server.closeIdleConnections();
 
-    const closeAsync = promisify(server.close.bind(server)) as () => Promise<void>;
+    const closeAsync = promisify(server.close.bind(server));
 
     try {
       const result = await raceTimeout(closeAsync(), SHUTDOWN_TIMEOUT_MS);

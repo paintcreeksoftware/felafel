@@ -23,7 +23,7 @@ interface HostResolution {
  *   `Defaults.HOST` (loopback)
  * - `bindHost` = explicit `WORKER_BIND_HOST` → whatever `advertiseHost`
  *   resolved to (back-compat: pre-PAI-107 behavior was bind == advertise)
- *
+ * @param opts - host-resolution inputs
  * @param opts.explicitAdvertiseHost - value of `WORKER_HOST`, or undefined
  * @param opts.explicitBindHost - value of `WORKER_BIND_HOST`, or undefined
  * @param opts.tailnetIp - result of `tailscale ip -4`, or null when

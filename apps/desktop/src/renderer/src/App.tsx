@@ -26,7 +26,14 @@ interface TailnetServeDegradation {
   remediation?: string;
 }
 
-/** Resolve which label to render for the orchestrator state. */
+/**
+ * Resolve which label to render for the orchestrator state.
+ * @param props - orchestrator status props
+ * @param props.statusError - error message from the last status probe, or null
+ * @param props.status - the current orchestrator lifecycle state
+ * @param props.orchUrl - origin (e.g. `http://127.0.0.1:9090`) when ready, else null
+ * @returns the label JSX
+ */
 function OrchestratorLabel(props: {
   statusError: string | null;
   status: Status;
@@ -39,7 +46,7 @@ function OrchestratorLabel(props: {
     return (
       <span>
         <span className="font-mono">ready</span>{" "}
-        <span className="text-muted-foreground/70 font-mono text-sm">{props.orchUrl}</span>
+        <span className="font-mono text-sm text-muted-foreground/70">{props.orchUrl}</span>
       </span>
     );
   }
@@ -58,6 +65,9 @@ function OrchestratorLabel(props: {
  * worker is heartbeating; the orchestrator can dispatch to it. `stale`
  * is amber — worker stopped heartbeating past the sweep threshold; the
  * row is still in the DB but the worker is presumed gone.
+ * @param root0 - props
+ * @param root0.status - the worker's liveness status
+ * @returns the pill JSX
  */
 function StatusPill({ status }: { status: Worker["status"] }) {
   const color =
@@ -66,14 +76,25 @@ function StatusPill({ status }: { status: Worker["status"] }) {
       : "bg-amber-500/15 text-amber-700 dark:text-amber-400";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-medium ${color}`}
+      className={`
+        inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs
+        font-medium
+        ${color}
+      `}
     >
       {status}
     </span>
   );
 }
 
-/** Resolve which list/empty/error view to render for the worker registry. */
+/**
+ * Resolve which list/empty/error view to render for the worker registry.
+ * @param props - worker list props
+ * @param props.workers - the registered workers, or null while loading
+ * @param props.workersError - error message from the last fetch, or null
+ * @param props.onForget - callback to drop a stale worker from the registry
+ * @returns the list/empty/error JSX
+ */
 function WorkersList(props: {
   workers: Worker[] | null;
   workersError: string | null;
@@ -94,14 +115,18 @@ function WorkersList(props: {
         <li key={w.id} className="flex items-center gap-2 text-sm">
           <StatusPill status={w.status} />
           <span className="font-mono">{w.hostname}</span>
-          <span className="text-muted-foreground/70 font-mono text-xs">({w.id})</span>
+          <span className="font-mono text-xs text-muted-foreground/70">({w.id})</span>
           {w.status === "stale" && (
             <button
               type="button"
               onClick={() => {
                 props.onForget(w);
               }}
-              className="text-muted-foreground hover:text-foreground ml-auto text-xs underline underline-offset-2"
+              className="
+                ml-auto text-xs text-muted-foreground underline
+                underline-offset-2
+                hover:text-foreground
+              "
             >
               forget
             </button>
@@ -112,6 +137,13 @@ function WorkersList(props: {
   );
 }
 
+/**
+ * Top-level renderer component: subscribes to orchestrator status +
+ * worker registry IPC channels, slots the Tailscale pill, and
+ * renders the three view-pieces (OrchestratorLabel, WorkersList,
+ * StatusPill) into the app shell.
+ * @returns the renderer root JSX
+ */
 export default function App() {
   const [status, setStatus] = useState<Status>("unknown");
   const [orchUrl, setOrchUrl] = useState<string | null>(null);
@@ -179,22 +211,36 @@ export default function App() {
   }, [orchUrl]);
 
   return (
-    <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
-      <header className="absolute right-4 top-4 z-10">
+    <div className="
+      flex min-h-screen items-center justify-center bg-background font-sans
+      text-foreground
+    ">
+      <header className="absolute top-4 right-4 z-10">
         <TailscalePill tailnetServeDegradation={tailnetServeDegradation} />
       </header>
-      <main className="bg-background flex min-h-screen w-full max-w-3xl flex-col items-center justify-between px-16 py-32 sm:items-start">
-        <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="text-foreground max-w-xs text-3xl font-semibold leading-10 tracking-tight">
+      <main className="
+        flex min-h-screen w-full max-w-3xl flex-col items-center justify-between
+        bg-background px-16 py-32
+        sm:items-start
+      ">
+        <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="
+          dark:invert
+        " />
+        <div className="
+          flex flex-col items-center gap-6 text-center
+          sm:items-start sm:text-left
+        ">
+          <h1 className="
+            max-w-xs text-3xl/10 font-semibold tracking-tight text-foreground
+          ">
             To get started, edit src/renderer/src/App.tsx.
           </h1>
-          <p className="text-muted-foreground max-w-md text-lg leading-8">
+          <p className="max-w-md text-lg/8 text-muted-foreground">
             Orchestrator:{" "}
             <OrchestratorLabel statusError={statusError} status={status} orchUrl={orchUrl} />
           </p>
-          <section className="text-muted-foreground w-full max-w-md text-base leading-7">
-            <h2 className="text-foreground mb-2 text-lg font-medium">Workers</h2>
+          <section className="w-full max-w-md text-base/7 text-muted-foreground">
+            <h2 className="mb-2 text-lg font-medium text-foreground">Workers</h2>
             <WorkersList
               workers={workers}
               workersError={workersError}
@@ -202,6 +248,9 @@ export default function App() {
                 if (!orchUrl) {
                   return;
                 }
+                // TODO(PAI-145): replace with a shadcn Dialog so the
+                //   no-alert ESLint rule can flip from off to error and
+                //   the confirm UX matches the rest of the renderer.
                 const confirmed = window.confirm(
                   `Forget worker "${worker.hostname}"? This permanently removes the row from the orchestrator's database.`,
                 );
@@ -236,7 +285,10 @@ export default function App() {
             />
           </section>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row" />
+        <div className="
+          flex flex-col gap-4 text-base font-medium
+          sm:flex-row
+        " />
       </main>
     </div>
   );

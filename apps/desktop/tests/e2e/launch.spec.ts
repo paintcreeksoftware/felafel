@@ -57,7 +57,8 @@ test("Workers panel reflects a worker that registered after mount", async () => 
   // Pull the orchestrator URL out of the UI — the renderer renders it
   // verbatim next to "ready".
   const urlEl = window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`).first();
-  const orchUrl = (await urlEl.textContent())?.match(/http:\/\/127\.0\.0\.1:\d{4,5}/u)?.[0];
+  const urlText = await urlEl.textContent();
+  const orchUrl = urlText?.match(/http:\/\/127\.0\.0\.1:\d{4,5}/u)?.[0];
   expect(orchUrl).toBeTruthy();
 
   const registration = {

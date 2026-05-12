@@ -28,13 +28,15 @@ interface StartHeartbeatOptions {
  *
  * Errors are logged and swallowed: the loop continues so the worker
  * recovers automatically once the orchestrator becomes reachable again.
- *
  * @param opts - heartbeat configuration; see {@link StartHeartbeatOptions}
  * @returns a stop function that halts the loop and prevents future ticks
  */
 export function startHeartbeat(opts: StartHeartbeatOptions): () => void {
   let stopped = false;
 
+  /**
+   *
+   */
   async function tick(): Promise<void> {
     if (stopped) {
       return;
