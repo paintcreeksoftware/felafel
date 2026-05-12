@@ -222,6 +222,12 @@ const config = [
       "no-undefined": "off",
       "no-void": "off",
       "no-warning-comments": "off",
+      "no-global-assign": "error",
+      "no-lone-blocks": "error",
+      "no-multi-assign": "error",
+      "no-regex-spaces": "error",
+      "no-sequences": "error",
+      "no-unused-expressions": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
