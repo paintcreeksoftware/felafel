@@ -5,6 +5,16 @@ import {
   type Worker,
 } from "@felafel/desktop/orchestrator";
 import { TailscalePill } from "@felafel/tailscale/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@felafel/ui/components/ui/alert-dialog";
 
 type Status = OrchestratorStatus["kind"] | "unknown";
 
@@ -152,6 +162,42 @@ export default function App() {
     useState<TailnetServeDegradation | null>(null);
   const [workers, setWorkers] = useState<Worker[] | null>(null);
   const [workersError, setWorkersError] = useState<string | null>(null);
+  // `workerToForget` doubles as the AlertDialog's `open` signal —
+  // null = closed; a Worker = open, pinned to that row. Setting it
+  // back to null on either Cancel or successful Forget closes the
+  // dialog without a separate flag.
+  const [workerToForget, setWorkerToForget] = useState<Worker | null>(null);
+
+  /**
+   * Issue DELETE /workers/:id for the previously-confirmed worker.
+   * 204 is the success path; the next poll cycle (≤5s) drops the row.
+   * 409 surfaces the orchestrator's "still has live runs" guard back
+   * to the user as an inline error.
+   * @param worker - the worker to forget
+   */
+  async function forgetWorker(worker: Worker): Promise<void> {
+    if (!orchUrl) {
+      return;
+    }
+    try {
+      const client = makeClient(orchUrl);
+      const res = await client.workers[":id"].$delete({
+        param: { id: worker.id },
+      });
+      if (res.status === STATUS_NO_CONTENT) {
+        setWorkersError(null);
+        return;
+      }
+      if (res.status === STATUS_CONFLICT) {
+        const body = (await res.json()) as { message: string };
+        setWorkersError(body.message);
+        return;
+      }
+      setWorkersError(`DELETE /workers ${res.status.toString()}`);
+    } catch (error) {
+      setWorkersError(error instanceof Error ? error.message : String(error));
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = window.api.onOrchestratorStatus((next) => {
@@ -244,44 +290,7 @@ export default function App() {
             <WorkersList
               workers={workers}
               workersError={workersError}
-              onForget={(worker) => {
-                if (!orchUrl) {
-                  return;
-                }
-                // TODO(PAI-145): replace with a shadcn Dialog so the
-                //   no-alert ESLint rule can flip from off to error and
-                //   the confirm UX matches the rest of the renderer.
-                const confirmed = window.confirm(
-                  `Forget worker "${worker.hostname}"? This permanently removes the row from the orchestrator's database.`,
-                );
-                if (!confirmed) {
-                  return;
-                }
-                void (async () => {
-                  try {
-                    const client = makeClient(orchUrl);
-                    const res = await client.workers[":id"].$delete({
-                      param: { id: worker.id },
-                    });
-                    // 204 = forget succeeded; the next poll cycle (≤5s)
-                    // will drop the row from the rendered list.
-                    if (res.status === STATUS_NO_CONTENT) {
-                      setWorkersError(null);
-                      return;
-                    }
-                    if (res.status === STATUS_CONFLICT) {
-                      const body = (await res.json()) as { message: string };
-                      setWorkersError(body.message);
-                      return;
-                    }
-                    setWorkersError(`DELETE /workers ${res.status.toString()}`);
-                  } catch (error) {
-                    setWorkersError(
-                      error instanceof Error ? error.message : String(error),
-                    );
-                  }
-                })();
-              }}
+              onForget={setWorkerToForget}
             />
           </section>
         </div>
@@ -290,6 +299,39 @@ export default function App() {
           sm:flex-row
         " />
       </main>
+      <AlertDialog
+        open={workerToForget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWorkerToForget(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Forget worker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {workerToForget
+                ? `"${workerToForget.hostname}" will be permanently removed from the orchestrator's database. The worker daemon can re-register if it heartbeats again.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const target = workerToForget;
+                setWorkerToForget(null);
+                if (target) {
+                  void forgetWorker(target);
+                }
+              }}
+            >
+              Forget
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

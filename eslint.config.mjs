@@ -165,6 +165,7 @@ const config = [
       // Rules that reject specific syntax. Most are bug-finders worth
       // having on; the off cases are syntactic patterns we explicitly
       // want to keep using.
+      "no-alert": "error",
       "no-array-constructor": "error",
       "no-bitwise": "off",
       "no-caller": "error",
