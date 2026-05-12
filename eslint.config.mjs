@@ -175,6 +175,7 @@ const config = [
       "no-delete-var": "error",
       "no-div-regex": "error",
       "no-empty": "error",
+      "no-empty-function": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
@@ -193,6 +194,15 @@ const config = [
       // TODO(PAI-141 batch 11: cutover — drop oxlint, .oxlintrc.json,
       //   per-package "lint" scripts, root "lint" → alias to lint:eslint.
       //   oxfmt stays.
+    },
+  },
+  {
+    // Test-file overrides — mirrors the `.oxlintrc.json` overrides
+    // section. Empty arrow functions are a standard test idiom
+    // (`mockImplementation(() => {})`, stream `.on("data", () => {})`).
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
+    rules: {
+      "no-empty-function": "off",
     },
   },
 ];
