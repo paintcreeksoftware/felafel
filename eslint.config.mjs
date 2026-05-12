@@ -160,7 +160,75 @@ const config = [
       "no-ternary": "off",
       "no-unneeded-ternary": ["error", { defaultAssignment: false }],
       "yoda": ["error", "never"],
-      // TODO(PAI-141 batch 2: core - Suggestions; continuing control flow).
+      // Core — Suggestions / forbid syntax (no-*)
+      // Rules that reject specific syntax. Most are bug-finders worth
+      // having on; the off cases are syntactic patterns we explicitly
+      // want to keep using.
+      // TODO(PAI-145): https://linear.app/paint-creek-software/issue/PAI-145
+      //   `window.confirm` in App.tsx's worker-forget flow needs a
+      //   React Dialog refactor; flip this rule to error in the same PR.
+      "no-array-constructor": "error",
+      "no-bitwise": "off",
+      "no-caller": "error",
+      "no-console": "off",
+      "no-continue": "off",
+      "no-delete-var": "error",
+      "no-div-regex": "error",
+      "no-empty": "error",
+      "no-empty-function": "error",
+      "no-empty-static-block": "error",
+      "no-eq-null": "error",
+      "no-eval": "error",
+      "no-extend-native": "error",
+      "no-extra-bind": "error",
+      "no-implied-eval": "error",
+      "no-new-func": "error",
+      "no-script-url": "error",
+      "no-iterator": "error",
+      "no-multi-str": "error",
+      "no-octal": "error",
+      "no-octal-escape": "error",
+      "no-proto": "error",
+      "no-with": "error",
+      "no-new": "error",
+      "no-new-wrappers": "error",
+      "no-object-constructor": "error",
+      "no-useless-call": "error",
+      "no-useless-catch": "error",
+      "no-useless-computed-key": "error",
+      "no-useless-concat": "error",
+      "no-useless-constructor": "error",
+      "no-useless-escape": "error",
+      "no-useless-rename": "error",
+      "no-useless-return": "error",
+      "no-extra-label": "error",
+      "no-label-var": "error",
+      "no-labels": "error",
+      "no-unused-labels": "error",
+      "no-param-reassign": "error",
+      "no-redeclare": "error",
+      "no-shadow": "error",
+      "no-shadow-restricted-names": "error",
+      "no-extra-boolean-cast": "error",
+      "no-implicit-coercion": "error",
+      "no-implicit-globals": "error",
+      "no-invalid-this": "error",
+      "no-throw-literal": "error",
+      "no-nonoctal-decimal-escape": "error",
+      "no-undef-init": "error",
+      "no-var": "error",
+      "no-inline-comments": "off",
+      "no-plusplus": "off",
+      "no-undefined": "off",
+      "no-void": "off",
+      "no-warning-comments": "off",
+      "no-global-assign": "error",
+      "no-lone-blocks": "error",
+      "no-multi-assign": "error",
+      "no-regex-spaces": "error",
+      "no-sequences": "error",
+      "no-unused-expressions": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
@@ -178,6 +246,15 @@ const config = [
       // TODO(PAI-141 batch 11: cutover — drop oxlint, .oxlintrc.json,
       //   per-package "lint" scripts, root "lint" → alias to lint:eslint.
       //   oxfmt stays.
+    },
+  },
+  {
+    // Test-file overrides — mirrors the `.oxlintrc.json` overrides
+    // section. Empty arrow functions are a standard test idiom
+    // (`mockImplementation(() => {})`, stream `.on("data", () => {})`).
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
+    rules: {
+      "no-empty-function": "off",
     },
   },
 ];

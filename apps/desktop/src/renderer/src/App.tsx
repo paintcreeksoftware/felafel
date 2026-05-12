@@ -149,7 +149,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!orchUrl) {return () => {};}
+    if (!orchUrl) {return () => { /* no orchestrator URL yet — nothing to clean up */ };}
     const client = makeClient(orchUrl);
     let cancelled = false;
     const fetchWorkers = async () => {
