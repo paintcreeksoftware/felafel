@@ -228,7 +228,38 @@ const config = [
       "no-regex-spaces": "error",
       "no-sequences": "error",
       "no-unused-expressions": "error",
-      // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
+      // Core — Suggestions / modern-syntax push (prefer-* / require-*)
+      // Rules that prefer the modern alternative when one exists.
+      "prefer-arrow-callback": "error",
+      "prefer-const": "error",
+      "prefer-destructuring": "error",
+      "prefer-exponentiation-operator": "error",
+      "prefer-named-capture-group": "error",
+      "prefer-numeric-literals": "error",
+      "prefer-object-has-own": "error",
+      "prefer-object-spread": "error",
+      "prefer-promise-reject-errors": "error",
+      "prefer-regex-literals": "error",
+      "prefer-rest-params": "error",
+      "prefer-spread": "error",
+      "prefer-template": "error",
+      "require-await": "error",
+      // TODO(PAI-146): https://linear.app/paint-creek-software/issue/PAI-146
+      //   Flip to error after the /u-flag migration PR.
+      "require-unicode-regexp": "off",
+      "require-yield": "error",
+      "arrow-body-style": ["error", "as-needed"],
+      "object-shorthand": ["error", "always"],
+      "operator-assignment": ["error", "always"],
+      "logical-assignment-operators": ["error", "always"],
+      "radix": ["error", "always"],
+      "symbol-description": "error",
+      "accessor-pairs": "error",
+      "grouped-accessor-pairs": "error",
+      "one-var": ["error", "never"],
+      "strict": ["error", "never"],
+      "vars-on-top": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
