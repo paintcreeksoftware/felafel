@@ -16,6 +16,11 @@ on:
   push:
     branches: [main]
 
+# Minimum needed for actions/checkout + actions/upload-artifact (artifact
+# API works with contents: read). Explicit per PAI-135.
+permissions:
+  contents: read
+
 jobs:
   desktop-package:
     name: Desktop installer (Linux)

@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# Minimum needed for actions/checkout. Explicit per PAI-135.
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest

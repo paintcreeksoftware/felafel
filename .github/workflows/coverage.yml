@@ -18,6 +18,12 @@ on:
   push:
     branches: [main]
 
+# Minimum needed for actions/checkout. GITHUB_STEP_SUMMARY writes are
+# file-based on the runner — no API permissions required. Explicit per
+# PAI-135.
+permissions:
+  contents: read
+
 jobs:
   coverage:
     runs-on: ubuntu-latest
