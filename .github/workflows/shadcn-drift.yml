@@ -1,0 +1,90 @@
+name: shadcn drift
+
+# Weekly poll of the shadcn registry for upstream changes to the
+# components copied into `packages/ui/src/components/ui/`. If drift is
+# detected, the workflow opens a PR with the upstream content applied,
+# normalized for this project's `@felafel/ui/...` import aliases.
+#
+# Scheduled rather than on-push because the upstream registry isn't
+# under our control — we discover drift when *they* update, not when
+# we do.
+
+on:
+  schedule:
+    # Mondays at 08:00 UTC. Picks a quiet hour + an early-week day so a
+    # surfaced drift PR has the rest of the week to be reviewed before
+    # the next cycle.
+    - cron: "0 8 * * 1"
+  # Manual trigger so someone can poll outside the weekly cycle (e.g.
+  # right after a known shadcn release).
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `--apply` mode writes upstream content to the local files. The
+      # script exits non-zero when drift is found (in apply mode this
+      # is purely informational — we use `git status` below to decide
+      # whether to open a PR). `|| true` keeps the workflow from
+      # failing on the expected non-zero exit.
+      - name: Apply upstream registry content
+        run: node scripts/check-shadcn-registry-drift.mjs --apply || true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::shadcn drift detected; will open a PR"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::no shadcn drift"
+          fi
+
+      # peter-evans/create-pull-request handles the whole branch + commit
+      # + PR loop idempotently — if a previous run already opened a PR
+      # on the same branch, this updates it with the new diff instead of
+      # creating a duplicate.
+      - name: Open PR on drift
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/shadcn-registry-drift
+          title: "chore(ui): merge upstream shadcn registry changes"
+          body: |
+            Weekly drift check found upstream changes in the shadcn registry.
+            Each modified file under `packages/ui/src/components/ui/` has
+            been overwritten with the canonical upstream content (with
+            `@/...` imports normalized to `@felafel/ui/...` per the project's
+            `components.json` aliases).
+
+            **Review checklist:**
+            - Glance through each diff — shadcn occasionally renames variant
+              keys or restructures props, which would break consumers.
+            - Run the renderer locally + check the components Storybook
+              (PAI-148, once it lands) to spot visual changes.
+            - If a specific file shouldn't auto-update (you've intentionally
+              forked it), revert that one file before merging.
+
+            Run `node scripts/check-shadcn-registry-drift.mjs` locally to
+            re-check at any time.
+          commit-message: "chore(ui): merge upstream shadcn registry changes"
+          assignees: yingw787
+          delete-branch: true
