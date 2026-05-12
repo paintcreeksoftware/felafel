@@ -121,6 +121,7 @@ const config = [
       "max-depth": ["error", 4],
       "max-lines-per-function": ["error", { max: 200, skipBlankLines: true, skipComments: true }],
       "max-nested-callbacks": ["error", 10],
+      "max-params": ["error", 5],
       // TODO(PAI-141 batch 2: core - Suggestions).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
