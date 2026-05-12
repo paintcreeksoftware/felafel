@@ -2,12 +2,12 @@
 // as a Node bundle (apps/orchestrator); the desktop main process spawns it as
 // a child and points the renderer at it over IPC.
 import { spawn, type ChildProcess } from "node:child_process";
-import { app } from "electron";
 import getPort from "get-port";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 import { ensureDataDir } from "@felafel/desktop/main/orchestrator-data-dir";
 import { resolveScriptPath } from "@felafel/desktop/main/orchestrator-paths";
 import { waitForOrchestratorReady } from "@felafel/desktop/main/orchestrator-readiness";
+import { buildSpawnInvocation } from "@felafel/desktop/main/orchestrator-spawn";
 // Single source of truth for the desktop→orchestrator env-var contract lives
 // next to the reader. Importing it here keeps the spawned-process names
 // in sync without duplicating the literals.
@@ -26,14 +26,6 @@ interface TailnetServeDegradation {
 }
 
 /**
- * Tag emitted in `ELECTRON_RUN_AS_NODE` so a packaged build's spawned child
- * runs as Node rather than as a second Electron app instance. Electron
- * checks this env var on startup; presence flips the runtime mode. Used
- * only here, hence file-private.
- */
-const ELECTRON_RUN_AS_NODE = "ELECTRON_RUN_AS_NODE";
-
-/**
  * Default stable Tailnet TCP port the AppImage publishes via `tailscale serve`
  * when no env override is set. 9090 chosen to match the orchestrator's local
  * default — a remote worker pointing at `<desktop-tailnet-name>:9090` lands
@@ -44,13 +36,6 @@ const DEFAULT_TAILNET_PORT = 9090;
 
 /** Grace period after SIGTERM before escalating to SIGKILL. */
 const SIGTERM_GRACE_MS = 5_000;
-
-/** Spawn invocation parts: command, argv, and any extra env to layer on top of `process.env`. */
-interface SpawnInvocation {
-  command: string;
-  args: string[];
-  extraEnv: Record<string, string>;
-}
 
 /**
  * Manager for the orchestrator child process. Owns the spawned `ChildProcess`
@@ -115,7 +100,7 @@ export class OrchestratorManager {
     const port = await getPort();
     const url = `http://${LOCALHOST}:${port}`;
 
-    const { command, args, extraEnv } = this.buildSpawnInvocation(script);
+    const { command, args, extraEnv } = buildSpawnInvocation(script);
     this.process = spawn(command, args, {
       stdio: ["ignore", "inherit", "inherit"],
       env: {
@@ -289,32 +274,6 @@ export class OrchestratorManager {
       this.publishedTailnetPort = null;
       await this.tailscale.unpublishServe({ tailnetPort });
     }
-  }
-
-  /**
-   * Decide how to invoke the orchestrator script. In a packaged build:
-   * Electron's bundled Node via `process.execPath` + `ELECTRON_RUN_AS_NODE`
-   * + `--experimental-sqlite`. In dev/tests: system `node` (24+, where
-   * `node:sqlite` is stable without the flag).
-   *
-   * TODO: drop `--experimental-sqlite` once Electron's bundled Node tracks
-   * a release where `node:sqlite` is GA (no flag required). Today Electron
-   * 41 ships a Node where it's still experimental; once the bundled Node
-   * matches Node 24 LTS's GA promotion, the flag becomes a runtime warning
-   * and should be removed.
-   *
-   * @param script - absolute path to the bundled `.mjs` entry
-   * @returns command/argv/env triple to pass to {@link spawn}
-   */
-  private buildSpawnInvocation(script: string): SpawnInvocation {
-    if (app.isPackaged) {
-      return {
-        command: process.execPath,
-        args: ["--experimental-sqlite", script],
-        extraEnv: { [ELECTRON_RUN_AS_NODE]: "1" },
-      };
-    }
-    return { command: "node", args: [script], extraEnv: {} };
   }
 
 }
