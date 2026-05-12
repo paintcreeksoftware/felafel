@@ -13,6 +13,7 @@
 // Plugins beyond `typescript-eslint/parser` are added in their batch
 // PRs so this scaffold stays installable without pulling the whole
 // ESLint ecosystem in one shot.
+import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginReactRefresh from "eslint-plugin-react-refresh";
@@ -430,6 +431,13 @@ const config = [
   {
     files: ["**/*.{jsx,tsx}"],
     ...pluginReactRefresh.configs.vite,
+  },
+  // jsx-a11y — accessibility checks on JSX. Scoped to JSX/TSX. The
+  // plugin's `flatConfigs.recommended` is the curated subset that
+  // catches real accessibility issues without becoming noise.
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ...pluginJsxA11y.flatConfigs.recommended,
   },
 ];
 
