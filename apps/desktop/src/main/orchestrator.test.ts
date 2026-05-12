@@ -5,7 +5,7 @@
 // orchestrator.integration.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
-import { type TailscaleManager } from "@felafel/desktop/main/tailscale";
+import { type TailscaleManager } from "@felafel/tailscale";
 
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => "/tmp" } }));
 

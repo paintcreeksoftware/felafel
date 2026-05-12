@@ -1,4 +1,4 @@
-// Tier 1 — unit tests for the pure helpers in tailscale.ts. Runs in
+// Tier 1 — unit tests for the pure helpers in manager.ts. Runs in
 // milliseconds, no `tailscale` binary required, no spawn, no electron.
 //
 // The IO functions (findBinary, probeStatus, runUp) are exercised in the
@@ -12,7 +12,7 @@ import {
   classifyUpError,
   parseServeConfigJson,
   parseStatusJson,
-} from "@felafel/desktop/main/tailscale";
+} from "@felafel/tailscale";
 
 vi.mock("execa");
 

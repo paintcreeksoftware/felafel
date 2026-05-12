@@ -25,7 +25,7 @@ import pRetry from "p-retry";
 import which from "which";
 import { z } from "zod";
 import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
-import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
+import { LOCALHOST, TailscaleEnvVars } from "@felafel/tailscale/constants";
 
 /** Initial backoff between `tailscale status` retries on transient errors. */
 const PROBE_RETRY_INITIAL_DELAY_MS = 200;
@@ -339,7 +339,7 @@ export class TailscaleManager {
    * @returns absolute path to the binary, or null if not found
    */
   async findBinary(opts: { refresh?: boolean } = {}): Promise<string | null> {
-    const fake = process.env[DesktopEnvVars.FELAFEL_TAILSCALE_FAKE];
+    const fake = process.env[TailscaleEnvVars.FELAFEL_TAILSCALE_FAKE];
     if (fake) {
       return fake;
     }

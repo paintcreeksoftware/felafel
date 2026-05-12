@@ -25,7 +25,7 @@ vi.mock("electron", () => ({
 }));
 
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
-import { TailscaleManager } from "@felafel/desktop/main/tailscale";
+import { TailscaleManager } from "@felafel/tailscale";
 
 const devDataDir = join(here, "..", "..", ".dev-orchestrator-data");
 

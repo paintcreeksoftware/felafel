@@ -1,4 +1,4 @@
-// Tier 2 — integration test for tailscale.ts. Spawns the real `tailscale`
+// Tier 2 — integration test for manager.ts. Spawns the real `tailscale`
 // binary on the host (read-only — does NOT call runUp because that would
 // burn auth keys and mutate tailnet membership).
 //
@@ -6,7 +6,7 @@
 // to leave in the always-on test suite, though it lives outside the default
 // `pnpm test` glob and only runs via `pnpm test:integration`.
 import { beforeAll, describe, expect, it } from "vitest";
-import { TailscaleManager } from "@felafel/desktop/main/tailscale";
+import { TailscaleManager } from "@felafel/tailscale";
 
 let binaryAvailable = false;
 let manager: TailscaleManager;

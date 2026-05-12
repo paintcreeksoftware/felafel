@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@felafel/shared": "workspace:*",
+    "@felafel/tailscale": "workspace:*",
     "@felafel/ui": "workspace:*",
     "execa": "^9.6.1",
     "get-port": "^7.2.0",

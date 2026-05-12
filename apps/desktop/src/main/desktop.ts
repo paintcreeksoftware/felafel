@@ -23,7 +23,7 @@ import {
   WindowSize,
 } from "@felafel/desktop/main/constants";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
-import { TailscaleManager } from "@felafel/desktop/main/tailscale";
+import { TailscaleManager } from "@felafel/tailscale";
 
 const moduleDir = import.meta.dirname;
 
