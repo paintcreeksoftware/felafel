@@ -214,6 +214,9 @@ const config = [
       "no-implicit-globals": "error",
       "no-invalid-this": "error",
       "no-throw-literal": "error",
+      "no-nonoctal-decimal-escape": "error",
+      "no-undef-init": "error",
+      "no-var": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the

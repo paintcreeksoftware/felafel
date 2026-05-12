@@ -36,7 +36,7 @@ export async function runProbe(binary: string | null): Promise<TailscaleStatus> 
   }
   // Retain the last probe result so an exhausted-retry path can surface
   // the actual transient TailscaleStatus instead of a generic Error.
-  let lastResult: TailscaleStatus | undefined = undefined;
+  let lastResult: TailscaleStatus | null = null;
   try {
     return await pRetry(
       async () => {
