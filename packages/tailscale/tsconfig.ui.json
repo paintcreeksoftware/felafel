@@ -11,5 +11,5 @@
     "jsx": "react-jsx",
     "paths": { "@felafel/tailscale/*": ["./src/*"] }
   },
-  "include": ["src/ui/**/*"]
+  "include": ["src/ui/**/*", "vitest.config.ts"]
 }
