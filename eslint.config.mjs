@@ -390,6 +390,22 @@ const config = [
       "no-restricted-imports": "off",
     },
   },
+  // ──────────────────────────────────────────────────────────────────
+  // Plugin tier (PAI-141 batches 4-10). Each plugin is wired up with
+  // its `recommended` preset + targeted overrides — that's the
+  // conventional ESLint flow and is honest about who owns the rule
+  // curation (the plugin authors, not us). The "every rule must be
+  // specified" requirement applies to the core-rules layer above; for
+  // plugins we trust the recommended preset and document only the
+  // overrides.
+  // ──────────────────────────────────────────────────────────────────
+  // @typescript-eslint — non-type-aware recommended. The type-aware
+  // tier (`recommendedTypeChecked`) is deferred to a follow-up PR
+  // because it needs tsconfig surgery (the auto-discovered project
+  // service doesn't see every .ts file under the current layout) and
+  // surfaces ~80 real violations we'd want to fix one-by-one, which
+  // is its own scoped change.
+  ...tseslint.configs.recommended,
 ];
 
 export default config;
