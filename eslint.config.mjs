@@ -259,6 +259,64 @@ const config = [
       "one-var": ["error", "never"],
       "strict": ["error", "never"],
       "vars-on-top": "error",
+      // Core — Suggestions / restricted-* (project-specific bans)
+      // Each entry is researched against the codebase + cross-referenced
+      // with its prefer-* twin (when one exists) so the ban is
+      // enforceable, not theoretical. oxlint implements all five via
+      // `eslint/no-restricted-*`; flipping them on in ESLint matches
+      // the existing oxlint coverage with project-tuned defaults.
+      "no-restricted-exports": ["error", {
+        // Exporting a member named `then` makes the module thenable
+        // under dynamic `import()`, silently triggering its await.
+        // Silent foot-gun; never intentional.
+        restrictedNamedExports: ["then"],
+      }],
+      "no-restricted-globals": ["error",
+        // Browser `Window` globals that look like locals but shadow
+        // real identifiers. The bare references compile clean and
+        // resolve to `window.<x>` only in browser contexts — flagging
+        // them forces an explicit `window.` or a real local binding.
+        { name: "event", message: "Use the event parameter from the handler, not the global." },
+        { name: "name", message: "window.name leaks into globals; use a local binding." },
+        { name: "top", message: "window.top is rarely what you want; use the local scope." },
+        { name: "parent", message: "window.parent is for iframes; use the local scope." },
+        { name: "external", message: "window.external is non-standard." },
+        { name: "closed", message: "window.closed is non-standard." },
+        { name: "find", message: "window.find is the browser search box; use Array.prototype.find." },
+      ],
+      "no-restricted-imports": ["error", {
+        // Project rule (memory: no-relative-imports). Carve-outs for
+        // window.ts (Vite `?asset` query) + test fixtures are handled
+        // by the file-level overrides at the bottom of this file.
+        patterns: [
+          { group: ["./*", "../*"], message: "Use the @felafel/<pkg>/... alias, not relative paths." },
+          { group: ["*.js"], message: "Drop the .js extension; bundler resolution handles it." },
+        ],
+      }],
+      "no-restricted-properties": ["error",
+        // Twins of `prefer-exponentiation-operator` and
+        // `prefer-object-has-own` that catch the bracketed-access /
+        // variable-reference shapes those rules don't see.
+        //
+        // Deliberately omitted: `Object.assign`. The prefer-object-spread
+        // rule already catches the common case (`Object.assign({}, …)`
+        // → `{...a, ...b}`). The remaining `Object.assign(existingObj, …)`
+        // form is the canonical Error-decoration idiom used by
+        // `ServeFailureError` in packages/tailscale — direct mutation
+        // would be no better and three lines longer.
+        { object: "Math", property: "pow", message: "Use the `**` operator (also enforced by prefer-exponentiation-operator)." },
+        { property: "hasOwnProperty", message: "Use Object.hasOwn(obj, prop) (also enforced by prefer-object-has-own)." },
+      ],
+      "no-restricted-syntax": ["error",
+        // Two project bans, both currently non-regressing (codebase
+        // scan found zero matches), so this is a lockdown not a
+        // refactor: enums (enum-merging + reverse mappings hurt
+        // bundle-time analyzability; we use `Platform` / `EnvVars`
+        // const-objects instead) and `export let` (mutable exports
+        // defeat import-side reasoning).
+        { selector: "TSEnumDeclaration", message: "Use a `const` object with `as const` instead of an enum — keeps the runtime shape predictable and matches the `Platform` / `EnvVars` pattern." },
+        { selector: "ExportNamedDeclaration > VariableDeclaration[kind='let']", message: "Export `const`, not `let`. A mutable export defeats import-side reasoning." },
+      ],
       // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
@@ -283,9 +341,23 @@ const config = [
     // Test-file overrides — mirrors the `.oxlintrc.json` overrides
     // section. Empty arrow functions are a standard test idiom
     // (`mockImplementation(() => {})`, stream `.on("data", () => {})`).
+    // Test fixtures (e.g. `./helpers/fake-worker.ts`) are colocated
+    // with the test file by convention and don't go through a
+    // workspace alias.
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
     rules: {
       "no-empty-function": "off",
+      "no-restricted-imports": "off",
+    },
+  },
+  {
+    // `apps/desktop/src/main/window.ts` inlines the app icon via Vite's
+    // `?asset` query, which is a relative-path import by construction
+    // (the bundler resolves `?asset` against the build/ directory at
+    // build time — there's no workspace-alias form).
+    files: ["apps/desktop/src/main/window.ts"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ];
