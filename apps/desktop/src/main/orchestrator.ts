@@ -2,11 +2,10 @@
 // as a Node bundle (apps/orchestrator); the desktop main process spawns it as
 // a child and points the renderer at it over IPC.
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdir } from "node:fs/promises";
 import { app } from "electron";
 import getPort from "get-port";
-import { join } from "pathe";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
+import { ensureDataDir } from "@felafel/desktop/main/orchestrator-data-dir";
 import { resolveScriptPath } from "@felafel/desktop/main/orchestrator-paths";
 import { waitForOrchestratorReady } from "@felafel/desktop/main/orchestrator-readiness";
 // Single source of truth for the desktop→orchestrator env-var contract lives
@@ -45,8 +44,6 @@ const DEFAULT_TAILNET_PORT = 9090;
 
 /** Grace period after SIGTERM before escalating to SIGKILL. */
 const SIGTERM_GRACE_MS = 5_000;
-
-const moduleDir = import.meta.dirname;
 
 /** Spawn invocation parts: command, argv, and any extra env to layer on top of `process.env`. */
 interface SpawnInvocation {
@@ -108,8 +105,7 @@ export class OrchestratorManager {
    */
   async start(): Promise<string> {
     const script = resolveScriptPath();
-    const dataDir = this.resolveDataDir();
-    await mkdir(dataDir, { recursive: true });
+    const dataDir = await ensureDataDir();
 
     // Kernel-assigned ephemeral port (bind to 0). Avoids picking a fixed
     // range that might collide with common services (Prometheus on 9090,
@@ -293,19 +289,6 @@ export class OrchestratorManager {
       this.publishedTailnetPort = null;
       await this.tailscale.unpublishServe({ tailnetPort });
     }
-  }
-
-  /**
-   * Resolve the orchestrator's data directory. In packaged builds: under
-   * Electron's `userData`. In dev: a gitignored repo-local folder.
-   *
-   * @returns absolute path; created lazily by {@link start}
-   */
-  private resolveDataDir(): string {
-    if (app.isPackaged) {
-      return join(app.getPath("userData"), "orchestrator");
-    }
-    return join(moduleDir, "..", "..", ".dev-orchestrator-data");
   }
 
   /**
