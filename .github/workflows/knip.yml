@@ -18,6 +18,9 @@ permissions:
 
 jobs:
   knip:
+    # Skip on draft PRs so CI minutes aren't burned on in-progress work.
+    # `pull_request.draft` is unset on push events, so pushes to main proceed.
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
