@@ -228,7 +228,22 @@ const config = [
       "no-regex-spaces": "error",
       "no-sequences": "error",
       "no-unused-expressions": "error",
-      // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
+      // Core — Suggestions / modern-syntax push (prefer-* / require-*)
+      // Rules that prefer the modern alternative when one exists.
+      "prefer-arrow-callback": "error",
+      "prefer-const": "error",
+      "prefer-destructuring": "off",
+      "prefer-exponentiation-operator": "error",
+      "prefer-named-capture-group": "off",
+      "prefer-numeric-literals": "error",
+      "prefer-object-has-own": "error",
+      "prefer-object-spread": "error",
+      "prefer-promise-reject-errors": "error",
+      "prefer-regex-literals": "error",
+      "prefer-rest-params": "error",
+      "prefer-spread": "error",
+      "prefer-template": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
