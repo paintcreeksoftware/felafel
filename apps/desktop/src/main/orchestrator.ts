@@ -1,7 +1,7 @@
 // Orchestrator sidecar lifecycle. The orchestrator is a Hono service shipped
 // as a Node bundle (apps/orchestrator); the desktop main process spawns it as
 // a child and points the renderer at it over IPC.
-import { spawn, type ChildProcess } from "node:child_process";
+import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 import { ensureDataDir } from "@felafel/desktop/main/orchestrator-data-dir";
@@ -34,16 +34,16 @@ interface TailnetServeDegradation {
  */
 const DEFAULT_TAILNET_PORT = 9090;
 
-/** Grace period after SIGTERM before escalating to SIGKILL. */
+/** Grace period after SIGTERM before execa escalates to SIGKILL. */
 const SIGTERM_GRACE_MS = 5_000;
 
 /**
- * Manager for the orchestrator child process. Owns the spawned `ChildProcess`
- * handle and the lifecycle around it. One instance per Electron main
- * process; tests construct fresh instances per case.
+ * Manager for the orchestrator child process. Owns the execa-spawned
+ * subprocess handle and the lifecycle around it. One instance per Electron
+ * main process; tests construct fresh instances per case.
  */
 export class OrchestratorManager {
-  private process: ChildProcess | null = null;
+  private process: ResultPromise | null = null;
   private readonly tailscale: TailscaleManager;
   // Tailnet port we published a `tailscale serve` mapping for during the
   // last successful start(). Null when start() ran on a Tailscale-less
@@ -99,7 +99,7 @@ export class OrchestratorManager {
     const url = `http://${LOCALHOST}:${port}`;
 
     const { command, args, extraEnv } = buildSpawnInvocation(script);
-    this.process = spawn(command, args, {
+    this.process = execa(command, args, {
       stdio: ["ignore", "inherit", "inherit"],
       env: {
         ...process.env,
@@ -108,6 +108,16 @@ export class OrchestratorManager {
         [OrchestratorEnvVars.HOST]: LOCALHOST,
         [OrchestratorEnvVars.DATA_DIR]: dataDir,
       },
+      // execa handles the SIGTERM → SIGKILL escalation: when stop()
+      // calls `.kill("SIGTERM")`, execa waits this long and sends
+      // SIGKILL if the child hasn't exited. Retires the manual
+      // setTimeout(SIGKILL) dance the previous spawn-based version
+      // had.
+      forceKillAfterDelay: SIGTERM_GRACE_MS,
+      // execa rejects on non-zero exit by default; for a long-lived
+      // supervised child we want the promise to resolve so the
+      // try/await wrap below doesn't have to swallow a normal exit.
+      reject: false,
     });
 
     this.process.on("exit", (code, signal) => {
@@ -247,17 +257,11 @@ export class OrchestratorManager {
     // a swallowed log line. The brief window where the mapping points at
     // a dying loopback port is acceptable — Tailscale clients see a
     // connection refused, not stale data.
+    // Ask politely first; execa's `forceKillAfterDelay` (set in
+    // start()) handles the SIGKILL escalation if the child hangs.
+    // Awaiting the subprocess promise resolves on exit (any signal).
     proc.kill("SIGTERM");
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
-        proc.kill("SIGKILL");
-        resolve();
-      }, SIGTERM_GRACE_MS);
-      proc.once("exit", () => {
-        clearTimeout(timer);
-        resolve();
-      });
-    });
+    await proc;
     // Only unpublish if we actually published in the matching start().
     // setupTailnetServe sets `publishedTailnetPort` after a successful
     // publish; on Tailscale-less hosts or when the publish failed the
