@@ -11,10 +11,12 @@ name: shadcn drift
 
 on:
   schedule:
-    # Mondays at 08:00 UTC. Picks a quiet hour + an early-week day so a
-    # surfaced drift PR has the rest of the week to be reviewed before
-    # the next cycle.
-    - cron: "0 8 * * 1"
+    # Mondays at 08:17 UTC. Early-week day so a surfaced drift PR has
+    # the rest of the week to be reviewed before the next cycle; :17
+    # because the on-the-hour and quarter-hour slots see massive
+    # queue contention on GitHub's runners (every workflow defaults
+    # to those).
+    - cron: "17 8 * * 1"
   # Manual trigger so someone can poll outside the weekly cycle (e.g.
   # right after a known shadcn release).
   workflow_dispatch:
