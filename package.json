@@ -19,6 +19,7 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\" \"#**/out\" \"#**/release\" \"#**/dist\" \"#**/test-results\" \"#**/playwright-report\"",
     "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg",
     "lint:exports": "node scripts/check-export-coverage.mjs",
+    "lint:scripts": "oxlint --deny-warnings commitlint.config.mjs scripts/",
     "knip": "knip",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"

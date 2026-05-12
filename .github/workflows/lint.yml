@@ -51,3 +51,9 @@ jobs:
       # tsconfig-paths-vs-package-exports drift that broke PAI-139 #57.
       - name: Export-coverage check
         run: pnpm lint:exports
+
+      # Lints root-level .mjs files (commitlint.config.mjs + scripts/*.mjs)
+      # that fall outside every workspace's per-package oxlint scope.
+      # Retired when PAI-141's eslint cutover folds this in.
+      - name: Lint root-level scripts
+        run: pnpm lint:scripts
