@@ -137,6 +137,7 @@ const config = [
       "id-denylist": "off", // no project-specific identifier bans defined yet
       "id-length": "off", // `i`, `j`, `e` (event) valid in narrow scopes
       "id-match": "off", // too prescriptive; no project regex pattern defined
+      "new-cap": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing identifier naming).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
