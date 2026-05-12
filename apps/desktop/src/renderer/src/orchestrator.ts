@@ -4,7 +4,9 @@
 // renderer bundle.
 import { hc } from "hono/client";
 import { type AppType } from "@felafel/orchestrator/app";
-import { type DesktopApi, type OrchestratorStatus, type Worker } from "@felafel/shared";
+import { type DesktopApi } from "@felafel/shared";
+
+export type { OrchestratorStatus, Worker } from "@felafel/shared";
 
 declare global {
   interface Window {
@@ -22,5 +24,3 @@ type OrchestratorClient = ReturnType<typeof hc<AppType>>;
 export function makeClient(baseUrl: string): OrchestratorClient {
   return hc<AppType>(baseUrl);
 }
-
-export type { OrchestratorStatus, Worker };

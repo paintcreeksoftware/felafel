@@ -105,7 +105,8 @@ describe("/runs", () => {
       setTimeout(resolve, 2);
     });
     const second = await post(2);
-    const list = (await (await app.request("/runs")).json()) as Run[];
+    const res = await app.request("/runs");
+    const list = (await res.json()) as Run[];
     expect(list).toHaveLength(2);
     expect(list[0]?.id).toBe(second.id);
     expect(list[1]?.id).toBe(first.id);

@@ -20,6 +20,7 @@ import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginReactRefresh from "eslint-plugin-react-refresh";
+import pluginUnicorn from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 import { LAYOUT_FORMATTING_RULES } from "./eslint/layout-formatting.mjs";
 
@@ -171,9 +172,6 @@ const config = [
       // Rules that reject specific syntax. Most are bug-finders worth
       // having on; the off cases are syntactic patterns we explicitly
       // want to keep using.
-      // TODO(PAI-145): https://linear.app/paint-creek-software/issue/PAI-145
-      //   `window.confirm` in App.tsx's worker-forget flow needs a
-      //   React Dialog refactor; flip this rule to error in the same PR.
       "no-array-constructor": "error",
       "no-bitwise": "off",
       "no-caller": "error",
@@ -347,20 +345,6 @@ const config = [
       // here as a single statement to keep this file under the
       // max-lines cap.
       ...LAYOUT_FORMATTING_RULES,
-      // TODO(PAI-141 batch 4: @typescript-eslint). Plugin install lands
-      //   with that batch.
-      // TODO(PAI-141 batch 5: react + react-hooks + react-refresh).
-      // TODO(PAI-141 batch 6: jsx-a11y).
-      // TODO(PAI-141 batch 7: import-x).
-      // TODO(PAI-141 batch 8: better-tailwindcss) — motivating plugin;
-      //   no-unregistered-classes catches the Tailwind class typos
-      //   that slipped past oxlint on PAI-138.
-      // TODO(PAI-141 batch 9: jsdoc) — codify the TSDoc-by-default
-      //   project rule as a tool check.
-      // TODO(PAI-141 batch 10: unicorn).
-      // TODO(PAI-141 batch 11: cutover — drop oxlint, .oxlintrc.json,
-      //   per-package "lint" scripts, root "lint" → alias to lint:eslint.
-      //   oxfmt stays.
     },
   },
   {
@@ -500,17 +484,68 @@ const config = [
   // Strict — per the lint-determinism memory rule, if a rule fires
   // we fix the code, not soften the rule.
   pluginJsdoc.configs["flat/recommended-tsdoc-error"],
+  // unicorn — opinionated bug-catcher + modernization grab-bag.
+  // Uses flat/recommended (the conservative curated set), not flat/all
+  // (which includes stylistic preferences that conflict with oxfmt).
+  pluginUnicorn.configs["flat/recommended"],
   {
-    // Test files opt out of type-aware lint entirely. vi.mocked()
-    // and `expect(mock.method)` patterns are inherently loose-typed —
-    // the type-aware rules are right to flag this in production code,
-    // but the same pattern in tests is the canonical vitest/jest API.
-    // Categorical exclusion. This block MUST live at the end of the
-    // config array — flat config later-wins, and the
-    // recommendedTypeChecked spread further up sets these rules to
-    // error.
+    // Categorical carve-outs from unicorn — these rules are
+    // wrong for this codebase as a class, not as per-site exceptions.
+    rules: {
+      // The codebase uses `null` as a sentinel pervasively
+      // (TailscaleStatus discriminated unions, DB nullable columns,
+      // cache miss markers). Rewriting 70+ sites to undefined would
+      // weaken the semantic distinction between "not yet set" and
+      // "explicitly absent".
+      "unicorn/no-null": "off",
+      // `props`, `args`, `err`, `req`, `res`, `ctx` are standard names
+      // in the React / Node / Hono ecosystems this codebase lives in.
+      // The "preferred" expansions (`properties`, `arguments`,
+      // `error`, `request`, `response`, `context`) are anti-idiomatic
+      // for these libraries' documentation and surrounding ecosystem.
+      "unicorn/prevent-abbreviations": "off",
+      // Pure formatting — oxfmt owns formatting.
+      "unicorn/numeric-separators-style": "off",
+      // `process.exit` is legitimate for graceful-shutdown paths in
+      // the worker + orchestrator long-running services. The rule's
+      // anti-pattern is "exit from a library function"; the project
+      // only uses it at the service entry-point + shutdown handler.
+      "unicorn/no-process-exit": "off",
+      // The project mixes naming conventions deliberately: PascalCase
+      // for React components (`App.tsx`, `Pill.tsx`), kebab-case for
+      // most other modules, lowercase for tests (`bundle.spec.ts`).
+      // Forcing a single case across all of them would be a mass
+      // rename that doesn't improve the code.
+      "unicorn/filename-case": "off",
+      // `globalThis` is correct in cross-environment code (Node + DOM)
+      // but adds noise to renderer-only code where `window` is the
+      // documented surface for `window.api`. The rule doesn't make
+      // the distinction.
+      "unicorn/prefer-global-this": "off",
+      // Named imports for node builtins (`import { join } from
+      // "node:path"`) are clearer about the project's actual API
+      // surface than default imports. Categorical project preference.
+      "unicorn/import-style": "off",
+      // Single-site flag in a regex-escape helper. `"\\$&"` is the
+      // canonical regex-replacement-string spelling; the
+      // `String.raw` rewrite isn't a bug-catcher.
+      "unicorn/prefer-string-raw": "off",
+    },
+  },
+  {
+    // Test-file overrides that need to win over every plugin block
+    // above. Flat config later-wins, and the recommendedTypeChecked
+    // / unicorn / etc. spreads further up set their rules to error
+    // for all .ts/.tsx — including tests. Disabling here categorically.
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
     ...tseslint.configs.disableTypeChecked,
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      // Test helpers (stubExeca, withFakeProcess, etc.) are
+      // deliberately scoped inside `describe()` for colocation. The
+      // rule's hoist-to-outer-scope rewrite would weaken readability.
+      "unicorn/consistent-function-scoping": "off",
+    },
   },
 ];
 
