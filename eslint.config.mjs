@@ -243,6 +243,9 @@ const config = [
       "prefer-rest-params": "error",
       "prefer-spread": "error",
       "prefer-template": "error",
+      "require-await": "off",
+      "require-unicode-regexp": "off",
+      "require-yield": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
