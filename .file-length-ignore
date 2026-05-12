@@ -1,0 +1,13 @@
+# Files exempt from the 300-line source-file cap enforced by
+# scripts/check-file-length.sh. One path per line, repo-relative.
+#
+# Add an entry ONLY when splitting fights the file's canonical shape
+# (e.g. vendored shadcn components). Document the reason in a comment
+# above the entry so the carve-out can be re-evaluated.
+
+# shadcn-vendored components — splitting fights the canonical shape used
+# by the upstream shadcn-ui generator. Re-evaluated if a Felafel-specific
+# rewrite replaces them.
+packages/ui/src/components/ui/sidebar.tsx
+packages/ui/src/components/ui/chart.tsx
+packages/ui/src/components/ui/combobox.tsx
