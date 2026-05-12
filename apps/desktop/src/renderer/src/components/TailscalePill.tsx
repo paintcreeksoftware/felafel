@@ -187,7 +187,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     status.kind !== "missing-binary" && status.kind !== "connected" && !pillBusy;
 
   return (
-    <div className="flex items-center gap-2" data-testid="ts-pill">
+    <div className="flex items-center gap-2 p-2" data-testid="ts-pill">
       {isClickable ? (
         <button
           type="button"
