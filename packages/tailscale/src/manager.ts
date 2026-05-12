@@ -1,56 +1,22 @@
 // Tailscale CLI wrapper. Tailscale is an *external* system service — not a
 // sidecar Felafel owns — so this module is a thin layer that shells out to
 // whatever `tailscale` binary the user has on their PATH and surfaces the
-// result as a typed status. Linux only for this first cut.
+// result as a typed status. Linux only for this first cut. The actual
+// CLI-spawn flows live in adjacent modules:
 //
-// Two write paths through `runUp`:
+//   - `tailscale status --json` retry + parse → `probe.ts`.
+//   - `tailscale up` auth flow → `up.ts`.
+//   - `tailscale serve` publish/unpublish/read → `serve.ts`.
 //
-//   1. Session resume (no key): runs `tailscale up --timeout=5s`. Succeeds
-//      silently if tailscaled has cached credentials and can re-auth without
-//      interaction. Fails fast with an auth URL if it can't, so the renderer
-//      can promptly open the paste-in modal.
-//
-//   2. Keyed (paste-in): runs `tailscale up --authkey-stdin --timeout=30s`
-//      with the key piped on stdin. Longer timeout because the daemon is
-//      doing a real handshake with Tailscale's coordination server.
-//
-// Outer 60s AbortController wraps both so a wedged spawn can't hang IPC
-// forever; the inner --timeout flags are the CLI's own bail-outs.
-//
-// Why `--authkey-stdin` over `--authkey=`: the latter leaks the key to other
-// users on the box via /proc/<pid>/cmdline. We probe the installed CLI with
-// `tailscale up --help` once and cache the result.
-import { execa } from "execa";
-import pRetry from "p-retry";
+// Manager owns the cached binary path, the last-known status, the
+// in-flight de-dup promises, and the per-flow caches; the modules above
+// own the IO.
 import which from "which";
 import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
-import {
-  classifyServeError,
-  classifyUpError,
-  type ServeFailureError,
-} from "@felafel/tailscale/classify";
 import { LOCALHOST, TailscaleEnvVars } from "@felafel/tailscale/constants";
-import { parseServeConfigJson, parseStatusJson } from "@felafel/tailscale/parse";
-
-/** Initial backoff between `tailscale status` retries on transient errors. */
-const PROBE_RETRY_INITIAL_DELAY_MS = 200;
-/** Cap for exponential backoff between probe retries. */
-const PROBE_RETRY_MAX_DELAY_MS = 1_500;
-/** Maximum number of probe attempts before surfacing the last error. */
-const PROBE_RETRY_MAX_ATTEMPTS = 4;
-
-/** 5-second cap on a single status probe. */
-const PROBE_SINGLE_ATTEMPT_TIMEOUT_MS = 5_000;
-
-/** Outer ceiling on a `tailscale up` invocation, regardless of inner --timeout. */
-const UP_OUTER_TIMEOUT_MS = 60_000;
-
-/** Result of capturing a child-process invocation's output. */
-interface CaptureResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-}
+import { runProbe } from "@felafel/tailscale/probe";
+import { readServePublished, runServeMutation } from "@felafel/tailscale/serve";
+import { makeUpFlowCache, runUpFlow, type UpFlowCache } from "@felafel/tailscale/up";
 
 /**
  * Manager for Tailscale CLI interactions. Owns the cache of resolved binary
@@ -63,7 +29,7 @@ export class TailscaleManager {
   private cachedStatus: TailscaleStatus = { kind: "unknown" };
   private probeInflight: Promise<TailscaleStatus> | null = null;
   private upInflight: Promise<TailscaleConnectResult> | null = null;
-  private stdinSupportCache: boolean | undefined;
+  private readonly upFlowCache: UpFlowCache = makeUpFlowCache();
 
   /**
    * Resolve the `tailscale` binary on PATH. Falls back to the
@@ -110,10 +76,18 @@ export class TailscaleManager {
     return this.probeInflight;
   }
 
-  /** Run a probe, then clear the in-flight handle. Async-await form of `.finally`. */
+  /**
+   * Run a probe, then clear the in-flight handle. Async-await form of
+   * `.finally`. The retry/backoff + spawn-and-classify flow lives in
+   * `probe.ts` — this method handles binary resolution + caches the
+   * resolved status on the class so future {@link getCachedStatus}
+   * callers see fresh state.
+   */
   private async runProbeAndClear(): Promise<TailscaleStatus> {
     try {
-      return await this.doProbe();
+      const binary = await this.findBinary();
+      this.cachedStatus = await runProbe(binary);
+      return this.cachedStatus;
     } finally {
       this.probeInflight = null;
     }
@@ -140,257 +114,22 @@ export class TailscaleManager {
     return this.upInflight;
   }
 
-  /** Run `tailscale up`, then clear the in-flight handle. Async-await form of `.finally`. */
+  /**
+   * Run `tailscale up`, then clear the in-flight handle. Async-await form of
+   * `.finally`. The actual spawn + classify flow lives in `up.ts` — this
+   * method just resolves the binary, short-circuits when missing, and
+   * delegates.
+   */
   private async runUpAndClear(authkey: string | undefined): Promise<TailscaleConnectResult> {
     try {
-      return await this.doRunUp(authkey);
+      const binary = await this.findBinary();
+      if (!binary) {
+        return { ok: false, kind: "error", message: "Tailscale binary not found on PATH" };
+      }
+      return await runUpFlow(binary, authkey, this.upFlowCache);
     } finally {
       this.upInflight = null;
     }
-  }
-
-  /**
-   * Internal probe with retry/backoff. Updates {@link cachedStatus} as a
-   * side effect.
-   *
-   * @returns the resolved status
-   */
-  private async doProbe(): Promise<TailscaleStatus> {
-    const binary = await this.findBinary();
-    if (!binary) {
-      this.cachedStatus = { kind: "missing-binary", path: null };
-      return this.cachedStatus;
-    }
-    // Retain the last probe result so an exhausted-retry path can surface
-    // the actual transient TailscaleStatus instead of a generic Error.
-    let lastResult: TailscaleStatus | undefined = undefined;
-    try {
-      this.cachedStatus = await pRetry(
-        async () => {
-          lastResult = await this.tryProbeOnce(binary);
-          if (
-            lastResult.kind === "error"
-            && /EAGAIN|ETIMEDOUT|aborted/i.test(lastResult.message)
-          ) {
-            throw new Error(lastResult.message);
-          }
-          return lastResult;
-        },
-        {
-          retries: PROBE_RETRY_MAX_ATTEMPTS - 1,
-          factor: 2,
-          minTimeout: PROBE_RETRY_INITIAL_DELAY_MS,
-          maxTimeout: PROBE_RETRY_MAX_DELAY_MS,
-        },
-      );
-    } catch {
-      if (lastResult) {
-        this.cachedStatus = lastResult;
-      }
-    }
-    return this.cachedStatus;
-  }
-
-  /**
-   * Single probe attempt. Spawns the CLI with a 5s timeout and parses
-   * stdout. Recognized error patterns (EACCES, no daemon) get specialized
-   * status; everything else returns `kind: "error"` with the raw message.
-   *
-   * @param binary - resolved path to the `tailscale` binary
-   * @returns one-shot status (no retry logic)
-   */
-  private async tryProbeOnce(binary: string): Promise<TailscaleStatus> {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), PROBE_SINGLE_ATTEMPT_TIMEOUT_MS);
-    try {
-      const result = await execa(binary, ["status", "--json"], {
-        cancelSignal: ac.signal,
-      });
-      return parseStatusJson(result.stdout);
-    } catch (error: unknown) {
-      // tailscale status exits non-zero when not logged in but still emits
-      // valid JSON on stdout — try parsing before giving up. execa attaches
-      // stdout/stderr/code to the thrown ExecaError.
-      const e = error as { stdout?: unknown; stderr?: unknown; message?: string; code?: string };
-      if (typeof e.stdout === "string" && e.stdout.length > 0) {
-        const parsed = parseStatusJson(e.stdout);
-        if (parsed.kind !== "error") {
-          return parsed;
-        }
-      }
-      if (typeof e.stderr === "string") {
-        if (/permission denied|\bEACCES\b/i.test(e.stderr)) {
-          return {
-            kind: "error",
-            message: "Tailscale daemon socket permission denied",
-            remediation: "sudo tailscale set --operator=$USER",
-          };
-        }
-        if (/(failed to connect.*tailscaled|tailscaled\.sock)/i.test(e.stderr)) {
-          return { kind: "disconnected", reason: "no-daemon" };
-        }
-      }
-      return { kind: "error", message: e.message ?? String(error) };
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  /**
-   * Internal `tailscale up` runner with full error classification.
-   *
-   * @param authkey - optional pre-auth key; piped via stdin when supported
-   * @returns the connect outcome
-   */
-  private async doRunUp(authkey?: string): Promise<TailscaleConnectResult> {
-    const binary = await this.findBinary();
-    if (!binary) {
-      return { ok: false, kind: "error", message: "Tailscale binary not found on PATH" };
-    }
-    const ac = new AbortController();
-    const outerTimer = setTimeout(() => ac.abort(), UP_OUTER_TIMEOUT_MS);
-    try {
-      const invocation = await this.buildUpInvocation(binary, authkey);
-      const attempt = await this.attemptUpSpawn(binary, invocation, ac.signal);
-      if (!attempt.ok) {
-        return attempt.error;
-      }
-      const { captured, timedOut } = attempt;
-      if (captured.exitCode === 0 && !timedOut) {
-        return { ok: true, kind: "connected" };
-      }
-      const combined = `${captured.stdout}\n${captured.stderr}`;
-      const cls = classifyUpError(combined, captured.exitCode, timedOut);
-      if (cls.kind === "eacces") {
-        return {
-          ok: false,
-          kind: "error",
-          message: cls.message,
-          remediation: "sudo tailscale set --operator=$USER",
-        };
-      }
-      if (cls.kind === "needs-login") {
-        return {
-          ok: false,
-          kind: "needs-key",
-          authUrl: cls.authUrl,
-          message: cls.message,
-        };
-      }
-      return { ok: false, kind: "error", message: cls.message };
-    } finally {
-      clearTimeout(outerTimer);
-    }
-  }
-
-  /**
-   * Decide which CLI args + optional stdin to use for `tailscale up`. Branches
-   * on whether the caller supplied a pre-auth key and whether the installed
-   * CLI accepts `--authkey-stdin` (preferred for security).
-   *
-   * @param binary - resolved path to the `tailscale` binary
-   * @param authkey - optional pre-auth key
-   * @returns argv + optional stdin payload to feed `spawnAndCapture`
-   */
-  private async buildUpInvocation(
-    binary: string,
-    authkey: string | undefined,
-  ): Promise<{ args: string[]; stdin: string | undefined }> {
-    if (!authkey) {
-      return { args: ["up", "--timeout=5s"], stdin: undefined };
-    }
-    const useStdin = await this.supportsAuthkeyStdin(binary);
-    if (!useStdin) {
-      console.warn(
-        "[tailscale] --authkey-stdin not supported by installed CLI; falling back to --authkey= (leaks the key via /proc/<pid>/cmdline)",
-      );
-      return {
-        args: ["up", "--timeout=30s", `--authkey=${authkey}`],
-        stdin: undefined,
-      };
-    }
-    return {
-      args: ["up", "--timeout=30s", "--authkey-stdin"],
-      stdin: authkey,
-    };
-  }
-
-  /**
-   * Run a single `tailscale up` spawn with abort-aware capture. The outer
-   * AbortController fires `ac.abort()` on timeout; AbortError or `signal.aborted`
-   * returns a `timedOut` outcome with empty capture so the caller's classifier
-   * can distinguish timeout from CLI error. Other errors are wrapped into the
-   * `ok: false` branch so the caller can fail with a typed message.
-   *
-   * @param binary - resolved tailscale binary path
-   * @param invocation - argv and optional stdin from {@link buildUpInvocation}
-   * @param signal - abort signal hooked up to the outer timeout
-   * @returns discriminated success/failure
-   */
-  private async attemptUpSpawn(
-    binary: string,
-    invocation: { args: string[]; stdin: string | undefined },
-    signal: AbortSignal,
-  ): Promise<
-    | { ok: true; captured: CaptureResult; timedOut: boolean }
-    | { ok: false; error: TailscaleConnectResult }
-  > {
-    // `reject: false` lets us inspect `result.isCanceled` / `result.failed`
-    // without try/catch — execa returns the result object on both success
-    // and known failure modes. Real spawn errors (e.g. ENOENT) still throw
-    // and are caught here.
-    try {
-      const result = await execa(binary, invocation.args, {
-        input: invocation.stdin,
-        cancelSignal: signal,
-        reject: false,
-      });
-      if (result.isCanceled) {
-        return {
-          ok: true,
-          captured: { stdout: "", stderr: "", exitCode: null },
-          timedOut: true,
-        };
-      }
-      return {
-        ok: true,
-        captured: {
-          stdout: result.stdout ?? "",
-          stderr: result.stderr ?? "",
-          exitCode: result.exitCode ?? null,
-        },
-        timedOut: false,
-      };
-    } catch (error: unknown) {
-      return {
-        ok: false,
-        error: {
-          ok: false,
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        },
-      };
-    }
-  }
-
-  /**
-   * Detect whether the installed Tailscale CLI supports `--authkey-stdin`.
-   * Cached after first probe.
-   *
-   * @param binary - resolved path to the `tailscale` binary
-   * @returns true if the help text mentions the flag
-   */
-  private async supportsAuthkeyStdin(binary: string): Promise<boolean> {
-    if (this.stdinSupportCache !== undefined) {
-      return this.stdinSupportCache;
-    }
-    try {
-      const { stdout, stderr } = await execa(binary, ["up", "--help"]);
-      this.stdinSupportCache = /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);
-    } catch {
-      this.stdinSupportCache = false;
-    }
-    return this.stdinSupportCache;
   }
 
   /**
@@ -439,7 +178,8 @@ export class TailscaleManager {
    *   non-recoverable reason (no daemon, permission denied, port in use)
    */
   async publishServe(opts: { tailnetPort: number; localPort: number }): Promise<void> {
-    await this.runServeCommand([
+    const binary = await this.requireBinary();
+    await runServeMutation(binary, [
       "serve",
       "--bg",
       `--tcp=${String(opts.tailnetPort)}`,
@@ -456,7 +196,8 @@ export class TailscaleManager {
    * @param opts.tailnetPort - the stable Tailnet port to clear
    */
   async unpublishServe(opts: { tailnetPort: number }): Promise<void> {
-    await this.runServeCommand([
+    const binary = await this.requireBinary();
+    await runServeMutation(binary, [
       "serve",
       `--tcp=${String(opts.tailnetPort)}`,
       "off",
@@ -483,43 +224,7 @@ export class TailscaleManager {
     opts: { tailnetPort: number },
   ): Promise<{ targetLocalPort: number } | null> {
     const binary = await this.requireBinary();
-    const result = await execa(binary, ["serve", "status", "--json"], {
-      cancelSignal: AbortSignal.timeout(PROBE_SINGLE_ATTEMPT_TIMEOUT_MS),
-      reject: false,
-    });
-    // Tailscale exits non-zero with no JSON when nothing is configured;
-    // treat that as "nothing mapped" rather than a hard error.
-    if (result.stdout.trim().length === 0) {
-      return null;
-    }
-    return parseServeConfigJson(result.stdout, opts.tailnetPort);
-  }
-
-  /**
-   * Shared spawn wrapper for `tailscale serve` mutating commands (publish,
-   * unpublish). Handles binary discovery, abort-aware timeout, and error
-   * classification. Throws a descriptive Error on failure so callers can
-   * just `await` and let exceptions propagate.
-   *
-   * @param args - argv to pass after the resolved tailscale binary
-   * @throws when the binary is missing or the CLI returns a classified failure
-   */
-  private async runServeCommand(args: string[]): Promise<void> {
-    const binary = await this.requireBinary();
-    const result = await execa(binary, args, {
-      cancelSignal: AbortSignal.timeout(UP_OUTER_TIMEOUT_MS),
-      reject: false,
-    });
-    if (result.exitCode === 0 && !result.isCanceled) {
-      return;
-    }
-    const combined = `${result.stdout}\n${result.stderr}`;
-    const cls = classifyServeError(combined, result.exitCode ?? null, result.isCanceled);
-    const error: ServeFailureError = Object.assign(
-      new Error(`tailscale serve (${cls.kind}): ${cls.message}`),
-      { classification: cls },
-    );
-    throw error;
+    return readServePublished(binary, opts.tailnetPort);
   }
 }
 

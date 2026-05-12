@@ -12,7 +12,10 @@
     "./constants": "./src/constants.ts",
     "./manager": "./src/manager.ts",
     "./parse": "./src/parse.ts",
+    "./probe": "./src/probe.ts",
+    "./serve": "./src/serve.ts",
     "./ui": "./src/ui/index.ts",
+    "./up": "./src/up.ts",
     "./ui/Pill": "./src/ui/Pill.tsx",
     "./worker-ip": "./src/worker-ip.ts"
   },
