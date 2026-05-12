@@ -92,3 +92,9 @@ pnpm db:check
 # resolves via `exports` at build time — they're free to drift, and they
 # did on PAI-139 #57. See PAI-143.
 pnpm lint:exports
+# `knip` catches dead exports, dead files, and unlisted dependencies
+# (imports from packages not in the consuming workspace's package.json).
+# Same coverage as CI's knip job — running it locally too shifts the
+# catch left so a "forgot to `pnpm --filter <pkg> add <dep>`" miss is
+# caught at commit time, not after the PR's CI build.
+pnpm knip
