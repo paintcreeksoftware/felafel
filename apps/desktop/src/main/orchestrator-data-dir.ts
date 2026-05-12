@@ -26,7 +26,10 @@ export async function ensureDataDir(): Promise<string> {
 }
 
 /**
- *
+ * Resolve the orchestrator data directory: a packaged app's userData
+ * dir under Electron, or a `.dev-orchestrator-data/` sibling of the
+ * repo when running in dev mode.
+ * @returns absolute filesystem path for the orchestrator's data root
  */
 function resolveDataDir(): string {
   if (app.isPackaged) {

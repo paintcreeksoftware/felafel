@@ -15,8 +15,9 @@ declare global {
 type OrchestratorClient = ReturnType<typeof hc<AppType>>;
 
 /**
- *
- * @param baseUrl
+ * Build a typed Hono RPC client for the orchestrator.
+ * @param baseUrl - orchestrator origin (e.g. `http://127.0.0.1:9090`)
+ * @returns the typed Hono client
  */
 export function makeClient(baseUrl: string): OrchestratorClient {
   return hc<AppType>(baseUrl);

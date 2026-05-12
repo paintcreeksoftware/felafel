@@ -28,10 +28,11 @@ interface TailnetServeDegradation {
 
 /**
  * Resolve which label to render for the orchestrator state.
- * @param props
- * @param props.statusError
- * @param props.status
- * @param props.orchUrl
+ * @param props - orchestrator status props
+ * @param props.statusError - error message from the last status probe, or null
+ * @param props.status - the current orchestrator lifecycle state
+ * @param props.orchUrl - origin (e.g. `http://127.0.0.1:9090`) when ready, else null
+ * @returns the label JSX
  */
 function OrchestratorLabel(props: {
   statusError: string | null;
@@ -64,8 +65,9 @@ function OrchestratorLabel(props: {
  * worker is heartbeating; the orchestrator can dispatch to it. `stale`
  * is amber — worker stopped heartbeating past the sweep threshold; the
  * row is still in the DB but the worker is presumed gone.
- * @param root0
- * @param root0.status
+ * @param root0 - props
+ * @param root0.status - the worker's liveness status
+ * @returns the pill JSX
  */
 function StatusPill({ status }: { status: Worker["status"] }) {
   const color =
@@ -87,10 +89,11 @@ function StatusPill({ status }: { status: Worker["status"] }) {
 
 /**
  * Resolve which list/empty/error view to render for the worker registry.
- * @param props
- * @param props.workers
- * @param props.workersError
- * @param props.onForget
+ * @param props - worker list props
+ * @param props.workers - the registered workers, or null while loading
+ * @param props.workersError - error message from the last fetch, or null
+ * @param props.onForget - callback to drop a stale worker from the registry
+ * @returns the list/empty/error JSX
  */
 function WorkersList(props: {
   workers: Worker[] | null;
@@ -135,7 +138,11 @@ function WorkersList(props: {
 }
 
 /**
- *
+ * Top-level renderer component: subscribes to orchestrator status +
+ * worker registry IPC channels, slots the Tailscale pill, and
+ * renders the three view-pieces (OrchestratorLabel, WorkersList,
+ * StatusPill) into the app shell.
+ * @returns the renderer root JSX
  */
 export default function App() {
   const [status, setStatus] = useState<Status>("unknown");

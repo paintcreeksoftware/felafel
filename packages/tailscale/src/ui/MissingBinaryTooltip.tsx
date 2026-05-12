@@ -19,8 +19,8 @@ const INSTALL_URL = "https://tailscale.com/download/linux";
  * Wrap the given pill in a tooltip that explains the missing-binary state
  * and surfaces install hints. Used only when {@link TailscaleStatus.kind}
  * is `"missing-binary"`.
- * @param children - the pill JSX to anchor the tooltip on
- * @param children.children
+ * @param root0 - props
+ * @param root0.children - the pill JSX to anchor the tooltip on
  * @returns the wrapped pill
  */
 export function MissingBinaryTooltip({ children }: { children: React.ReactNode }) {

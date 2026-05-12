@@ -73,9 +73,13 @@ async function withMinVisibleBusy<T>(work: Promise<T>): Promise<T> {
 }
 
 /**
- *
- * @param root0
- * @param root0.tailnetServeDegradation
+ * Top-level Tailscale connection pill. Subscribes to the
+ * TailscaleStatus push channel, renders the right colored badge, and
+ * surfaces the paste-in pre-auth-key flow when the daemon is not yet
+ * connected.
+ * @param root0 - props
+ * @param root0.tailnetServeDegradation - orchestrator-side serve failure to surface, or null
+ * @returns the pill JSX
  */
 export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillProps = {}) {
   const [status, setStatus] = useState<TailscaleStatus>({ kind: "unknown" });
@@ -160,8 +164,9 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
   }
 
   /**
-   *
-   * @param event
+   * Submit the paste-in pre-auth key to main. On success, the broadcast
+   * push closes the modal; on failure, show the remediation inline.
+   * @param event - the form-submit event from the auth-key dialog
    */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

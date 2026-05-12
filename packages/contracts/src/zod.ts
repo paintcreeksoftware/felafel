@@ -53,7 +53,7 @@ export type WorkerStatus = z.infer<typeof WorkerStatusSchema>;
  * Worker registration payload — what the worker daemon POSTs to `/workers`.
  *
  * `id` is the daemon's persisted UUID. The orchestrator stores it in the
- * `worker_id` column (the @felafel/db conversion layer does the rename);
+ * `worker_id` column (the `@felafel/db` conversion layer does the rename);
  * the wire never sees the DB-internal integer PK.
  */
 export const WorkerRegistrationSchema = z.object({
@@ -99,7 +99,7 @@ export type RunStatus = z.infer<typeof RunStatusSchema>;
 /**
  * Full run shape — returned by `GET /runs` and `GET /runs/:id`. The DB row's
  * `run_id` column maps to the wire's `id` (rename happens in
- * @felafel/db/conversions.ts, not here).
+ * `@felafel/db/conversions.ts`, not here).
  */
 export const RunSchema = z.object({
   id: z.uuid(),

@@ -13,8 +13,10 @@ import { buildApp } from "@felafel/orchestrator/app";
 import { type Worker, type WorkerRegistration } from "@felafel/shared";
 
 /**
- *
- * @param overrides
+ * Build a WorkerRegistration test fixture with safe defaults; spreads
+ * `overrides` last so individual tests can pin fields.
+ * @param overrides - field-level overrides for the registration
+ * @returns a complete WorkerRegistration ready to POST
  */
 function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistration {
   return {
@@ -26,9 +28,10 @@ function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistrat
 }
 
 /**
- *
- * @param app
- * @param reg
+ * POST a worker registration to the app under test.
+ * @param app - the Hono app handle from `buildApp`
+ * @param reg - the WorkerRegistration payload to send
+ * @returns the Response from the POST
  */
 async function postWorker(
   app: ReturnType<typeof buildApp>,

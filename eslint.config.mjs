@@ -484,26 +484,9 @@ const config = [
   // a tool check. The `flat/recommended-tsdoc-error` preset uses the
   // TSDoc syntax dialect (matches what TypeScript itself parses, and
   // what's documented in the project's TSDoc-by-default rule).
+  // Strict — per the lint-determinism memory rule, if a rule fires
+  // we fix the code, not soften the rule.
   pluginJsdoc.configs["flat/recommended-tsdoc-error"],
-  {
-    rules: {
-      // Recommended-tsdoc preset's strictest rules — too aggressive
-      // for the codebase's current TSDoc coverage. The "TSDoc by
-      // default" memory rule is about discipline for new code, not
-      // retrofitting every existing function in one batch.
-      //   - require-returns / require-param-description: many
-      //     existing TSDoc blocks describe what the function does
-      //     without separately spelling out each @returns and @param.
-      //     Forcing the fill-in is hundreds of touch points and adds
-      //     little signal.
-      //   - escape-inline-tags: the rule misfires on the project's
-      //     own `@felafel/*` import paths inside TSDoc comments,
-      //     which aren't tags.
-      "jsdoc/require-returns": "off",
-      "jsdoc/require-param-description": "off",
-      "jsdoc/escape-inline-tags": "off",
-    },
-  },
 ];
 
 export default config;

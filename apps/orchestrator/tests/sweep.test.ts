@@ -23,8 +23,10 @@ import {
 } from "@felafel/orchestrator/sweep";
 
 /**
- *
- * @param ms
+ * Promise that resolves after `ms` milliseconds — minimal sleep
+ * helper for tests that need to observe wall-clock-driven behavior.
+ * @param ms - the delay in milliseconds
+ * @returns a promise that resolves after the delay
  */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {

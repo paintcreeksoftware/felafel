@@ -31,7 +31,8 @@ const builtinSet = new Set(builtinModules);
  * artifact: `electron` itself, anything under `electron/`, anything
  * under `node:`, and Node builtins in the legacy unprefixed form
  * (including subpaths like `fs/promises`).
- * @param id
+ * @param id - the bare import specifier to test
+ * @returns true if the specifier may remain unbundled
  */
 function isAllowedExternal(id: string): boolean {
   if (id === "electron" || id.startsWith("electron/")) {
@@ -51,7 +52,8 @@ function isAllowedExternal(id: string): boolean {
  * bundled libraries like hono carry quoted imports in their own doc
  * comments that aren't real module-level dependencies. Good enough for
  * regression-style assertions; not a full parser.
- * @param src
+ * @param src - bundled ESM source contents
+ * @returns the list of import specifiers extracted from `src`
  */
 function extractImportSpecifiers(src: string): string[] {
   const matches = src.matchAll(
@@ -63,9 +65,12 @@ function extractImportSpecifiers(src: string): string[] {
 }
 
 /**
- *
- * @param bundlePath
- * @param allowed
+ * Read a built bundle and list any import specifiers that aren't
+ * allowed to remain external (per {@link isAllowedExternal} + the
+ * caller-supplied `allowed` set).
+ * @param bundlePath - absolute path to the built bundle
+ * @param allowed - per-bundle allowlist (e.g. native modules shipped as sidecars)
+ * @returns the list of externalized specifiers that should have been bundled
  */
 function externalizedSpecifiers(bundlePath: string, allowed: ReadonlySet<string> = new Set()): string[] {
   const src = readFileSync(bundlePath, "utf8");

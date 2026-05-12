@@ -9,9 +9,12 @@ import { type Run, type WorkerRegistration } from "@felafel/shared";
 import { type FakeWorker, startFakeWorker } from "./helpers/fake-worker";
 
 /**
- *
- * @param controlPlaneUrl
- * @param overrides
+ * Build a WorkerRegistration test fixture with a random id and the
+ * caller's control-plane URL; spreads `overrides` last so individual
+ * tests can pin fields.
+ * @param controlPlaneUrl - the URL the fake worker listens on
+ * @param overrides - field-level overrides for the registration
+ * @returns a complete WorkerRegistration ready to POST
  */
 function sampleReg(
   controlPlaneUrl: string,

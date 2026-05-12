@@ -48,7 +48,10 @@ export interface UpFlowCache {
   stdinSupportPromise: Promise<boolean> | undefined;
 }
 
-/** Construct a fresh `UpFlowCache` for a new manager instance. */
+/**
+ * Construct a fresh `UpFlowCache` for a new manager instance.
+ * @returns an empty UpFlowCache
+ */
 export function makeUpFlowCache(): UpFlowCache {
   return { stdinSupportPromise: undefined };
 }
@@ -147,8 +150,8 @@ async function buildUpInvocation(
  * `ok: false` branch so the caller can fail with a typed message.
  * @param binary - resolved tailscale binary path
  * @param invocation - argv and optional stdin from {@link buildUpInvocation}
- * @param invocation.args
- * @param invocation.stdin
+ * @param invocation.args - CLI args after the `tailscale` binary
+ * @param invocation.stdin - optional stdin (e.g. the auth key)
  * @param signal - abort signal hooked up to the outer timeout
  * @returns discriminated success/failure
  */

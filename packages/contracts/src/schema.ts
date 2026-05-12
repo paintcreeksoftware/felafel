@@ -45,7 +45,7 @@ const baseColumns = {
  * Wire identity (`workerId`) is the UUID the worker daemon presents in its
  * registration payload — it lives in its own column with `UNIQUE NOT NULL`
  * so DB row identity (the integer PK) and business identity stay separate.
- * The conversion layer in @felafel/db translates `row.workerId` back to the
+ * The conversion layer in `@felafel/db` translates `row.workerId` back to the
  * wire's `id` field at the orchestrator boundary.
  *
  * `os` and `arch` are constrained to Node's `process.platform` /

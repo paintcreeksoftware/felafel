@@ -32,8 +32,12 @@ export interface BuildAppOptions {
 }
 
 /**
- *
- * @param opts
+ * Build the orchestrator's Hono app: applies CORS, mounts the OpenAPI
+ * routes, attaches the DB handle so each request resolves it from
+ * context, and registers the global error handler.
+ * @param opts - dependency-injection options
+ * @param opts.db - the Drizzle DB handle the routes will use
+ * @returns the configured Hono app, ready for `serve`
  */
 export function buildApp(opts: BuildAppOptions) {
   // The orchestrator binds to 127.0.0.1 only (or, in container mode, behind a

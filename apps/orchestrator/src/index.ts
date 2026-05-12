@@ -22,8 +22,10 @@ serve({ fetch: app.fetch, port, hostname }, (info) => {
 });
 
 /**
- *
- * @param signal
+ * Graceful-shutdown handler — log the trigger signal and exit cleanly
+ * so the Electron parent's child-process supervisor sees the orderly
+ * termination it expects.
+ * @param signal - the POSIX signal name that triggered shutdown
  */
 function shutdown(signal: string): void {
   console.log(`received ${signal}, shutting down...`);

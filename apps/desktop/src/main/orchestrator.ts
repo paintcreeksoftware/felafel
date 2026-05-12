@@ -16,7 +16,7 @@ import { isServeFailureError, type TailscaleManager } from "@felafel/tailscale";
 
 /**
  * Local mirror of `OrchestratorDegradations["tailnetServe"]` from
- * @felafel/shared. Imported as a type-only structural duplicate so this
+ * `@felafel/shared`. Imported as a type-only structural duplicate so this
  * file stays under the per-file dependency cap (~10). The shapes must
  * stay in sync; tests in shared check the full union remains compatible.
  */

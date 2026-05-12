@@ -45,6 +45,7 @@ function discoverWorkspaces() {
  * @param subPath - empty string for a bare `@felafel/<pkg>` import,
  * otherwise the path segment after the package name and slash.
  * @param exportsMap - the `exports` object from the target package.json.
+ * @returns true if any exports entry resolves `subPath`
  */
 function matchesAnyExport(subPath, exportsMap) {
   for (const key of Object.keys(exportsMap)) {
@@ -59,6 +60,7 @@ function matchesAnyExport(subPath, exportsMap) {
  * Test one `exports` map entry against the sub-path being resolved.
  * @param subPath - the sub-path being resolved.
  * @param exportKey - one entry from the package.json#exports map.
+ * @returns true if the exports entry matches `subPath`
  */
 function matchesExportKey(subPath, exportKey) {
   if (subPath === "") {
@@ -78,6 +80,7 @@ function matchesExportKey(subPath, exportKey) {
 /**
  * Extract every bare-specifier `@felafel/...` import from one source string.
  * @param source - the file contents to scan.
+ * @returns the list of `@felafel/...` import specifiers found
  */
 function extractFelafelImports(source) {
   const found = [];
@@ -92,6 +95,7 @@ function extractFelafelImports(source) {
 
 /**
  * Tracked source files under apps/* + packages/* (skip .d.ts ambient files).
+ * @returns the tracked source file paths
  */
 function listSourceFiles() {
   const out = execSync("git ls-files apps packages", { cwd: REPO_ROOT, encoding: "utf8" });

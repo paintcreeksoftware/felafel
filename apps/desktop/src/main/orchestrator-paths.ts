@@ -34,7 +34,10 @@ export function resolveScriptPath(): string {
 }
 
 /**
- *
+ * Compute the on-disk path to the orchestrator's bundled entry.
+ * Looks under `resources/orchestrator/` in a packaged app, otherwise
+ * the dev tree at `apps/orchestrator/dist/index.mjs`.
+ * @returns absolute filesystem path to the orchestrator entry
  */
 function computePath(): string {
   const fake = process.env[DesktopEnvVars.FELAFEL_ORCHESTRATOR_FAKE_BUNDLE];

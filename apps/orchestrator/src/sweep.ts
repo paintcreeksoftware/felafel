@@ -24,7 +24,7 @@ const BACKOFF_FACTOR = 2;
  * given the current consecutive-failure count. Below the threshold the
  * loop runs at its normal cadence; past it the delay doubles per
  * additional failure, capped at {@link BACKOFF_MAX_DELAY_MS}.
- * @param opts
+ * @param opts - backoff inputs
  * @param opts.baseMs - normal inter-tick delay
  * @param opts.consecutiveFailures - failure count since last success
  * @param opts.thresholdFailures - failures tolerated before backoff

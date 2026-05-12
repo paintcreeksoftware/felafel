@@ -41,6 +41,7 @@ import {
  * the year to exactly 4 digits. Default `date()` happily produces
  * year 12345 or year -200, which serialize to ISO strings the schema
  * refuses to parse.
+ * @returns a fast-check arbitrary that yields ISO-8601 strings in-range
  */
 const isoDatetime = (): Arbitrary<string> =>
   date({

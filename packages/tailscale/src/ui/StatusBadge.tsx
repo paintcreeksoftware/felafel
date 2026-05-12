@@ -38,6 +38,7 @@ interface StatusBadgeProps {
  * @param root0.status - the discriminated TailscaleStatus from main
  * @param root0.busy - local "connecting"/"refreshing" state, or null
  * @param root0.serveDegradation - orchestrator serve failure, or null
+ * @returns the pill JSX
  */
 export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps) {
   if (busy === "connecting") {
