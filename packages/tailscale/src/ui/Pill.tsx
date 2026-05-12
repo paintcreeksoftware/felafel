@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleX, ExternalLink, LoaderCircle, RefreshCw } from "lucide-react";
 import { type TailscaleStatus } from "@felafel/shared";
+import { MissingBinaryTooltip } from "@felafel/tailscale/ui/MissingBinaryTooltip";
 import { StatusBadge, type PillBusy, type ServeDegradation } from "@felafel/tailscale/ui/StatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@felafel/ui/components/ui/alert";
 import { Button } from "@felafel/ui/components/ui/button";
@@ -21,12 +22,6 @@ import {
 } from "@felafel/ui/components/ui/dialog";
 import { Input } from "@felafel/ui/components/ui/input";
 import { Label } from "@felafel/ui/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@felafel/ui/components/ui/tooltip";
 
 interface SubmitError {
   message: string;
@@ -48,7 +43,6 @@ interface TailscalePillProps {
 }
 
 const ADMIN_KEYS_URL = "https://login.tailscale.com/admin/settings/keys";
-const INSTALL_URL = "https://tailscale.com/download/linux";
 
 /**
  * Floor on how long the pill's busy spinner stays visible. The connect
@@ -289,31 +283,3 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
   );
 }
 
-function MissingBinaryTooltip({ children }: { children: React.ReactNode }) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs to be focusable */}
-          <span tabIndex={0}>{children}</span>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-sm space-y-2 text-xs">
-          <p>
-            Felafel couldn&apos;t find the <code>tailscale</code> binary on <code>PATH</code>.
-            Install it via your distro&apos;s package manager — <code>rpm-ostree install tailscale</code>{" "}
-            on Bluefin/Silverblue, <code>sudo apt install tailscale</code> on Debian/Ubuntu.
-            Tailscale runs as a system service so installation needs <code>sudo</code>.
-          </p>
-          <a
-            href={INSTALL_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
-          >
-            Install instructions <ExternalLink className="size-3" />
-          </a>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
