@@ -117,6 +117,7 @@ const config = [
       // are not what reviewers are counting; reviewable code is what
       // matters.
       "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-classes-per-file": ["error", 1],
       // TODO(PAI-141 batch 2: core - Suggestions).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
