@@ -184,6 +184,12 @@ const config = [
       "no-implied-eval": "error",
       "no-new-func": "error",
       "no-script-url": "error",
+      "no-iterator": "error",
+      "no-multi-str": "error",
+      "no-octal": "error",
+      "no-octal-escape": "error",
+      "no-proto": "error",
+      "no-with": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
