@@ -39,17 +39,18 @@ interface CaptureResult {
  */
 export interface UpFlowCache {
   /**
-   * Cached result of probing `tailscale up --help` for `--authkey-stdin`
-   * support. `undefined` means "not probed yet". Tailscale CLI builds
-   * never lose flags they once supported, so we only probe once per
-   * manager instance.
+   * In-flight or settled probe of `tailscale up --help` for `--authkey-stdin`
+   * support. We cache the Promise rather than the resolved boolean so the
+   * check + assign happen synchronously (no `await` between them), which
+   * means concurrent callers share a single subprocess instead of racing
+   * to compute the same answer. `undefined` means "not probed yet".
    */
-  stdinSupportCache: boolean | undefined;
+  stdinSupportPromise: Promise<boolean> | undefined;
 }
 
 /** Construct a fresh `UpFlowCache` for a new manager instance. */
 export function makeUpFlowCache(): UpFlowCache {
-  return { stdinSupportCache: undefined };
+  return { stdinSupportPromise: undefined };
 }
 
 /**
@@ -206,18 +207,19 @@ async function attemptUpSpawn(
  * @param cache - manager-owned cache for the probe result
  * @returns true if the help text mentions the flag
  */
-async function supportsAuthkeyStdin(binary: string, cache: UpFlowCache): Promise<boolean> {
-  if (cache.stdinSupportCache !== undefined) {
-    return cache.stdinSupportCache;
-  }
-  try {
-    const { stdout, stderr } = await execa(binary, ["up", "--help"]);
-    // eslint-disable-next-line require-atomic-updates -- benign memoization race; concurrent callers compute the same value.
-    cache.stdinSupportCache =
-      /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);
-  } catch {
-    // eslint-disable-next-line require-atomic-updates -- same race; same outcome.
-    cache.stdinSupportCache = false;
-  }
-  return cache.stdinSupportCache;
+function supportsAuthkeyStdin(binary: string, cache: UpFlowCache): Promise<boolean> {
+  // The `??=` does the read + assign synchronously (no `await` in between),
+  // so a second caller arriving while the first is still running reuses the
+  // same Promise instead of kicking off a second `execa`. The IIFE's
+  // try/catch keeps the cached Promise resolved (never rejected), matching
+  // the prior "treat probe failure as 'no support'" semantics.
+  cache.stdinSupportPromise ??= (async () => {
+    try {
+      const { stdout, stderr } = await execa(binary, ["up", "--help"]);
+      return /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);
+    } catch {
+      return false;
+    }
+  })();
+  return cache.stdinSupportPromise;
 }
