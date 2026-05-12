@@ -209,6 +209,11 @@ const config = [
       "no-redeclare": "error",
       "no-shadow": "error",
       "no-shadow-restricted-names": "error",
+      "no-extra-boolean-cast": "error",
+      "no-implicit-coercion": "error",
+      "no-implicit-globals": "error",
+      "no-invalid-this": "error",
+      "no-throw-literal": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
