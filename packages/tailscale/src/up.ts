@@ -212,9 +212,11 @@ async function supportsAuthkeyStdin(binary: string, cache: UpFlowCache): Promise
   }
   try {
     const { stdout, stderr } = await execa(binary, ["up", "--help"]);
+    // eslint-disable-next-line require-atomic-updates -- benign memoization race; concurrent callers compute the same value.
     cache.stdinSupportCache =
       /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);
   } catch {
+    // eslint-disable-next-line require-atomic-updates -- same race; same outcome.
     cache.stdinSupportCache = false;
   }
   return cache.stdinSupportCache;
