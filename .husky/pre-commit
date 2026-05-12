@@ -68,6 +68,11 @@ pnpm lint:exports
 # scope. Retired when the eslint cutover (PAI-141) folds this coverage
 # into the main config.
 pnpm lint:scripts
+# `lint:eslint` is the cutover-track for the oxlint → eslint migration
+# (PAI-141). PR 1 wires up the framework with no rules enabled; batch
+# PRs flip rules on plugin-by-plugin. Until those land it's effectively
+# a no-op pass that keeps the dev loop honest about the config parsing.
+pnpm lint:eslint
 # `lint:loc` prints any source file exceeding the 300-line cap. Warn-mode
 # only today (PAI-140 scaffold) — the script exits 0 even when offenders
 # are present. Flipped to error-mode in a follow-up PAI-140 PR once the

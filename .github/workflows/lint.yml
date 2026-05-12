@@ -58,6 +58,13 @@ jobs:
       - name: Lint root-level scripts
         run: pnpm lint:scripts
 
+      # eslint cutover scaffold (PAI-141 PR 1). Framework only; rules
+      # arrive plugin-by-plugin in subsequent PAI-141_N PRs. Wired
+      # alongside oxlint so the parse/glob coverage is visible in CI
+      # before any rule lights up.
+      - name: Lint (eslint scaffold)
+        run: pnpm lint:eslint
+
       # Prints any source file over the 300-line cap (PAI-140). Warn-mode
       # today — the script exits 0 even when offenders are present, so
       # this step is informational. Flipped to error-mode in a follow-up
