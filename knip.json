@@ -1,5 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": [
+    "shellcheck"
+  ],
   "workspaces": {
     "apps/desktop": {
       "entry": [
@@ -9,7 +12,10 @@
         "src/renderer/src/main.tsx",
         "tests/**/*.{test,spec}.ts"
       ],
-      "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"]
+      "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+      "ignoreDependencies": [
+        "tailwindcss"
+      ]
     },
     "apps/orchestrator": {
       "entry": ["tests/**/*.{test,spec}.ts"],
