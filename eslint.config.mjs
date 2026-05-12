@@ -46,20 +46,87 @@ const config = [
       },
     },
     rules: {
-      // TODO(PAI-141 batch 1: core): enumerate every rule under
-      //   https://eslint.org/docs/latest/rules/ with an explicit on/off.
-      // TODO(PAI-141 batch 2: @typescript-eslint): enumerate every rule
-      //   under https://typescript-eslint.io/rules/ . Add the plugin
-      //   here once installed.
-      // TODO(PAI-141 batch 3: react + react-hooks + react-refresh).
-      // TODO(PAI-141 batch 4: jsx-a11y).
-      // TODO(PAI-141 batch 5: import-x).
-      // TODO(PAI-141 batch 6: better-tailwindcss) — motivating plugin;
+      // Core — Possible Problems
+      // https://eslint.org/docs/latest/rules/#possible-problems
+      // Bug-finders from ESLint core. The off cases either duplicate
+      // TypeScript's own checks, are superseded by a typed analog in a
+      // later batch, or are deprecated by ESLint itself.
+      "array-callback-return": "error",
+      "constructor-super": "error",
+      "for-direction": "error",
+      "getter-return": "error",
+      "no-async-promise-executor": "error",
+      "no-await-in-loop": "off", // sequential awaits are sometimes intentional
+      "no-class-assign": "error",
+      "no-compare-neg-zero": "error",
+      "no-cond-assign": "error",
+      "no-const-assign": "error",
+      "no-constant-binary-expression": "error",
+      "no-constant-condition": "error",
+      "no-constructor-return": "error",
+      "no-control-regex": "error",
+      "no-debugger": "error",
+      "no-dupe-args": "error",
+      "no-dupe-class-members": "off", // TS catches; would also break valid overload signatures
+      "no-dupe-else-if": "error",
+      "no-dupe-keys": "error",
+      "no-duplicate-case": "error",
+      "no-duplicate-imports": "off", // batch 5 import-x/no-duplicates is type-aware
+      "no-empty-character-class": "error",
+      "no-empty-pattern": "error",
+      "no-ex-assign": "error",
+      "no-fallthrough": "error",
+      "no-func-assign": "error",
+      "no-import-assign": "error",
+      "no-inner-declarations": "error",
+      "no-invalid-regexp": "error",
+      "no-irregular-whitespace": "error",
+      "no-loss-of-precision": "error",
+      "no-misleading-character-class": "error",
+      "no-new-native-nonconstructor": "error",
+      "no-obj-calls": "error",
+      "no-promise-executor-return": "error",
+      "no-prototype-builtins": "error",
+      "no-self-assign": "error",
+      "no-self-compare": "error",
+      "no-setter-return": "error",
+      "no-sparse-arrays": "error",
+      "no-template-curly-in-string": "error",
+      "no-this-before-super": "error",
+      "no-undef": "off", // TS resolver handles undefined identifiers
+      "no-unexpected-multiline": "off", // deprecated; oxfmt owns formatting
+      "no-unmodified-loop-condition": "error",
+      "no-unreachable": "error",
+      "no-unreachable-loop": "error",
+      "no-unsafe-finally": "error",
+      "no-unsafe-negation": "error",
+      "no-unsafe-optional-chaining": "error",
+      "no-unused-private-class-members": "error",
+      "no-unused-vars": "off", // batch 4 @typescript-eslint/no-unused-vars supersedes
+      "no-use-before-define": "off", // batch 4 @typescript-eslint/no-use-before-define supersedes
+      "no-useless-assignment": "error",
+      "no-useless-backreference": "error",
+      "require-atomic-updates": "error",
+      "use-isnan": "error",
+      "valid-typeof": "error",
+      // TODO(PAI-141 batch 2: core - Suggestions).
+      // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
+      //   since oxfmt owns formatting, but enumerated explicitly per the
+      //   "every rule must be specified" cutover rule).
+      // TODO(PAI-141 batch 4: @typescript-eslint). Plugin install lands
+      //   with that batch.
+      // TODO(PAI-141 batch 5: react + react-hooks + react-refresh).
+      // TODO(PAI-141 batch 6: jsx-a11y).
+      // TODO(PAI-141 batch 7: import-x).
+      // TODO(PAI-141 batch 8: better-tailwindcss) — motivating plugin;
       //   no-unregistered-classes catches the Tailwind class typos
       //   that slipped past oxlint on PAI-138.
-      // TODO(PAI-141 batch 7: jsdoc) — codify the TSDoc-by-default
+      // TODO(PAI-141 batch 9: jsdoc) — codify the TSDoc-by-default
       //   project rule as a tool check.
-      // TODO(PAI-141 batch 8: unicorn).
+      // TODO(PAI-141 batch 10: unicorn).
+      // TODO(PAI-141 batch 11: cutover — drop oxlint, .oxlintrc.json,
+      //   per-package "lint" scripts, root "lint" → alias to lint:eslint.
+      //   oxfmt stays.
     },
   },
 ];
