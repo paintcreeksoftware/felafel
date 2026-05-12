@@ -254,6 +254,11 @@ const config = [
       "logical-assignment-operators": ["error", "always"],
       "radix": ["error", "always"],
       "symbol-description": "error",
+      "accessor-pairs": "error",
+      "grouped-accessor-pairs": "error",
+      "one-var": ["error", "never"],
+      "strict": "off",
+      "vars-on-top": "off",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
