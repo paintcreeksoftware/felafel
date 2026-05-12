@@ -149,6 +149,7 @@ const config = [
       "default-param-last": "error",
       "dot-notation": "error",
       "eqeqeq": ["error", "always"],
+      "guard-for-in": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing control flow).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
