@@ -248,6 +248,9 @@ export default function App() {
                 if (!orchUrl) {
                   return;
                 }
+                // TODO(PAI-145): replace with a shadcn Dialog so the
+                //   no-alert ESLint rule can flip from off to error and
+                //   the confirm UX matches the rest of the renderer.
                 const confirmed = window.confirm(
                   `Forget worker "${worker.hostname}"? This permanently removes the row from the orchestrator's database.`,
                 );

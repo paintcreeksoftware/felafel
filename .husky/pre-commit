@@ -92,13 +92,3 @@ pnpm db:check
 # resolves via `exports` at build time — they're free to drift, and they
 # did on PAI-139 #57. See PAI-143.
 pnpm lint:exports
-# `lint:scripts` lints root-level .mjs files (commitlint.config.mjs +
-# scripts/*.mjs) that fall outside every workspace's per-package oxlint
-# scope. Retired when the eslint cutover (PAI-141) folds this coverage
-# into the main config.
-pnpm lint:scripts
-# `lint:eslint` is the cutover-track for the oxlint → eslint migration
-# (PAI-141). PR 1 wires up the framework with no rules enabled; batch
-# PRs flip rules on plugin-by-plugin. Until those land it's effectively
-# a no-op pass that keeps the dev loop honest about the config parsing.
-pnpm lint:eslint

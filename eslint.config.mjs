@@ -1,18 +1,10 @@
-// Scaffold eslint flat config for the oxlint → eslint cutover tracked
-// in PAI-141. Intentionally enumerates rules explicitly with no
-// `extends` and no inherited preset, per the ticket's "no implicit
-// recommended sets" requirement.
-//
-// PR 1 (this file) wires up the TS parser and the file globs only —
-// every rule starts implicitly off. Follow-up PAI-141_N batch PRs flip
-// rules on in cohesive batches (core, typescript, react, a11y, import,
-// tailwindcss, jsdoc, unicorn). The motivating rule —
-// `better-tailwindcss/no-unregistered-classes` — lands in the
-// tailwindcss batch.
-//
-// Plugins beyond `typescript-eslint/parser` are added in their batch
-// PRs so this scaffold stays installable without pulling the whole
-// ESLint ecosystem in one shot.
+// Flat ESLint config — the only lint surface in this repo after the
+// PAI-141 cutover replaced oxlint. Core rules are enumerated
+// explicitly (per the cutover policy of "no inherited recommended
+// sets" for ESLint core). Plugins use their `recommended` preset +
+// targeted overrides where the recommended preset is wrong for the
+// project (one canonical way to write code; if a rule fires we fix
+// the code or remove the rule, no per-site disable shortcuts).
 import pluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import { flatConfigs as importXFlatConfigs } from "eslint-plugin-import-x";
 import pluginJsdoc from "eslint-plugin-jsdoc";

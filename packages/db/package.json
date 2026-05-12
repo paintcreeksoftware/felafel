@@ -14,7 +14,6 @@
     "./queries/workers": "./src/queries/workers.ts"
   },
   "scripts": {
-    "lint": "oxlint --deny-warnings",
     "format": "oxfmt",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
