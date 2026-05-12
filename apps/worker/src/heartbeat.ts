@@ -9,7 +9,7 @@ import {
 /**
  * Configuration accepted by {@link startHeartbeat}.
  */
-export interface StartHeartbeatOptions {
+interface StartHeartbeatOptions {
   /** Worker UUID, persisted to disk. */
   identity: string;
   /** URL the orchestrator should dial back on, e.g. `http://127.0.0.1:9091`. */

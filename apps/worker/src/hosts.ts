@@ -4,7 +4,7 @@
 import { Defaults } from "@felafel/worker/constants";
 
 /** Resolved bind + advertise hostnames. See {@link resolveHosts}. */
-export interface HostResolution {
+interface HostResolution {
   /** Hostname embedded in the advertised `controlPlaneUrl`. */
   advertiseHost: string;
   /** Hostname passed to `serve({ hostname })`. */

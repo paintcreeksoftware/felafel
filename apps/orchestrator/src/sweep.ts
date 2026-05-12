@@ -1,11 +1,11 @@
 import { type Db, markRunsTimedOutSince, markWorkersStaleSince } from "@felafel/db";
 
 /** Default sweep tick — runs every 30s in production. */
-export const DEFAULT_SWEEP_INTERVAL_MS = 30_000;
+const DEFAULT_SWEEP_INTERVAL_MS = 30_000;
 /** Default worker staleness threshold — 90s without a heartbeat. */
-export const DEFAULT_WORKER_STALE_AFTER_MS = 90_000;
+const DEFAULT_WORKER_STALE_AFTER_MS = 90_000;
 /** Default run dispatch timeout — 5min between dispatch and ack. */
-export const DEFAULT_RUN_TIMEOUT_MS = 300_000;
+const DEFAULT_RUN_TIMEOUT_MS = 300_000;
 
 /**
  * Number of consecutive sweep failures tolerated at the normal cadence
@@ -48,7 +48,7 @@ export function sweepDelayFor(opts: {
 /**
  * Configuration accepted by {@link startSweep}.
  */
-export interface StartSweepOptions {
+interface StartSweepOptions {
   db: Db;
   /** Tick, in milliseconds. */
   intervalMs?: number;

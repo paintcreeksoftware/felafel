@@ -59,6 +59,12 @@ importers:
       get-port:
         specifier: ^7.2.0
         version: 7.2.0
+      hono:
+        specifier: ^4.10.0
+        version: 4.12.16
+      lucide-react:
+        specifier: ^1.12.0
+        version: 1.12.0(react@19.2.5)
       p-retry:
         specifier: ^8.0.0
         version: 8.0.0
@@ -213,6 +219,9 @@ importers:
       fast-check:
         specifier: ^4.7.0
         version: 4.7.0
+      pathe:
+        specifier: ^2.0.0
+        version: 2.0.3
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -247,9 +256,6 @@ importers:
       '@felafel/contracts':
         specifier: workspace:*
         version: link:../contracts
-      zod:
-        specifier: ^4.0.0
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: ^24.12.2
