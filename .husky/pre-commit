@@ -57,3 +57,14 @@ pnpm lint:sh
 # "edited schema, forgot to run `db:generate`" failure mode locally before
 # push (and again in CI — see .github/workflows/lint.yml).
 pnpm db:check
+# `lint:exports` catches `@felafel/<pkg>/<sub-path>` imports that aren't
+# declared in the target package's package.json#exports. tsc resolves
+# them via the tsconfig `paths` block at typecheck time; the bundler
+# resolves via `exports` at build time — they're free to drift, and they
+# did on PAI-139 #57. See PAI-143.
+pnpm lint:exports
+# `lint:scripts` lints root-level .mjs files (commitlint.config.mjs +
+# scripts/*.mjs) that fall outside every workspace's per-package oxlint
+# scope. Retired when the eslint cutover (PAI-141) folds this coverage
+# into the main config.
+pnpm lint:scripts

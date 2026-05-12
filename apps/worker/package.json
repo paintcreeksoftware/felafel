@@ -8,7 +8,12 @@
   "exports": {
     ".": "./dist/index.mjs",
     "./app": "./src/app.ts",
-    "./constants": "./src/constants.ts"
+    "./constants": "./src/constants.ts",
+    "./heartbeat": "./src/heartbeat.ts",
+    "./hosts": "./src/hosts.ts",
+    "./identity": "./src/identity.ts",
+    "./routes/*": "./src/routes/*.ts",
+    "./shutdown": "./src/shutdown.ts"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
