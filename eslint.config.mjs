@@ -180,6 +180,7 @@ const config = [
       "no-eq-null": "error",
       "no-eval": "error",
       "no-extend-native": "error",
+      "no-extra-bind": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
