@@ -165,6 +165,7 @@ Distrobox shell.
 | `pnpm lint` | Dev Container or Distrobox | oxlint across every workspace package |
 | `pnpm lint:exports` | Dev Container or Distrobox | Verify every `@felafel/<pkg>/<sub-path>` import has a matching entry in the target package's `package.json#exports` (catches the tsconfig-paths-vs-package-exports drift) |
 | `pnpm lint:scripts` | Dev Container or Distrobox | oxlint over root-level `.mjs` files (`commitlint.config.mjs`, `scripts/*.mjs`) that fall outside the per-package lint scope |
+| `pnpm lint:loc` | Dev Container or Distrobox | Print any source file over the 300-line cap. Warn-mode today; flipped to error-mode in a follow-up PR per [PAI-140](https://linear.app/paint-creek-software/issue/PAI-140) |
 | `pnpm check-types` | Dev Container or Distrobox | `tsc --noEmit` across every workspace package |
 | `pnpm build` | Dev Container or Distrobox | Bundle main + preload + renderer into `apps/desktop/out/` |
 | `pnpm package` | Dev Container or Distrobox | Run electron-builder; produces installer in `apps/desktop/release/` |

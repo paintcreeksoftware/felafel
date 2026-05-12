@@ -68,3 +68,9 @@ pnpm lint:exports
 # scope. Retired when the eslint cutover (PAI-141) folds this coverage
 # into the main config.
 pnpm lint:scripts
+# `lint:loc` prints any source file exceeding the 300-line cap. Warn-mode
+# only today (PAI-140 scaffold) — the script exits 0 even when offenders
+# are present. Flipped to error-mode in a follow-up PAI-140 PR once the
+# in-scope offenders are refactored. Wired here so the audit re-runs on
+# every commit and the offender count stays visible.
+pnpm lint:loc
