@@ -56,7 +56,7 @@ describe("runs queries", () => {
       const run = insertRun(handle.db, { kind: "noop" });
       expect(run.status).toBe("pending");
       expect(run.payload).toEqual({ kind: "noop" });
-      expect(run.id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(run.id).toMatch(/^[0-9a-f-]{36}$/u);
       expect(run.workerId).toBeUndefined();
       expect(run.dispatchedAt).toBeUndefined();
       expect(run.completedAt).toBeUndefined();

@@ -216,7 +216,7 @@ function supportsAuthkeyStdin(binary: string, cache: UpFlowCache): Promise<boole
   cache.stdinSupportPromise ??= (async () => {
     try {
       const { stdout, stderr } = await execa(binary, ["up", "--help"]);
-      return /--authkey-stdin/.test(stdout) || /--authkey-stdin/.test(stderr);
+      return /--authkey-stdin/u.test(stdout) || /--authkey-stdin/u.test(stderr);
     } catch {
       return false;
     }

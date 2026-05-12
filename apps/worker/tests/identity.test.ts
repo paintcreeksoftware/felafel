@@ -18,7 +18,7 @@ describe("loadOrCreateIdentity", () => {
   it("generates a UUID when the file is missing", () => {
     const path = join(dir, "id");
     const id = loadOrCreateIdentity(path);
-    expect(id).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(id).toMatch(/^[0-9a-f-]{36}$/iu);
   });
 
   it("returns the same UUID across calls", () => {
@@ -31,7 +31,7 @@ describe("loadOrCreateIdentity", () => {
   it("creates parent directories as needed", () => {
     const path = join(dir, "nested", "subdir", "id");
     const id = loadOrCreateIdentity(path);
-    expect(id).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(id).toMatch(/^[0-9a-f-]{36}$/iu);
   });
 
   it("throws when the file content is not a UUID", () => {

@@ -48,7 +48,7 @@ describe("OrchestratorManager lifecycle", () => {
 
   it("spawns the orchestrator and serves /health", async () => {
     const url = await manager.start();
-    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/u);
 
     const health = await fetch(`${url}/health`);
     expect(health.ok).toBe(true);

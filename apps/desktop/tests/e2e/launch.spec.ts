@@ -35,7 +35,7 @@ test("Electron launches, orchestrator reaches ready", async () => {
   // kernel-assigned (bind to 0), so it's whatever ephemeral port the OS
   // hands us — Linux typically 32768–60999, macOS/Windows 49152–65535.
   const urlLine = await window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`).textContent();
-  expect(urlLine).toMatch(/http:\/\/127\.0\.0\.1:\d{4,5}/);
+  expect(urlLine).toMatch(/http:\/\/127\.0\.0\.1:\d{4,5}/u);
 
   // Empty worker list rendered.
   await window.waitForSelector("text=No workers registered yet", { timeout: 5_000 });
@@ -57,7 +57,7 @@ test("Workers panel reflects a worker that registered after mount", async () => 
   // Pull the orchestrator URL out of the UI — the renderer renders it
   // verbatim next to "ready".
   const urlEl = window.locator(String.raw`text=/http:\/\/127\.0\.0\.1:\d{4,5}/`).first();
-  const orchUrl = (await urlEl.textContent())?.match(/http:\/\/127\.0\.0\.1:\d{4,5}/)?.[0];
+  const orchUrl = (await urlEl.textContent())?.match(/http:\/\/127\.0\.0\.1:\d{4,5}/u)?.[0];
   expect(orchUrl).toBeTruthy();
 
   const registration = {
@@ -121,6 +121,6 @@ test("quitting the app does not leave an orphan orchestrator process", async () 
   const psOutput = execFileSync("ps", ["-A", "-o", "command="], { encoding: "utf8" });
   const orphans = psOutput
     .split("\n")
-    .filter((line) => /orchestrator[/\\]dist[/\\]index\.mjs|resources[/\\]orchestrator[/\\]index\.mjs/.test(line));
+    .filter((line) => /orchestrator[/\\]dist[/\\]index\.mjs|resources[/\\]orchestrator[/\\]index\.mjs/u.test(line));
   expect(orphans).toEqual([]);
 });

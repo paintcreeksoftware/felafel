@@ -85,7 +85,7 @@ export function classifyUpError(
       message: "Tailscale didn't respond — check your network and try again.",
     };
   }
-  if (/permission denied|\bEACCES\b/i.test(stderr)) {
+  if (/permission denied|\bEACCES\b/iu.test(stderr)) {
     return {
       kind: "eacces",
       message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
@@ -97,7 +97,7 @@ export function classifyUpError(
       message: "The tailscaled daemon isn't running on this machine.",
     };
   }
-  const authUrlMatch = stderr.match(/https?:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/);
+  const authUrlMatch = stderr.match(/https?:\/\/login\.tailscale\.com\/a\/[A-Za-z0-9]+/u);
   if (authUrlMatch) {
     return {
       kind: "needs-login",
@@ -105,7 +105,7 @@ export function classifyUpError(
       authUrl: authUrlMatch[0],
     };
   }
-  if (/invalid (?:auth )?key|unauthorized/i.test(stderr)) {
+  if (/invalid (?:auth )?key|unauthorized/iu.test(stderr)) {
     return {
       kind: "invalid-key",
       message: "Tailscale rejected the auth key — check it isn't expired or revoked.",
@@ -144,7 +144,7 @@ export function classifyServeError(
   // "Access denied: serve config denied" — the older `permission denied` /
   // `EACCES` patterns are still in for the daemon-socket-EACCES case and
   // forward compatibility with other Tailscale versions.
-  if (/access denied|permission denied|\bEACCES\b/i.test(stderr)) {
+  if (/access denied|permission denied|\bEACCES\b/iu.test(stderr)) {
     return {
       kind: "eacces",
       message: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
@@ -163,7 +163,7 @@ export function classifyServeError(
   // backtrack across many "address" substrings).
   const stderrLower = stderr.toLowerCase();
   if (
-    /already (?:in use|configured|serving)/i.test(stderr) ||
+    /already (?:in use|configured|serving)/iu.test(stderr) ||
     (stderrLower.includes("address") && stderrLower.includes("in use"))
   ) {
     return {

@@ -244,9 +244,7 @@ const config = [
       "prefer-spread": "error",
       "prefer-template": "error",
       "require-await": "error",
-      // TODO(PAI-146): https://linear.app/paint-creek-software/issue/PAI-146
-      //   Flip to error after the /u-flag migration PR.
-      "require-unicode-regexp": "off",
+      "require-unicode-regexp": "error",
       "require-yield": "error",
       "arrow-body-style": ["error", "as-needed"],
       "object-shorthand": ["error", "always"],

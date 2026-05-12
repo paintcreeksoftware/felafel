@@ -72,8 +72,8 @@ function matchesExportKey(subPath, exportKey) {
     return false;
   }
   if (key.includes("*")) {
-    const escaped = key.replaceAll(/[.+?^${}()|[\]\\]/g, String.raw`\$&`);
-    return new RegExp(`^${escaped.replaceAll("*", ".*")}$`).test(subPath);
+    const escaped = key.replaceAll(/[.+?^${}()|[\]\\]/gu, String.raw`\$&`);
+    return new RegExp(`^${escaped.replaceAll("*", ".*")}$`, "u").test(subPath);
   }
   return subPath === key;
 }
@@ -85,7 +85,7 @@ function matchesExportKey(subPath, exportKey) {
  */
 function extractFelafelImports(source) {
   const found = [];
-  const re = /(?:from|import)\s*\(?\s*["'](?<spec>@felafel\/[^"']+)["']/g;
+  const re = /(?:from|import)\s*\(?\s*["'](?<spec>@felafel\/[^"']+)["']/gu;
   for (const match of source.matchAll(re)) {
     if (match.groups?.spec) {
       found.push(match.groups.spec);
@@ -101,7 +101,7 @@ function listSourceFiles() {
   const out = execSync("git ls-files apps packages", { cwd: REPO_ROOT, encoding: "utf8" });
   return out
     .split("\n")
-    .filter((p) => /\.(?:ts|tsx|js|mjs|cjs)$/.test(p))
+    .filter((p) => /\.(?:ts|tsx|js|mjs|cjs)$/u.test(p))
     .filter((p) => !p.endsWith(".d.ts"));
 }
 

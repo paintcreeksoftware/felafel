@@ -33,11 +33,11 @@ describe("resolveScriptPath", () => {
   });
 
   it("returns a dev path inside the orchestrator dist tree otherwise", () => {
-    expect(resolveScriptPath()).toMatch(/orchestrator\/dist\/index\.mjs$/);
+    expect(resolveScriptPath()).toMatch(/orchestrator\/dist\/index\.mjs$/u);
   });
 
   it("throws when the resolved path does not exist on disk", () => {
     vi.mocked(existsSync).mockReturnValue(false);
-    expect(() => resolveScriptPath()).toThrow(/bundle missing at/);
+    expect(() => resolveScriptPath()).toThrow(/bundle missing at/u);
   });
 });

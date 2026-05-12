@@ -27,7 +27,7 @@ describe("ensureDataDir", () => {
 
   it("returns a dev path under the repo when not packaged", async () => {
     const dir = await ensureDataDir();
-    expect(dir).toMatch(/\.dev-orchestrator-data$/);
+    expect(dir).toMatch(/\.dev-orchestrator-data$/u);
     expect(mkdir).toHaveBeenCalledExactlyOnceWith(dir, { recursive: true });
   });
 

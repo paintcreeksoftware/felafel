@@ -53,7 +53,7 @@ function isAllowedExternal(id: string): boolean {
  */
 function extractImportSpecifiers(src: string): string[] {
   const matches = src.matchAll(
-    /^(?:import|export)\s+(?:.*?\s+from\s+)?["'](?<spec>[^"']+)["']/gm,
+    /^(?:import|export)\s+(?:.*?\s+from\s+)?["'](?<spec>[^"']+)["']/gmu,
   );
   return [...matches]
     .map((m) => m.groups?.spec)
