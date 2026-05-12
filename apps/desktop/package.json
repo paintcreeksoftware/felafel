@@ -22,14 +22,11 @@
     "@felafel/shared": "workspace:*",
     "@felafel/tailscale": "workspace:*",
     "@felafel/ui": "workspace:*",
-    "execa": "^9.6.1",
     "get-port": "^7.2.0",
     "hono": "^4.10.0",
     "lucide-react": "^1.12.0",
     "p-retry": "^8.0.0",
-    "pathe": "^2.0.0",
-    "which": "^6.0.1",
-    "zod": "^4.0.0"
+    "pathe": "^2.0.0"
   },
   "devDependencies": {
     "@felafel/orchestrator": "workspace:*",
@@ -37,7 +34,6 @@
     "@tailwindcss/postcss": "^4.2.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/which": "^3.0.4",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "41.3.0",
     "electron-builder": "^26.8.1",
