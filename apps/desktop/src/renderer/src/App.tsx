@@ -39,7 +39,7 @@ function OrchestratorLabel(props: {
     return (
       <span>
         <span className="font-mono">ready</span>{" "}
-        <span className="text-muted-foreground/70 font-mono text-sm">{props.orchUrl}</span>
+        <span className="font-mono text-sm text-muted-foreground/70">{props.orchUrl}</span>
       </span>
     );
   }
@@ -66,7 +66,11 @@ function StatusPill({ status }: { status: Worker["status"] }) {
       : "bg-amber-500/15 text-amber-700 dark:text-amber-400";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-medium ${color}`}
+      className={`
+        inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs
+        font-medium
+        ${color}
+      `}
     >
       {status}
     </span>
@@ -94,14 +98,18 @@ function WorkersList(props: {
         <li key={w.id} className="flex items-center gap-2 text-sm">
           <StatusPill status={w.status} />
           <span className="font-mono">{w.hostname}</span>
-          <span className="text-muted-foreground/70 font-mono text-xs">({w.id})</span>
+          <span className="font-mono text-xs text-muted-foreground/70">({w.id})</span>
           {w.status === "stale" && (
             <button
               type="button"
               onClick={() => {
                 props.onForget(w);
               }}
-              className="text-muted-foreground hover:text-foreground ml-auto text-xs underline underline-offset-2"
+              className="
+                ml-auto text-xs text-muted-foreground underline
+                underline-offset-2
+                hover:text-foreground
+              "
             >
               forget
             </button>
@@ -179,22 +187,36 @@ export default function App() {
   }, [orchUrl]);
 
   return (
-    <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
-      <header className="absolute right-4 top-4 z-10">
+    <div className="
+      flex min-h-screen items-center justify-center bg-background font-sans
+      text-foreground
+    ">
+      <header className="absolute top-4 right-4 z-10">
         <TailscalePill tailnetServeDegradation={tailnetServeDegradation} />
       </header>
-      <main className="bg-background flex min-h-screen w-full max-w-3xl flex-col items-center justify-between px-16 py-32 sm:items-start">
-        <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="dark:invert" />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="text-foreground max-w-xs text-3xl font-semibold leading-10 tracking-tight">
+      <main className="
+        flex min-h-screen w-full max-w-3xl flex-col items-center justify-between
+        bg-background px-16 py-32
+        sm:items-start
+      ">
+        <img src="./next.svg" alt="Felafel logo" width={100} height={20} className="
+          dark:invert
+        " />
+        <div className="
+          flex flex-col items-center gap-6 text-center
+          sm:items-start sm:text-left
+        ">
+          <h1 className="
+            max-w-xs text-3xl/10 font-semibold tracking-tight text-foreground
+          ">
             To get started, edit src/renderer/src/App.tsx.
           </h1>
-          <p className="text-muted-foreground max-w-md text-lg leading-8">
+          <p className="max-w-md text-lg/8 text-muted-foreground">
             Orchestrator:{" "}
             <OrchestratorLabel statusError={statusError} status={status} orchUrl={orchUrl} />
           </p>
-          <section className="text-muted-foreground w-full max-w-md text-base leading-7">
-            <h2 className="text-foreground mb-2 text-lg font-medium">Workers</h2>
+          <section className="w-full max-w-md text-base/7 text-muted-foreground">
+            <h2 className="mb-2 text-lg font-medium text-foreground">Workers</h2>
             <WorkersList
               workers={workers}
               workersError={workersError}
@@ -236,7 +258,10 @@ export default function App() {
             />
           </section>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row" />
+        <div className="
+          flex flex-col gap-4 text-base font-medium
+          sm:flex-row
+        " />
       </main>
     </div>
   );

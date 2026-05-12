@@ -13,6 +13,7 @@
 // Plugins beyond `typescript-eslint/parser` are added in their batch
 // PRs so this scaffold stays installable without pulling the whole
 // ESLint ecosystem in one shot.
+import pluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import { flatConfigs as importXFlatConfigs } from "eslint-plugin-import-x";
 import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 import pluginReact from "eslint-plugin-react";
@@ -389,10 +390,14 @@ const config = [
     // Root-level lint config files. The root package isn't a
     // `@felafel/<pkg>` workspace member, so there's no alias form to
     // import the extracted rule-cluster modules in `eslint/` — the
-    // import has to be relative.
+    // import has to be relative. Also exempt from the file-length
+    // caps: a lint config that enumerates rule clusters for 9 plugins
+    // is legitimately longer than 300 lines, and "split this file"
+    // doesn't make a lint config easier to reason about.
     files: ["eslint.config.mjs", "eslint/**/*.mjs"],
     rules: {
       "no-restricted-imports": "off",
+      "max-lines": "off",
     },
   },
   // ──────────────────────────────────────────────────────────────────
@@ -452,6 +457,27 @@ const config = [
   {
     rules: {
       "import-x/no-unresolved": "off",
+    },
+  },
+  // better-tailwindcss — the motivating plugin for the PAI-141
+  // cutover. `no-unknown-classes` catches Tailwind class typos that
+  // oxlint missed on PAI-138. Tailwind v4 CSS-first setup means the
+  // plugin gets pointed at the v4 entry CSS via `settings.entryPoint`
+  // instead of a tailwind.config.{js,ts} (which doesn't exist in v4).
+  {
+    files: ["**/*.{jsx,tsx}"],
+    plugins: { "better-tailwindcss": pluginBetterTailwindcss },
+    settings: {
+      "better-tailwindcss": {
+        entryPoint: "packages/ui/src/styles/globals.css",
+      },
+    },
+    rules: {
+      ...pluginBetterTailwindcss.configs["recommended-error"].rules,
+      // Stylistic; class-string wrapping is a personal preference
+      // and the rule's default wraps eagerly enough to push some
+      // existing components past the max-lines-per-function cap.
+      "better-tailwindcss/enforce-consistent-line-wrapping": "off",
     },
   },
 ];

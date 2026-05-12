@@ -190,7 +190,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
         <button
           type="button"
           onClick={handlePillClick}
-          className="cursor-pointer focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 rounded-full"
+          className="cursor-pointer rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Connect to Tailscale"
         >
           {wrappedPill}
@@ -251,7 +251,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
                 href={ADMIN_KEYS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline-offset-2 hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
                 Open admin keys page <ExternalLink className="size-3" />
               </a>
