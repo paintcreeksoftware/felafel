@@ -8,24 +8,22 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, shell } from "electron";
-import { join } from "pathe";
+import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
 import {
   Channels,
   type OrchestratorStatus,
   type TailscaleStatus,
 } from "@felafel/shared";
-import iconPath from "../../build/icon.png?asset";
-import {
-  BRAND_NAME,
-  DesktopEnvVars,
-  Platform,
-  WindowSize,
-} from "@felafel/desktop/main/constants";
+import { DesktopEnvVars, Platform } from "@felafel/desktop/main/constants";
+import { applyAppIdentity } from "@felafel/desktop/main/identity";
+import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
+import {
+  buildBrowserWindow,
+  loadRenderer,
+  wireExternalLinkAllowlist,
+} from "@felafel/desktop/main/window";
 import { TailscaleManager } from "@felafel/tailscale";
-
-const moduleDir = import.meta.dirname;
 
 /**
  * Top-level desktop main-process owner. Composes the orchestrator +
@@ -60,61 +58,9 @@ class DesktopApp {
    */
   start(): void {
     applyAppIdentity();
-    this.removeDefaultMenu();
+    applyMainAppMenu();
     this.registerIpcHandlers();
     this.registerAppLifecycle();
-  }
-
-  /**
-   * Strip electron-vite's stock menu bar. On Linux/Windows the menu is
-   * removed entirely; on macOS we keep a minimal application menu so
-   * standard text-input shortcuts (Cmd-C/V, Cmd-Q) keep working — passing
-   * `null` on macOS leaves a degraded built-in that's worse than a small
-   * custom one.
-   */
-  private removeDefaultMenu(): void {
-    if (process.platform === Platform.MACOS) {
-      Menu.setApplicationMenu(this.buildMinimalMacMenu());
-    } else {
-      Menu.setApplicationMenu(null);
-    }
-  }
-
-  /**
-   * Build the minimum-viable macOS application menu: app submenu (about,
-   * hide, quit) + Edit submenu (the Edit roles are what wires Cmd-C/V/X
-   * and Cmd-A into focused inputs on macOS — without them, copy/paste
-   * silently stops working in form fields).
-   *
-   * @returns the assembled `Menu` ready to pass to `setApplicationMenu`
-   */
-  private buildMinimalMacMenu(): Menu {
-    return Menu.buildFromTemplate([
-      {
-        label: app.name,
-        submenu: [
-          { role: "about" },
-          { type: "separator" },
-          { role: "hide" },
-          { role: "hideOthers" },
-          { role: "unhide" },
-          { type: "separator" },
-          { role: "quit" },
-        ],
-      },
-      {
-        label: "Edit",
-        submenu: [
-          { role: "undo" },
-          { role: "redo" },
-          { type: "separator" },
-          { role: "cut" },
-          { role: "copy" },
-          { role: "paste" },
-          { role: "selectAll" },
-        ],
-      },
-    ]);
   }
 
   /**
@@ -272,46 +218,9 @@ class DesktopApp {
    * bundled HTML in packaged builds).
    */
   private async createWindow(): Promise<void> {
-    this.mainWindow = new BrowserWindow({
-      width: WindowSize.WIDTH,
-      height: WindowSize.HEIGHT,
-      // Title set here (not just in the renderer's <title>) so the OS
-      // sees "Felafel" before the renderer loads — matters for the
-      // initial window-decoration label and for screen-reader / a11y
-      // tools that read the window title pre-paint.
-      title: BRAND_NAME,
-      // Linux taskbar/dock icon hint. macOS ignores this (uses the .icns
-      // from electron-builder); Windows ignores it for the taskbar but
-      // uses it for the window's titlebar icon.
-      icon: iconPath,
-      webPreferences: {
-        // The preload script runs with Node access in the renderer's
-        // context. It's the ONLY way the renderer can talk to main without
-        // Electron exposing dangerous APIs to web content. `.mjs` because
-        // electron-vite emits ESM preload bundles.
-        preload: join(moduleDir, "../preload/index.mjs"),
-        sandbox: false,
-        contextIsolation: true,
-      },
-    });
-
-    // Open external links (e.g. the Tailscale install tooltip's
-    // <a target="_blank">) in the user's default browser instead of a new
-    // Electron window. Allow-list https only so a malicious renderer can't
-    // open file:// or javascript: URLs.
-    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith("https://")) {
-        void shell.openExternal(url);
-      }
-      return { action: "deny" };
-    });
-
-    // Dev (rendererUrl set): load Vite's HTTP dev server so HMR works.
-    // Production: load the bundled renderer from disk.
-    const rendererUrl = process.env[DesktopEnvVars.ELECTRON_RENDERER_URL];
-    await (rendererUrl
-      ? this.mainWindow.loadURL(rendererUrl)
-      : this.mainWindow.loadFile(join(moduleDir, "../renderer/index.html")));
+    this.mainWindow = buildBrowserWindow();
+    wireExternalLinkAllowlist(this.mainWindow);
+    await loadRenderer(this.mainWindow);
   }
 
   /**
@@ -374,34 +283,3 @@ export function startDesktopApp(): void {
   new DesktopApp().start();
 }
 
-/**
- * Override Electron's defaults so the running process identifies itself
- * as "Felafel" instead of "Electron".
- *
- * @remarks
- * Without these calls, the running process inherits the Electron
- * binary's identity:
- *
- * - `app.getName()` returns "electron" (from the executable name),
- *   which leaks into the macOS application menu and the userData
- *   directory name.
- * - On Linux X11/XWayland, the window's `WM_CLASS` defaults to
- *   `Electron`, which GNOME-derived shells read for the dock tooltip
- *   and icon-theme lookup. `--class` is a Chromium command-line flag
- *   forwarded by Electron; it must be appended before `app.whenReady`
- *   for Chromium to pick it up. On native Wayland this switch is
- *   ignored — `app_id` is derived from the binary name and Electron
- *   exposes no runtime override, so the dev-mode dock/menubar
- *   identity stays "electron" there. Packaged builds get the correct
- *   `app_id` through electron-builder's generated `.desktop` file.
- *
- * Exported as a free function (rather than a private class method) so
- * the regression test can call it directly without standing up a full
- * `DesktopApp` instance.
- */
-export function applyAppIdentity(): void {
-  app.setName(BRAND_NAME);
-  if (process.platform === Platform.LINUX) {
-    app.commandLine.appendSwitch("class", BRAND_NAME);
-  }
-}

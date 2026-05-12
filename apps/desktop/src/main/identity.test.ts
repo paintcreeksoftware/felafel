@@ -5,7 +5,7 @@
 // surfaces that can only be verified by running a built app.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "electron";
-import { applyAppIdentity } from "@felafel/desktop/main/desktop";
+import { applyAppIdentity } from "@felafel/desktop/main/identity";
 import { BRAND_NAME, Platform } from "@felafel/desktop/main/constants";
 
 vi.mock("electron", () => ({
