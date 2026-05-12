@@ -57,3 +57,10 @@ jobs:
       # Retired when PAI-141's eslint cutover folds this in.
       - name: Lint root-level scripts
         run: pnpm lint:scripts
+
+      # Prints any source file over the 300-line cap (PAI-140). Warn-mode
+      # today — the script exits 0 even when offenders are present, so
+      # this step is informational. Flipped to error-mode in a follow-up
+      # PAI-140 PR once the in-scope offenders are refactored.
+      - name: Source-file LOC cap (warn)
+        run: pnpm lint:loc
