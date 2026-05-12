@@ -83,6 +83,9 @@ importers:
       '@felafel/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      execa:
+        specifier: ^9.6.1
+        version: 9.6.1
       get-port:
         specifier: ^7.2.0
         version: 7.2.0
