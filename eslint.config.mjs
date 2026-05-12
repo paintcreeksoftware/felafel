@@ -109,22 +109,42 @@ const config = [
       "require-atomic-updates": "error",
       "use-isnan": "error",
       "valid-typeof": "error",
-      // TODO(PAI-141 batch 2: core - Suggestions).
-      // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
+      // Core — Suggestions / complexity + LOC caps
+      // https://eslint.org/docs/latest/rules/#suggestions
+      // All off: the project's LOC enforcement lives in `pnpm lint:loc`
+      // (PAI-140), which knows the 300-line cap and tracks the migration
+      // allowlist. Cognitive-complexity metrics aren't part of the
+      // project's review vocabulary, and function/param/depth limits
+      // are reviewer judgment rather than uniform thresholds.
+      "complexity": "off",
+      "max-classes-per-file": "off",
+      "max-depth": "off",
+      "max-lines": "off", // PAI-140 lint:loc owns the LOC cap
+      "max-lines-per-function": "off",
+      "max-nested-callbacks": "off",
+      "max-params": "off",
+      "max-statements": "off",
+      // TODO(PAI-141 batch 4: core - Suggestions / identifier naming).
+      // TODO(PAI-141 batch 5: core - Suggestions / control flow + early-return).
+      // TODO(PAI-141 batch 6: core - Suggestions / forbid syntax (no-*)).
+      // TODO(PAI-141 batch 7: core - Suggestions / push to modern syntax (prefer-* / require-*)).
+      // TODO(PAI-141 batch 8: core - Suggestions / restricted-* (project-specific bans)).
+      // TODO(PAI-141 batch 9: core - Suggestions / sort + ordering).
+      // TODO(PAI-141 batch 10: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
       //   "every rule must be specified" cutover rule).
-      // TODO(PAI-141 batch 4: @typescript-eslint). Plugin install lands
+      // TODO(PAI-141 batch 11: @typescript-eslint). Plugin install lands
       //   with that batch.
-      // TODO(PAI-141 batch 5: react + react-hooks + react-refresh).
-      // TODO(PAI-141 batch 6: jsx-a11y).
-      // TODO(PAI-141 batch 7: import-x).
-      // TODO(PAI-141 batch 8: better-tailwindcss) — motivating plugin;
+      // TODO(PAI-141 batch 12: react + react-hooks + react-refresh).
+      // TODO(PAI-141 batch 13: jsx-a11y).
+      // TODO(PAI-141 batch 14: import-x).
+      // TODO(PAI-141 batch 15: better-tailwindcss) — motivating plugin;
       //   no-unregistered-classes catches the Tailwind class typos
       //   that slipped past oxlint on PAI-138.
-      // TODO(PAI-141 batch 9: jsdoc) — codify the TSDoc-by-default
+      // TODO(PAI-141 batch 16: jsdoc) — codify the TSDoc-by-default
       //   project rule as a tool check.
-      // TODO(PAI-141 batch 10: unicorn).
-      // TODO(PAI-141 batch 11: cutover — drop oxlint, .oxlintrc.json,
+      // TODO(PAI-141 batch 17: unicorn).
+      // TODO(PAI-141 batch 18: cutover — drop oxlint, .oxlintrc.json,
       //   per-package "lint" scripts, root "lint" → alias to lint:eslint.
       //   oxfmt stays.
     },
