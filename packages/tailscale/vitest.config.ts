@@ -4,7 +4,7 @@
 // MissingBinaryTooltip, Pill) need a DOM. Resolved with two test
 // projects so each file gets the right environment without slowing
 // the node-side suite with happy-dom's bootstrap.
-import { resolve } from "pathe";
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
