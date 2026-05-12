@@ -167,6 +167,7 @@ Distrobox shell.
 | `pnpm lint:sh` | Dev Container or Distrobox | shellcheck over `setup.sh` + the husky hook scripts |
 | `pnpm lint:exports` | Dev Container or Distrobox | Verify every `@felafel/<pkg>/<sub-path>` import has a matching entry in the target package's `package.json#exports` (catches the tsconfig-paths-vs-package-exports drift) |
 | `pnpm lint:scripts` | Dev Container or Distrobox | oxlint over root-level `.mjs` files (`commitlint.config.mjs`, `scripts/*.mjs`) that fall outside the per-package lint scope |
+| `pnpm lint:eslint` | Dev Container or Distrobox | eslint over the whole repo via the flat config at [`eslint.config.mjs`](eslint.config.mjs). Scaffold today (no rules enabled); rules arrive per the [PAI-141](https://linear.app/paint-creek-software/issue/PAI-141) batch PRs |
 | `pnpm lint:loc` | Dev Container or Distrobox | Print any source file over the 300-line cap. Warn-mode today; flipped to error-mode in a follow-up PR per [PAI-140](https://linear.app/paint-creek-software/issue/PAI-140) |
 | `pnpm check-types` | Dev Container or Distrobox | `tsc --noEmit` across every workspace package |
 | `pnpm test` | Dev Container or Distrobox | vitest unit suites across every workspace package |

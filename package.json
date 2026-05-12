@@ -21,6 +21,7 @@
     "lint:exports": "node scripts/check-export-coverage.mjs",
     "lint:loc": "scripts/check-file-length.sh",
     "lint:scripts": "oxlint --deny-warnings commitlint.config.mjs scripts/",
+    "lint:eslint": "eslint . --max-warnings=0",
     "knip": "knip",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"
@@ -30,6 +31,7 @@
     "@commitlint/config-conventional": "^20.5.0",
     "@types/node": "^24.12.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^10.3.0",
     "husky": "^9.1.7",
     "knip": "^6.11.0",
     "markdownlint-cli2": "^0.22.1",
@@ -37,6 +39,7 @@
     "oxlint": "^1.62.0",
     "turbo": "^2.9.6",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.3",
     "vitest": "^4.1.5"
   },
   "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8",

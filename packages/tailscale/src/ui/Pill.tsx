@@ -363,7 +363,7 @@ function MissingBinaryTooltip({ children }: { children: React.ReactNode }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs to be focusable */}
+          {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs to be focusable */}
           <span tabIndex={0}>{children}</span>
         </TooltipTrigger>
         <TooltipContent className="max-w-sm space-y-2 text-xs">
