@@ -336,7 +336,7 @@ function renderPill(
                   className="gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
                   data-testid="ts-pill-degraded"
                 >
-                  <WifiHigh className="size-3" /> {status.tailnet} (serve degraded)
+                  <WifiHigh className="size-6" /> {status.tailnet} (serve degraded)
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm space-y-2 text-xs">
@@ -356,14 +356,14 @@ function renderPill(
           variant="default"
           className="gap-1.5 border-green-500/30 bg-green-500/15 text-green-700 dark:text-green-300 hover:bg-green-500/15"
         >
-          <WifiHigh className="size-3" /> Connected to {status.tailnet}
+          <WifiHigh className="size-6" /> Connected to {status.tailnet}
         </Badge>
       );
     }
     case "disconnected": {
       return (
         <Badge variant="outline" className="gap-1.5">
-          <WifiOff className="size-3" />
+          <WifiOff className="size-6" />
           {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
         </Badge>
       );
@@ -378,7 +378,7 @@ function renderPill(
     case "missing-binary": {
       return (
         <Badge variant="outline" className="gap-1.5 opacity-60">
-          <WifiOff className="size-3" /> Tailscale not installed
+          <WifiOff className="size-6" /> Tailscale not installed
         </Badge>
       );
     }
