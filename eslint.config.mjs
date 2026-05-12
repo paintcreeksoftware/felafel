@@ -190,6 +190,9 @@ const config = [
       "no-octal-escape": "error",
       "no-proto": "error",
       "no-with": "error",
+      "no-new": "error",
+      "no-new-wrappers": "error",
+      "no-object-constructor": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing forbid syntax).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
