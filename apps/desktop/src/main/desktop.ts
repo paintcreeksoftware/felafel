@@ -9,26 +9,21 @@
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
 import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
-import { join } from "pathe";
 import {
   Channels,
   type OrchestratorStatus,
   type TailscaleStatus,
 } from "@felafel/shared";
-import iconPath from "../../build/icon.png?asset";
-import {
-  BRAND_NAME,
-  DesktopEnvVars,
-  Platform,
-  WindowSize,
-} from "@felafel/desktop/main/constants";
+import { DesktopEnvVars, Platform } from "@felafel/desktop/main/constants";
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
 import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
-import { loadRenderer, wireExternalLinkAllowlist } from "@felafel/desktop/main/window";
+import {
+  buildBrowserWindow,
+  loadRenderer,
+  wireExternalLinkAllowlist,
+} from "@felafel/desktop/main/window";
 import { TailscaleManager } from "@felafel/tailscale";
-
-const moduleDir = import.meta.dirname;
 
 /**
  * Top-level desktop main-process owner. Composes the orchestrator +
@@ -223,29 +218,7 @@ class DesktopApp {
    * bundled HTML in packaged builds).
    */
   private async createWindow(): Promise<void> {
-    this.mainWindow = new BrowserWindow({
-      width: WindowSize.WIDTH,
-      height: WindowSize.HEIGHT,
-      // Title set here (not just in the renderer's <title>) so the OS
-      // sees "Felafel" before the renderer loads — matters for the
-      // initial window-decoration label and for screen-reader / a11y
-      // tools that read the window title pre-paint.
-      title: BRAND_NAME,
-      // Linux taskbar/dock icon hint. macOS ignores this (uses the .icns
-      // from electron-builder); Windows ignores it for the taskbar but
-      // uses it for the window's titlebar icon.
-      icon: iconPath,
-      webPreferences: {
-        // The preload script runs with Node access in the renderer's
-        // context. It's the ONLY way the renderer can talk to main without
-        // Electron exposing dangerous APIs to web content. `.mjs` because
-        // electron-vite emits ESM preload bundles.
-        preload: join(moduleDir, "../preload/index.mjs"),
-        sandbox: false,
-        contextIsolation: true,
-      },
-    });
-
+    this.mainWindow = buildBrowserWindow();
     wireExternalLinkAllowlist(this.mainWindow);
     await loadRenderer(this.mainWindow);
   }
