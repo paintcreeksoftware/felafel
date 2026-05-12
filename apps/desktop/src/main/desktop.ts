@@ -8,7 +8,7 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
-import { app, BrowserWindow, globalShortcut, ipcMain, shell } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
 import { join } from "pathe";
 import {
   Channels,
@@ -25,7 +25,7 @@ import {
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
 import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
-import { loadRenderer } from "@felafel/desktop/main/window";
+import { loadRenderer, wireExternalLinkAllowlist } from "@felafel/desktop/main/window";
 import { TailscaleManager } from "@felafel/tailscale";
 
 const moduleDir = import.meta.dirname;
@@ -246,17 +246,7 @@ class DesktopApp {
       },
     });
 
-    // Open external links (e.g. the Tailscale install tooltip's
-    // <a target="_blank">) in the user's default browser instead of a new
-    // Electron window. Allow-list https only so a malicious renderer can't
-    // open file:// or javascript: URLs.
-    this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      if (url.startsWith("https://")) {
-        void shell.openExternal(url);
-      }
-      return { action: "deny" };
-    });
-
+    wireExternalLinkAllowlist(this.mainWindow);
     await loadRenderer(this.mainWindow);
   }
 
