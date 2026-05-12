@@ -305,6 +305,25 @@ const config = [
         { object: "Math", property: "pow", message: "Use the `**` operator (also enforced by prefer-exponentiation-operator)." },
         { property: "hasOwnProperty", message: "Use Object.hasOwn(obj, prop) (also enforced by prefer-object-has-own)." },
       ],
+      // Core — Suggestions / sort + ordering
+      // All three off. None of them earns a place at the cost of
+      // forcing alphabetical reorderings over the semantic shapes the
+      // codebase prefers; oxlint cross-reference below.
+      //   - sort-imports: superseded by `import-x/order` (added in
+      //     the upcoming import-x plugin batch), which understands
+      //     side-effect-only, type-only, and bare specifier shapes.
+      //     oxlint has it off too.
+      //   - sort-keys: object keys are routinely grouped semantically
+      //     (`id`, `createdAt`, `updatedAt` first; configuration keys
+      //     by section; discriminated-union tag first). Alphabetical
+      //     would obscure that. oxlint has it off too.
+      //   - sort-vars: redundant with `one-var: never` above —
+      //     multi-declaration `let a, b` is already a hard error, so
+      //     there's nothing left to sort. oxlint marks it "under
+      //     development"; not waiting on it.
+      "sort-imports": "off",
+      "sort-keys": "off",
+      "sort-vars": "off",
       "no-restricted-syntax": ["error",
         // Two project bans, both currently non-regressing (codebase
         // scan found zero matches), so this is a lockdown not a
