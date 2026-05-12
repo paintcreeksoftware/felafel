@@ -16,6 +16,11 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+    # `ready_for_review` lets a draft→ready flip re-fire the workflow.
+    # Without it, GH only re-fires on push events to the branch; the
+    # if-guard (PAI-146) then sees draft=true and skips, leaving CI
+    # marked "skipping" indefinitely after the flip.
+    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
     - cron: '22 5 * * 6'
 
