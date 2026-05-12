@@ -59,14 +59,14 @@ export function parseStatusJson(stdout: string): TailscaleStatus {
       return { kind: "error", message: "Unexpected `tailscale status --json` shape" };
     }
     const obj = parsed as Record<string, unknown>;
-    const backend = obj["BackendState"];
+    const backend = obj.BackendState;
     switch (backend) {
       case "Running": {
-        const suffix = typeof obj["MagicDNSSuffix"] === "string" ? obj["MagicDNSSuffix"] : "";
+        const suffix = typeof obj.MagicDNSSuffix === "string" ? obj.MagicDNSSuffix : "";
         // Strip leading dot and any trailing .ts.net to keep the display name short.
         const tailnet = suffix.replace(/^\./, "").replace(/\.ts\.net$/, "") || "tailnet";
-        const self = (obj["Self"] as Record<string, unknown> | undefined) ?? {};
-        const selfName = typeof self["HostName"] === "string" ? self["HostName"] : "this machine";
+        const self = (obj.Self as Record<string, unknown> | undefined) ?? {};
+        const selfName = typeof self.HostName === "string" ? self.HostName : "this machine";
         return { kind: "connected", tailnet, selfName };
       }
       case "NeedsLogin": {
