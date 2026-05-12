@@ -333,10 +333,10 @@ function renderPill(
               <TooltipTrigger asChild>
                 <Badge
                   variant="default"
-                  className="gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
+                  className="gap-1.5 px-4 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15 [&>svg]:size-6"
                   data-testid="ts-pill-degraded"
                 >
-                  <WifiHigh className="size-6" /> {status.tailnet} (serve degraded)
+                  <WifiHigh /> {status.tailnet} (serve degraded)
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm space-y-2 text-xs">
@@ -354,16 +354,16 @@ function renderPill(
       return (
         <Badge
           variant="default"
-          className="gap-1.5 border-green-500/30 bg-green-500/15 text-green-700 dark:text-green-300 hover:bg-green-500/15"
+          className="gap-1.5 px-4 border-green-500/30 bg-green-500/15 text-green-700 dark:text-green-300 hover:bg-green-500/15 [&>svg]:size-6"
         >
-          <WifiHigh className="size-6" /> Connected to {status.tailnet}
+          <WifiHigh /> Connected to {status.tailnet}
         </Badge>
       );
     }
     case "disconnected": {
       return (
-        <Badge variant="outline" className="gap-1.5">
-          <WifiOff className="size-6" />
+        <Badge variant="outline" className="gap-1.5 px-4 [&>svg]:size-6">
+          <WifiOff />
           {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
         </Badge>
       );
@@ -377,8 +377,8 @@ function renderPill(
     }
     case "missing-binary": {
       return (
-        <Badge variant="outline" className="gap-1.5 opacity-60">
-          <WifiOff className="size-6" /> Tailscale not installed
+        <Badge variant="outline" className="gap-1.5 px-4 opacity-60 [&>svg]:size-6">
+          <WifiOff /> Tailscale not installed
         </Badge>
       );
     }
