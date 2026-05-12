@@ -126,5 +126,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
         </Badge>
       );
     }
+    // Exhaustive over TailscaleStatus discriminated union; TS catches a missed case at compile time.
+    // no default
   }
 }
