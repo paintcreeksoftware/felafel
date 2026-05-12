@@ -9,66 +9,9 @@ import { execa } from "execa";
 import {
   TailscaleManager,
   classifyServeError,
-  parseServeConfigJson,
 } from "@felafel/tailscale";
 
 vi.mock("execa");
-
-describe("parseServeConfigJson", () => {
-  it("returns the local port when a TCPForward exists for the requested tailnet port", () => {
-    const stdout = JSON.stringify({
-      TCP: { "9090": { TCPForward: "127.0.0.1:54321" } },
-    });
-    expect(parseServeConfigJson(stdout, 9090)).toEqual({ targetLocalPort: 54321 });
-  });
-
-  it("returns null when no entry exists for the requested port", () => {
-    const stdout = JSON.stringify({
-      TCP: { "8080": { TCPForward: "127.0.0.1:11111" } },
-    });
-    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
-  });
-
-  it("returns null when the TCP table is absent entirely", () => {
-    expect(parseServeConfigJson(JSON.stringify({ Web: {} }), 9090)).toBeNull();
-  });
-
-  it("returns null when TCPForward is missing on the entry", () => {
-    const stdout = JSON.stringify({
-      TCP: { "9090": { HTTPS: true } },
-    });
-    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
-  });
-
-  it("parses an IPv6 TCPForward target by splitting on the last colon", () => {
-    const stdout = JSON.stringify({
-      TCP: { "9090": { TCPForward: "[::1]:60123" } },
-    });
-    expect(parseServeConfigJson(stdout, 9090)).toEqual({ targetLocalPort: 60123 });
-  });
-
-  it("returns null for malformed JSON", () => {
-    expect(parseServeConfigJson("not json {{{", 9090)).toBeNull();
-  });
-
-  it("returns null when TCPForward is missing a port (no colon)", () => {
-    const stdout = JSON.stringify({
-      TCP: { "9090": { TCPForward: "127.0.0.1" } },
-    });
-    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
-  });
-
-  it("returns null when the parsed port is out of range", () => {
-    const stdout = JSON.stringify({
-      TCP: { "9090": { TCPForward: "127.0.0.1:99999" } },
-    });
-    expect(parseServeConfigJson(stdout, 9090)).toBeNull();
-  });
-
-  it("returns null when stdout is empty", () => {
-    expect(parseServeConfigJson("", 9090)).toBeNull();
-  });
-});
 
 describe("classifyServeError", () => {
   it("returns timeout when timedOut=true regardless of stderr content", () => {
