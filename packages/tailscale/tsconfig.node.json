@@ -1,0 +1,23 @@
+// Node-side TypeScript: TailscaleManager (host `tailscale` CLI wrapper),
+// the worker-side IPv4 resolver, the pure parsers / classifiers, and the
+// shared constants. DOM and JSX deliberately excluded so a stray DOM
+// reference from the node-side surface fails typecheck instead of slipping
+// through.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "paths": { "@felafel/tailscale/*": ["./src/*"] },
+    "types": ["node"]
+  },
+  "include": [
+    "src/constants.ts",
+    "src/index.ts",
+    "src/manager.ts",
+    "src/manager.test.ts",
+    "src/manager.integration.test.ts",
+    "src/worker-ip.ts",
+    "src/worker-ip.test.ts"
+  ]
+}

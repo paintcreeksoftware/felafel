@@ -1,10 +1,11 @@
+// Hub config for @felafel/tailscale — splits TS compilation in two so the
+// node-side TailscaleManager doesn't see DOM/JSX globals and the renderer-
+// side Pill doesn't see node globals. Mirrors the same split apps/desktop
+// uses for main/renderer.
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "composite": true,
-    "rootDir": "src",
-    "paths": { "@felafel/tailscale/*": ["./src/*"] },
-    "types": ["node"]
-  },
-  "include": ["src/**/*"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.ui.json" }
+  ]
 }

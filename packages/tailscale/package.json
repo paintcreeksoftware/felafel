@@ -10,6 +10,8 @@
     ".": "./src/index.ts",
     "./constants": "./src/constants.ts",
     "./manager": "./src/manager.ts",
+    "./ui": "./src/ui/index.ts",
+    "./ui/Pill": "./src/ui/Pill.tsx",
     "./worker-ip": "./src/worker-ip.ts"
   },
   "scripts": {
@@ -20,14 +22,18 @@
   },
   "dependencies": {
     "@felafel/shared": "workspace:*",
+    "@felafel/ui": "workspace:*",
     "execa": "^9.6.1",
+    "lucide-react": "^1.12.0",
     "p-retry": "^8.0.0",
     "which": "^6.0.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
     "@types/which": "^3.0.4",
+    "react": "19.2.5",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"
   }

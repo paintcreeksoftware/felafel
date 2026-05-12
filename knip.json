@@ -14,6 +14,7 @@
       ],
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
       "ignoreDependencies": [
+        "@felafel/ui",
         "tailwindcss"
       ]
     },
@@ -32,6 +33,12 @@
     "packages/db": {
       "entry": ["tests/**/*.{test,spec}.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
+    },
+    "packages/tailscale": {
+      "entry": [
+        "src/ui/window.d.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "packages/ui": {
       "ignore": ["**"]
