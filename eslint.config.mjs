@@ -246,6 +246,12 @@ const config = [
       "require-await": "off",
       "require-unicode-regexp": "off",
       "require-yield": "error",
+      "arrow-body-style": ["error", "as-needed"],
+      "object-shorthand": ["error", "always"],
+      "operator-assignment": ["error", "always"],
+      "logical-assignment-operators": ["error", "always"],
+      "radix": ["error", "always"],
+      "symbol-description": "error",
       // TODO(PAI-141 batch 2: core - Suggestions; continuing modern-syntax push).
       // TODO(PAI-141 batch 3: core - Layout & Formatting; expected all off
       //   since oxfmt owns formatting, but enumerated explicitly per the
