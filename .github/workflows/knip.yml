@@ -2,10 +2,10 @@ name: knip
 
 # Dead-code + unused-export detection. Catches exports/files/dependencies
 # that no consumer references — TS strict mode and oxlint don't surface
-# this. Runs as **advisory** (--no-exit-code in the script) so PRs aren't
-# blocked while we triage the initial backlog (PAI-117). Promote to
-# merge-blocking by dropping --no-exit-code from the script after the
-# baseline is clean.
+# this. **Merge-blocking** as of PAI-137 — the baseline was cleared in
+# PAI-136. Any new finding fails the job. To intentionally allow a new
+# unused export / dep, update knip.json's ignore lists with a comment
+# explaining why rather than re-adding --no-exit-code.
 
 on:
   pull_request:
