@@ -12,6 +12,7 @@
     "./zod": "./src/zod.ts"
   },
   "scripts": {
+    "lint": "eslint . --max-warnings=0",
     "format": "oxfmt",
     "check-types": "tsc --noEmit",
     "test": "vitest run"

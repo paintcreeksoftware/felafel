@@ -5,6 +5,7 @@
 // targeted overrides where the recommended preset is wrong for the
 // project (one canonical way to write code; if a rule fires we fix
 // the code or remove the rule, no per-site disable shortcuts).
+import { join } from "node:path";
 import pluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import { flatConfigs as importXFlatConfigs } from "eslint-plugin-import-x";
 import pluginJsdoc from "eslint-plugin-jsdoc";
@@ -458,7 +459,11 @@ const config = [
     plugins: { "better-tailwindcss": pluginBetterTailwindcss },
     settings: {
       "better-tailwindcss": {
-        entryPoint: "packages/ui/src/styles/globals.css",
+        // Absolute path so per-package ESLint runs (turbo executes
+        // `eslint .` from each package's cwd) still resolve the
+        // Tailwind v4 CSS entry. Relative paths would resolve from
+        // the cwd, not from this file.
+        entryPoint: join(import.meta.dirname, "packages/ui/src/styles/globals.css"),
       },
     },
     rules: {

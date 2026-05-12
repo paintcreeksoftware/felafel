@@ -30,6 +30,7 @@
       "cache": false,
       "persistent": true
     },
+    "lint": {},
     "format": {
       "cache": false
     },
