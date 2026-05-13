@@ -74,13 +74,11 @@ Host requirements (outside the container):
   shells out to it; no JS/TS SDK exists)
 - **Linux** or **macOS** (Windows currently untested)
 
-Provisioned inside the container (you don't install these manually):
-
-- **Node** ≥ 24 (the `node:sqlite` driver is stable from 24)
-- **pnpm** ≥ 10 (pinned by `packageManager` in `package.json`)
-- **GitHub CLI**, **Docker-in-Docker**, **Python 3.12**, **Claude
-  Code**, **shellcheck** — all wired via Dev Container features +
-  `setup.sh`.
+Everything provisioned inside the container — the base image, the
+`features` block, and what `postCreateCommand: bash setup.sh` adds —
+is defined in [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
+Read that file (and `setup.sh`) for the authoritative list rather
+than trusting an enumeration here that will drift.
 
 ## Installation
 
