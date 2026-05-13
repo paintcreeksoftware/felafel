@@ -59,27 +59,45 @@ vitest 4 (unit) + Playwright (E2E, xvfb on Linux CI)
 
 ## Prerequisites
 
-- **Node** ≥ 24 (the `node:sqlite` driver is stable from 24; `@types/node` is pinned to the 24 line)
-- **pnpm** ≥ 10 (workspace + scripts; `packageManager` in `package.json` pins the exact version)
-- **Tailscale CLI** on the host (the `@felafel/tailscale` package shells out to it; no JS/TS SDK exists)
+The expected developer environment is the **Dev Container** defined
+in `.devcontainer/devcontainer.json`. Open the cloned repo in VS Code
+with the **Dev Containers** extension and the container handles the
+host-side environment automatically — including `setup.sh` via its
+`postCreateCommand` (which raises inotify limits and installs
+shellcheck for the husky hook).
+
+Host requirements (outside the container):
+
+- **VS Code** with the **Dev Containers** extension
+- **Docker** (the Dev Container runs in it)
+- **Tailscale CLI** on the host (the `@felafel/tailscale` package
+  shells out to it; no JS/TS SDK exists)
 - **Linux** or **macOS** (Windows currently untested)
-- **Docker** (optional, only for building the orchestrator container image)
-- **shellcheck** (installed by `setup.sh`, used by the husky pre-commit hook)
+
+Provisioned inside the container (you don't install these manually):
+
+- **Node** ≥ 24 (the `node:sqlite` driver is stable from 24)
+- **pnpm** ≥ 10 (pinned by `packageManager` in `package.json`)
+- **GitHub CLI**, **Docker-in-Docker**, **Python 3.12**, **Claude
+  Code**, **shellcheck** — all wired via Dev Container features +
+  `setup.sh`.
 
 ## Installation
 
 ```bash
 git clone git@github.com:paintcreeksoftware/felafel.git
 cd felafel
-./setup.sh                                # one-time: inotify limits + shellcheck
+# Open in VS Code → "Reopen in Container". The Dev Container's
+# postCreateCommand runs setup.sh. Then, inside the container shell:
 pnpm install
-pnpm --filter @felafel/db db:migrate      # initialize SQLite schema
-pnpm --filter @felafel/desktop dev        # boot the Electron app (rebuilds the orchestrator too)
+pnpm --filter @felafel/desktop dev    # boots Electron + orchestrator
 ```
 
 The `dev` script in `apps/desktop` rebuilds `@felafel/orchestrator`
 before launching `electron-vite dev`, so a single command boots the
-full local stack.
+full local stack. Database migrations are applied automatically on
+orchestrator startup (see [`packages/db/src/client.ts`](packages/db/src/client.ts)),
+so there is no separate `db:migrate` step on fresh clone.
 
 ## Roadmap
 
