@@ -64,8 +64,16 @@ jobs:
       # + PR loop idempotently — if a previous run already opened a PR
       # on the same branch, this updates it with the new diff instead of
       # creating a duplicate.
+      #
+      # `ALLOW_BIG_COMMIT=1` bypasses the husky pre-commit 100-line cap
+      # for this step only. The cap exists to enforce one-logical-change
+      # commits for human authorship; a vendor sync (snapshot of upstream
+      # shadcn content across ~40 primitives) is the irreducible-commit
+      # case the cap's bypass was designed for. See `.husky/pre-commit`.
       - name: Open PR on drift
         if: steps.changes.outputs.changed == 'true'
+        env:
+          ALLOW_BIG_COMMIT: "1"
         uses: peter-evans/create-pull-request@v7
         with:
           branch: chore/shadcn-registry-drift
