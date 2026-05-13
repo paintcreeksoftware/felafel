@@ -29,20 +29,30 @@ const COMPONENTS_JSON = join(REPO_ROOT, "packages/ui/components.json");
  */
 function loadShadcnConfig() {
   const cfg = JSON.parse(readFileSync(COMPONENTS_JSON, "utf8"));
+  const style = cfg.style ?? "default";
   return {
-    style: cfg.style ?? "default",
-    // shadcn upstream uses `@/<path>` imports; the local files have these
-    // rewritten to `@felafel/ui/<path>` per components.json#aliases. Build
-    // the reverse mapping so we can normalize upstream content before
-    // diffing.
+    style,
+    // shadcn upstream uses two import-path conventions across the registry:
+    //   - `@/<subdir>/...`              (e.g. `@/components/ui/button`)
+    //   - `@/registry/<style>/<subdir>/...` (e.g. `@/registry/new-york/ui/button`)
+    // The shadcn CLI rewrites both on `add` per components.json#aliases. We
+    // mirror that here so a local-vs-upstream diff shows real semantic
+    // differences (not alias-substitution noise).
+    //
+    // Order matters within each prefix family: longer subpaths first, so
+    // `@/components/ui/...` doesn't get partially-rewritten by the
+    // `@/components/...` rule.
     aliasSubstitutions: [
-      // Order matters: longer prefixes first so `@/components/ui/...`
-      // doesn't get caught by the `@/components/...` rule first.
       { from: "@/components/ui", to: cfg.aliases.ui },
       { from: "@/components", to: cfg.aliases.components },
       { from: "@/lib/utils", to: cfg.aliases.utils },
       { from: "@/lib", to: cfg.aliases.lib },
       { from: "@/hooks", to: cfg.aliases.hooks },
+      { from: `@/registry/${style}/components`, to: cfg.aliases.components },
+      { from: `@/registry/${style}/lib/utils`, to: cfg.aliases.utils },
+      { from: `@/registry/${style}/lib`, to: cfg.aliases.lib },
+      { from: `@/registry/${style}/hooks`, to: cfg.aliases.hooks },
+      { from: `@/registry/${style}/ui`, to: cfg.aliases.ui },
     ],
   };
 }
