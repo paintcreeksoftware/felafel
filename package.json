@@ -22,6 +22,7 @@
     "lint:exports": "node scripts/check-export-coverage.mjs",
     "knip": "knip",
     "cost:report": "bash scripts/claude-cost.sh",
+    "cost:since": "bash scripts/cost-since.sh",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"
   },
