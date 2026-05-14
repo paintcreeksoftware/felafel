@@ -75,8 +75,31 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   binary / env / dep at the read site; never silent-null. Use
   `AbortSignal.timeout(ms)` not manual `setTimeout` + `clearTimeout`.
 - **Lint determinism.** If a rule fires, the code is fixed OR the
-  rule is removed (with cross-referenced reasoning). No "leave both
-  fine + disable comment" outcomes.
+  rule is removed. When turning a rule off, cite cross-referenced
+  evidence (`.oxlintrc.json` + plugin equivalents + codebase grep)
+  in the commit body — not hand-waved reasoning. No "leave both
+  fine, add a disable comment" outcomes.
+- **Disable directives are a last resort.** When a linter fires,
+  default to the canonical fix (promise-cache, lift-to-const, etc.)
+  before reaching for `eslint-disable-next-line` /
+  `oxlint-disable-next-line`. Flag any disable comment in the diff
+  that has not been justified in the commit body.
+- **Add lint rules, not one-off fixes.** When a style issue could be
+  a lint rule, add the rule in the same PR rather than fixing the
+  one instance. Trust enabled rules even when a specific case argues
+  against them — the determinism above depends on it.
+- **Revisit `export` keywords after stacked extraction.** A helper
+  may have lost its last cross-file consumer in a later commit on
+  the same stack. Run `pnpm knip` mentally on the final diff and
+  flag still-exported symbols that are now internal-only.
+- **Dedup check during fast writing.** When several files land in
+  one session-sprint, scan for duplicate logic across them before
+  marking ready. Consolidate at the seam, do not ship parallel
+  near-copies.
+- **Use `pnpm` scripts, not ad-hoc CLI.** Prefer
+  `pnpm --filter <pkg> <script>`; if no script exists, add one in
+  the same change. Flag `pnpm dlx`, `npx`, or `node_modules/.bin/…`
+  in the diff.
 
 ### Libraries & service design
 
@@ -98,6 +121,14 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   `127.0.0.1` by default. Tailnet exposure is per-service opt-in,
   gated on Tailscale connectivity (orchestrator uses
   `tailscale serve`; worker binds the Tailnet IP).
+
+### Checks & parity
+
+- **Pre-commit / CI / docs / memory in sync.** When a PR adds or
+  removes a check, all four surfaces move together: the
+  `.husky/pre-commit` hook, the matching CI workflow under
+  `.github/workflows/`, the README/docs, and the memory file if the
+  check encodes a policy. Flag any one-of-four landing in isolation.
 
 ### Testing & state
 
