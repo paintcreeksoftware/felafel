@@ -29,3 +29,5 @@ export {
   type CreateLoggerOptions,
   type Logger,
 } from "@felafel/logs/logger";
+
+export { createTelemetryResource } from "@felafel/logs/resource";
