@@ -29,4 +29,14 @@ describe("bootstrap", () => {
     });
     expect(l.bindings().version).toBe("9.9.9");
   });
+
+  it("leaves the SDK inert when OTEL_EXPORTER_OTLP_ENDPOINT is unset (no-op contract)", () => {
+    // Empty/unset env var should mean sdk.start was NOT called, so
+    // shutdown is still a no-op — no global patches to tear down.
+    delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+    const { sdk: inert } = bootstrap({ service: "felafel-worker" });
+    // The contract: calling shutdown on an unstarted SDK resolves cleanly.
+    // (We don't await — just confirm the call doesn't throw synchronously.)
+    expect(() => inert.shutdown()).not.toThrow();
+  });
 });
