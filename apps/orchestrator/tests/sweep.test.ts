@@ -15,12 +15,15 @@ import {
   upsertWorker,
   getRun,
 } from "@felafel/db";
+import { createLogger } from "@felafel/logs";
 import {
   BACKOFF_MAX_DELAY_MS,
   BACKOFF_THRESHOLD_FAILURES,
   startSweep,
   sweepDelayFor,
 } from "@felafel/orchestrator/sweep";
+
+const logger = createLogger({ service: "felafel-orchestrator" });
 
 /**
  * Promise that resolves after `ms` milliseconds — minimal sleep
@@ -58,6 +61,7 @@ describe("startSweep", () => {
 
     const stop = startSweep({
       db: handle.db,
+      logger,
       intervalMs: 50,
       // 1ms threshold so the just-registered worker ages out immediately
       workerStaleAfterMs: 1,
@@ -104,6 +108,7 @@ describe("startSweep", () => {
 
     const stop = startSweep({
       db: handle.db,
+      logger,
       intervalMs: 50,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 1,
@@ -136,6 +141,7 @@ describe("startSweep", () => {
 
     const stop = startSweep({
       db: handle.db,
+      logger,
       intervalMs: 50,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 1,
@@ -161,6 +167,7 @@ describe("startSweep", () => {
 
     const stop = startSweep({
       db: handle.db,
+      logger,
       intervalMs: 50,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 60_000,
@@ -240,7 +247,9 @@ describe("startSweep failure tracking", () => {
       hostname: "test",
       controlPlaneUrl: "http://127.0.0.1:9091",
     });
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Spy directly on the injected logger — sweep.ts emits
+    // logger.error({ consecutiveFailures, err }, "sweep.tick.failed").
+    const errorSpy = vi.spyOn(logger, "error");
     // Close the handle so every subsequent DB call throws — gives the
     // sweep loop a deterministic stream of failures to count without
     // mocking @felafel/db itself.
@@ -248,6 +257,7 @@ describe("startSweep failure tracking", () => {
 
     const stop = startSweep({
       db: handle.db,
+      logger,
       intervalMs: 20,
       workerStaleAfterMs: 60_000,
       runTimeoutMs: 60_000,
@@ -257,9 +267,17 @@ describe("startSweep failure tracking", () => {
       // ~4 ticks at 20ms before backoff doubles the gap; 250ms gives
       // enough headroom to see the count climb past 1 even on slow CI.
       await sleep(250);
-      const messages = errorSpy.mock.calls.map((call) => String(call[0]));
-      expect(messages.some((m) => /consecutive failures: 1\b/u.test(m))).toBe(true);
-      expect(messages.some((m) => /consecutive failures: [2-9]\b/u.test(m))).toBe(true);
+      const counts = errorSpy.mock.calls
+        .map((call) => call[0])
+        .filter(
+          (payload): payload is { consecutiveFailures: number } =>
+            typeof payload === "object" &&
+            payload !== null &&
+            "consecutiveFailures" in payload,
+        )
+        .map((payload) => payload.consecutiveFailures);
+      expect(counts).toContain(1);
+      expect(counts.some((n) => n >= 2)).toBe(true);
     } finally {
       stop();
       errorSpy.mockRestore();

@@ -153,6 +153,9 @@ importers:
       '@felafel/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@felafel/logs':
+        specifier: workspace:*
+        version: link:../../packages/logs
       '@felafel/shared':
         specifier: workspace:*
         version: link:../../packages/shared

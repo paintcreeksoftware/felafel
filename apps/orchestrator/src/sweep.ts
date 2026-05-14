@@ -1,4 +1,5 @@
 import { type Db, markRunsTimedOutSince, markWorkersStaleSince } from "@felafel/db";
+import type { Logger } from "@felafel/logs";
 
 /** Default sweep tick — runs every 30s in production. */
 const DEFAULT_SWEEP_INTERVAL_MS = 30_000;
@@ -50,6 +51,13 @@ export function sweepDelayFor(opts: {
  */
 interface StartSweepOptions {
   db: Db;
+  /**
+   * Service-scoped logger from `createHonoApp` (PAI-171). Required —
+   * the sweep loop's tick + error lines need to land in the same
+   * unified stream as request lines, so the operator can pivot
+   * between request flow and background work.
+   */
+  logger: Logger;
   /** Tick, in milliseconds. */
   intervalMs?: number;
   /** Worker is considered stale if `last_seen_at` is older than this. */
@@ -98,16 +106,17 @@ export function startSweep(opts: StartSweepOptions): () => void {
         "dispatch timeout",
       );
       if (workersMarked > 0 || runsMarked > 0) {
-        console.log(
-          `sweep: marked ${workersMarked.toString()} workers stale, ${runsMarked.toString()} runs failed`,
+        opts.logger.info(
+          { workersMarked, runsMarked },
+          "sweep.tick.complete",
         );
       }
       consecutiveFailures = 0;
     } catch (error) {
       consecutiveFailures += 1;
-      console.error(
-        `sweep error (consecutive failures: ${consecutiveFailures.toString()}):`,
-        error,
+      opts.logger.error(
+        { consecutiveFailures, err: error },
+        "sweep.tick.failed",
       );
     }
     scheduleNext();
