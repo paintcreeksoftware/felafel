@@ -20,6 +20,7 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\" \"#**/out\" \"#**/release\" \"#**/dist\" \"#**/test-results\" \"#**/playwright-report\"",
     "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg scripts/*.sh",
     "lint:exports": "node scripts/check-export-coverage.mjs",
+    "lint:dead-fields": "node scripts/check-dead-interface-fields.mjs packages/logs packages/backend",
     "knip": "knip",
     "cost:report": "bash scripts/cost.sh",
     "cost:since": "bash scripts/cost.sh --since",

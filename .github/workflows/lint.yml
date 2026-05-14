@@ -62,3 +62,11 @@ jobs:
       # tsconfig-paths-vs-package-exports drift that broke PAI-139 #57.
       - name: Export-coverage check
         run: pnpm lint:exports
+
+      # Catches exported-interface (and type-alias-with-object-literal)
+      # properties that are never read anywhere in the package's TS
+      # sources. Knip and tsc both stay silent on dead interface fields;
+      # this script uses the TS compiler API to count PropertyAccess
+      # reads per property symbol. v1 scope: packages/{logs,backend}.
+      - name: Dead-interface-field check
+        run: pnpm lint:dead-fields
