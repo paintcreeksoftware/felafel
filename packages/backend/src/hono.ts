@@ -29,7 +29,10 @@ export function createHonoApp(opts: CreateHonoAppOptions): {
   app: OpenAPIHono;
   sdk: NodeSDK;
 } {
-  const { logger, sdk } = bootstrap({ service: opts.service });
+  const { logger, sdk } = bootstrap({
+    service: opts.service,
+    version: opts.version,
+  });
   const app = new OpenAPIHono();
   app.use("*", cors());
   app.use("*", requestLoggerMiddleware(logger));
