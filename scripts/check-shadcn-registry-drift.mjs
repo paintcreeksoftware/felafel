@@ -80,17 +80,25 @@ async function fetchUpstreamComponent(style, name) {
 /**
  * Rewrite upstream `@/...` imports to the project's `@felafel/ui/...`
  * aliases so a local-vs-upstream diff shows real semantic differences
- * (not the alias-substitution noise the shadcn CLI does at `add` time).
+ * (not the alias-substitution noise the shadcn CLI does at `add` time),
+ * and prepend the ts-nocheck pragma so vendored content isn't gated by
+ * this project's strict tsc settings. We trust the registry; strict tsc
+ * on upstream surfaces noise like Recharts tooltip-prop strictness and
+ * implicit-any params that are runtime-correct.
+ * TODO(PAI-148): once Storybook lands as the runtime-smoke surface for
+ * these primitives, revisit whether we can drop the pragma and let
+ * strict tsc back in — Storybook would catch real breakage even if tsc
+ * doesn't.
  * @param upstream - raw upstream content
  * @param substitutions - mapping table from loadShadcnConfig
- * @returns upstream content with aliases rewritten
+ * @returns upstream content with aliases rewritten + ts-nocheck header
  */
 function normalizeUpstream(upstream, substitutions) {
   let out = upstream;
   for (const { from, to } of substitutions) {
     out = out.replaceAll(from, to);
   }
-  return out;
+  return `// @ts-nocheck\n${out}`;
 }
 
 /**
