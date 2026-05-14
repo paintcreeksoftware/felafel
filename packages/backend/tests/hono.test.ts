@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { createHonoApp } from "@felafel/backend";
 
-const { app, sdk } = createHonoApp({ service: "felafel-orchestrator" });
+const { app, sdk, logger } = createHonoApp({ service: "felafel-orchestrator" });
 
 afterAll(async () => {
   // Best-effort shutdown; auto-instrumentations can take a while.
@@ -24,5 +24,9 @@ describe("createHonoApp", () => {
     expect(res.status).toBe(200);
     // CORS middleware sets Access-Control-Allow-Origin (default: '*').
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  });
+
+  it("returns the parent logger pre-bound with the requested service", () => {
+    expect(logger.bindings().service).toBe("felafel-orchestrator");
   });
 });
