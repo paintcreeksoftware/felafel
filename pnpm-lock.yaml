@@ -150,6 +150,9 @@ importers:
 
   apps/orchestrator:
     dependencies:
+      '@felafel/backend':
+        specifier: workspace:*
+        version: link:../../packages/backend
       '@felafel/db':
         specifier: workspace:*
         version: link:../../packages/db

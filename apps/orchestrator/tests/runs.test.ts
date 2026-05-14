@@ -46,7 +46,7 @@ describe("/runs", () => {
   });
 
   it("POST /runs returns 503 when no workers are active", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -57,7 +57,7 @@ describe("/runs", () => {
 
   it("POST /runs dispatches to the active worker and returns the dispatched run", async () => {
     upsertWorker(handle.db, sampleReg(fakeWorker.url));
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -77,7 +77,7 @@ describe("/runs", () => {
     fakeWorker.setResponder(() =>
       Response.json({ error: "boom" }, { status: 500 }),
     );
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -91,7 +91,7 @@ describe("/runs", () => {
 
   it("GET /runs returns runs newest-first", async () => {
     upsertWorker(handle.db, sampleReg(fakeWorker.url));
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const post = async (n: number): Promise<Run> => {
       const res = await app.request("/runs", {
         method: "POST",
@@ -114,7 +114,7 @@ describe("/runs", () => {
 
   it("GET /runs/:id returns the run, or 404 when missing", async () => {
     upsertWorker(handle.db, sampleReg(fakeWorker.url));
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const submitRes = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -133,7 +133,7 @@ describe("/runs", () => {
 
   it("POST /runs/:id/complete with ok:true flips status to complete", async () => {
     upsertWorker(handle.db, sampleReg(fakeWorker.url));
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const submitRes = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -154,7 +154,7 @@ describe("/runs", () => {
 
   it("POST /runs/:id/complete with ok:false flips status to failed", async () => {
     upsertWorker(handle.db, sampleReg(fakeWorker.url));
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const submitRes = await app.request("/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -174,7 +174,7 @@ describe("/runs", () => {
   });
 
   it("POST /runs/:id/complete returns 404 for unknown run", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request(`/runs/${randomUUID()}/complete`, {
       method: "POST",
       headers: { "content-type": "application/json" },

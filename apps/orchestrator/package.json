@@ -23,6 +23,7 @@
     "package": "cd ../.. && docker build -f apps/orchestrator/Dockerfile -t felafel-orchestrator ."
   },
   "dependencies": {
+    "@felafel/backend": "workspace:*",
     "@felafel/db": "workspace:*",
     "@felafel/logs": "workspace:*",
     "@felafel/shared": "workspace:*",
