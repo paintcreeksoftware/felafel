@@ -31,3 +31,5 @@ export {
 } from "@felafel/logs/logger";
 
 export { createTelemetryResource } from "@felafel/logs/resource";
+
+export { withTracedOperation } from "@felafel/logs/tracing";

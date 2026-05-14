@@ -9,7 +9,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./logger": "./src/logger.ts",
-    "./resource": "./src/resource.ts"
+    "./resource": "./src/resource.ts",
+    "./tracing": "./src/tracing.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings=0",
