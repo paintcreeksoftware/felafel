@@ -23,6 +23,7 @@
     "knip": "knip",
     "cost:report": "bash scripts/cost.sh",
     "cost:since": "bash scripts/cost.sh --since",
+    "post-merge:sync": "bash scripts/post-merge-memory-sync.sh",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"
   },
