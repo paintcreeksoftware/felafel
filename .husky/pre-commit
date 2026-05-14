@@ -21,14 +21,10 @@ fi
 # Soft target is 50 lines; hard cap is 100. Lockfiles are excluded via
 # pathspec so rename detection still works. `-M70%` lets a file rename
 # count as the actual import-line diff instead of the full add+delete.
-# Bypass via ALLOW_BIG_COMMIT=1 for the rare irreducible commit (large
-# rename without enough overlap for -M, generated file). The bypass is
-# rationed by BIG_COMMIT_BUDGET per PR; default 2.
+# There is no bypass — split the commit along the smallest behavioral
+# delta. ALLOW_BIG_COMMIT used to provide a 2-per-PR escape hatch; it
+# was removed because it was being reached for too readily.
 cap=100
-budget="${BIG_COMMIT_BUDGET:-2}"
-# Space-separated list of git pathspecs that exclude lockfiles from the
-# cap. Word-splitting is intentional so each pathspec lands as a separate
-# argv element to `git diff` / `git show`.
 exclude_lockfiles=":(exclude)pnpm-lock.yaml :(exclude)package-lock.json :(exclude)yarn.lock :(exclude).devcontainer/devcontainer-lock.json"
 # shellcheck disable=SC2086 # word-splitting is intentional — one pathspec per arg
 stat=$(git diff --cached --shortstat -M70% -- $exclude_lockfiles)
@@ -38,42 +34,10 @@ inserts=${inserts:-0}
 deletes=${deletes:-0}
 total=$((inserts + deletes))
 if [ "$total" -gt "$cap" ]; then
-  if [ "${ALLOW_BIG_COMMIT:-0}" != "1" ]; then
-    echo "ERROR: commit is ${total} lines (insertions+deletions, lockfiles excluded, renames detected). Hard cap is ${cap}."
-    echo "Soft target is 50 lines; split along semantic seams first."
-    echo ""
-    echo "If this is genuinely irreducible (large rename without 70% overlap,"
-    echo "generated file), bypass with:"
-    echo "  ALLOW_BIG_COMMIT=1 git commit ..."
-    echo "Budget is ${budget} over-cap commits per PR; raise with BIG_COMMIT_BUDGET=N."
-    exit 1
-  fi
-  # Bypass requested. Count over-cap commits already on this branch and
-  # enforce the per-PR budget so the bypass stays exceptional.
-  mergebase=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || echo "")
-  big_count=0
-  if [ -n "$mergebase" ] && [ "$mergebase" != "$(git rev-parse HEAD 2>/dev/null)" ]; then
-    shas=$(git log "$mergebase"..HEAD --pretty=%H 2>/dev/null)
-    for sha in $shas; do
-      # shellcheck disable=SC2086 # word-splitting is intentional — one pathspec per arg
-      sstat=$(git show --shortstat --format= -M70% "$sha" -- $exclude_lockfiles)
-      sins=$(echo "$sstat" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo 0)
-      sdel=$(echo "$sstat" | grep -oE '[0-9]+ deletion'  | grep -oE '[0-9]+' || echo 0)
-      sins=${sins:-0}
-      sdel=${sdel:-0}
-      if [ $((sins + sdel)) -gt "$cap" ]; then
-        big_count=$((big_count + 1))
-      fi
-    done
-  fi
-  if [ "$big_count" -ge "$budget" ]; then
-    echo "ERROR: branch already has ${big_count} over-cap commits; budget is ${budget} per PR."
-    echo "Split this commit — the bypass slots are exhausted."
-    echo "(Raise the budget with BIG_COMMIT_BUDGET=N if you really mean it.)"
-    exit 1
-  fi
-  remaining=$((budget - big_count - 1))
-  echo "[hook] big-commit slot used: $((big_count + 1))/${budget} on this branch (${remaining} remaining)"
+  echo "ERROR: commit is ${total} lines (insertions+deletions, lockfiles excluded, renames detected). Hard cap is ${cap}."
+  echo "Soft target is 50 lines; split along the smallest behavioral delta."
+  echo "There is no bypass — split the commit."
+  exit 1
 fi
 
 pnpm lint
