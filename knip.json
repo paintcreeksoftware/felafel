@@ -26,6 +26,10 @@
       "entry": ["tests/**/*.{test,spec}.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
     },
+    "packages/backend": {
+      "entry": ["tests/**/*.{test,spec}.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"]
+    },
     "packages/contracts": {
       "entry": ["tests/**/*.{test,spec}.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
