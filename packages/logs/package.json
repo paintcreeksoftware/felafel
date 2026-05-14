@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./bootstrap": "./src/bootstrap.ts",
+    "./browser": "./src/browser.ts",
     "./logger": "./src/logger.ts",
     "./resource": "./src/resource.ts",
     "./tracing": "./src/tracing.ts"
