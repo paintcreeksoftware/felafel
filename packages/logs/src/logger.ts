@@ -1,5 +1,6 @@
 import { hostname } from "node:os";
 
+import { context, trace } from "@opentelemetry/api";
 import pino, { type DestinationStream, type Logger } from "pino";
 
 import type { Service } from "@felafel/logs";
@@ -44,6 +45,14 @@ export function createLogger(
         node: opts.node ?? hostname(),
         pid: process.pid,
         version: opts.version ?? process.env.npm_package_version,
+      },
+      mixin() {
+        const span = trace.getSpan(context.active());
+        if (!span) {
+          return {};
+        }
+        const ctx = span.spanContext();
+        return { traceId: ctx.traceId, spanId: ctx.spanId };
       },
       ...(usePrettyTransport && {
         transport: {

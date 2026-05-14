@@ -1,8 +1,25 @@
 import { hostname } from "node:os";
 
-import { describe, expect, it } from "vitest";
+import {
+  ROOT_CONTEXT,
+  TraceFlags,
+  context,
+  trace,
+} from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createLogger } from "@felafel/logs";
+
+const contextManager = new AsyncLocalStorageContextManager();
+beforeAll(() => {
+  contextManager.enable();
+  context.setGlobalContextManager(contextManager);
+});
+afterAll(() => {
+  context.disable();
+  contextManager.disable();
+});
 
 interface LogLine {
   service: string;
@@ -11,6 +28,8 @@ interface LogLine {
   version?: string;
   time: number;
   level: number;
+  traceId?: string;
+  spanId?: string;
   msg: string;
   [key: string]: unknown;
 }
@@ -94,6 +113,26 @@ describe("createLogger", () => {
     logger.info("hi");
 
     expect(sink.lines[0]!.version).toBe("1.2.3");
+  });
+
+  it("injects traceId + spanId into log lines emitted inside an active OTel span context (C6)", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+    const wrapped = trace.wrapSpanContext({
+      traceId: "0af7651916cd43dd8448eb211c80319c",
+      spanId: "b7ad6b7169203331",
+      traceFlags: TraceFlags.SAMPLED,
+    });
+
+    context.with(trace.setSpan(ROOT_CONTEXT, wrapped), () => {
+      logger.info("inside-span");
+    });
+    logger.info("outside-span");
+
+    expect(sink.lines[0]!.traceId).toBe("0af7651916cd43dd8448eb211c80319c");
+    expect(sink.lines[0]!.spanId).toBe("b7ad6b7169203331");
+    expect(sink.lines[1]!.traceId).toBeUndefined();
+    expect(sink.lines[1]!.spanId).toBeUndefined();
   });
 
   it("respects the LOG_LEVEL env var", () => {
