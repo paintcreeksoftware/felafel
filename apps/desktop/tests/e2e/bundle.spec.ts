@@ -93,14 +93,27 @@ test("desktop preload bundle inlines all package deps", () => {
   expect(externalizedSpecifiers(bundlePath)).toEqual([]);
 });
 
-// Native modules can't be bundled (the .node binary stub uses CJS
-// `require()` calls that ESM bundles can't honor). After PAI-103
-// (better-sqlite3 → node:sqlite), the orchestrator bundle has zero
-// native modules. If a future native dep returns, allowlist it here
-// AND ship it via electron-builder's `extraResources` for the AppImage
-// sidecar to load it; the empty set keeps the assertion strict so a
-// regression that re-externalizes a non-native dep fails loud.
-const NATIVE_MODULES_ALLOWED_EXTERNAL = new Set<string>();
+// Specifiers allowed to remain external in the orchestrator sidecar
+// bundle. After PAI-103 the bundle has zero native modules, but
+// PAI-171 introduced pino + OTel deps whose CJS dynamic-require
+// pattern esbuild can't follow into a single-file ESM bundle (`Dynamic
+// require of "os" is not supported`). The container path resolves
+// them via `pnpm deploy --prod`; the AppImage sidecar packaging that
+// would resolve them at the AppImage runtime is the follow-up
+// (PAI-183 — orchestrator sidecar ships a node_modules tree).
+const NATIVE_MODULES_ALLOWED_EXTERNAL = new Set<string>([
+  "pino",
+  "pino-pretty",
+  "@opentelemetry/api",
+  "@opentelemetry/sdk-node",
+  "@opentelemetry/sdk-trace-base",
+  "@opentelemetry/sdk-trace-node",
+  "@opentelemetry/sdk-trace-web",
+  "@opentelemetry/exporter-trace-otlp-http",
+  "@opentelemetry/auto-instrumentations-node",
+  "@opentelemetry/resources",
+  "@opentelemetry/context-async-hooks",
+]);
 
 test("orchestrator sidecar bundle inlines all non-native deps", () => {
   // Shipped via electron-builder.yml's extraResources block, so the
