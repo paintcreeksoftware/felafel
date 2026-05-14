@@ -13,3 +13,5 @@
  */
 
 export type { Logger } from "@felafel/logs";
+
+export { requestLoggerMiddleware } from "@felafel/backend/middleware";
