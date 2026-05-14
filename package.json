@@ -18,9 +18,11 @@
     "test:integration": "turbo run test:integration",
     "test:e2e": "turbo run test:e2e",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules\" \"#**/out\" \"#**/release\" \"#**/dist\" \"#**/test-results\" \"#**/playwright-report\"",
-    "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg",
+    "lint:sh": "shellcheck setup.sh .husky/pre-commit .husky/commit-msg scripts/*.sh",
     "lint:exports": "node scripts/check-export-coverage.mjs",
     "knip": "knip",
+    "cost:report": "bash scripts/claude-cost.sh",
+    "cost:since": "bash scripts/cost-since.sh",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"
   },

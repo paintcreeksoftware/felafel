@@ -112,11 +112,19 @@ anything in this file.
 
 ## Cost / FinOps
 
-The session-level token cost is visible in-CLI via the built-in
-`/cost` slash command. Cross-session aggregation tooling (a
-`pnpm cost:report` wrapper around `ccusage`, plus per-ticket cost
-comments on Linear when a PR merges) is being added incrementally —
-see the PAI-147 ticket for the rollout.
+- **`/cost`** (built-in) — current session's token cost.
+- **`pnpm cost:report`** — dual-mode aggregate across every Claude
+  Code session this workspace has recorded. Reports both the actual
+  marginal outlay (≈$0 on a Claude Max subscription) and the
+  API-equivalent list-price counterfactual ("what would this have
+  cost without the subscription"). Wraps `ccusage` against the JSONL
+  files under `~/.claude/projects/`.
+- **`pnpm cost:since [<ref>]`** — same dual-mode report, filtered to
+  sessions since `<ref>` was branched off main. Default is HEAD, so
+  `pnpm cost:since` answers "what did this branch cost?".
+- **Per-PR cost comments on Linear** — added on PR merge by a
+  GitHub Action (tracked in
+  [PAI-152](https://linear.app/paint-creek-software/issue/PAI-152)).
 
 ## Where the working agreements live
 
