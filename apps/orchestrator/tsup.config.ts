@@ -33,18 +33,16 @@ export default defineConfig({
   // returns, the AppImage's extraResources packaging needs a parallel
   // node_modules path or the dep should be evaluated for replacement
   // by a built-in / pure-JS alternative first.
-  noExternal: [
-    "@felafel/shared",
-    "@felafel/contracts",
-    "@felafel/db",
-    "@hono/node-server",
-    "@hono/zod-openapi",
-    "hono",
-    "drizzle-orm",
-    "drizzle-zod",
-    "pathe",
-    "zod",
-  ],
+  // Bundle every non-builtin import. tsup/esbuild already keep Node
+  // builtins external on `platform: "node"`, so this regex is a
+  // catch-all for application + transitive packages. Switched from an
+  // explicit allowlist when PAI-171 pulled @felafel/backend +
+  // @felafel/logs in transitively — the OTel auto-instrumentations
+  // stack has a long tail of optional packages and per-dep listing
+  // was already getting brittle. The bundle assertion in
+  // apps/desktop/tests/e2e/bundle.spec.ts still enforces the policy
+  // end-to-end (no externalized non-native specifiers in dist).
+  noExternal: [/.+/u],
   onSuccess: async () => {
     // tsup's onSuccess signature requires a Promise return. All the
     // I/O below is sync (we read/write the bundle in-place + copy a

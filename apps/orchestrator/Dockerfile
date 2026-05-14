@@ -19,12 +19,16 @@ COPY apps/orchestrator/package.json apps/orchestrator/
 COPY packages/shared/package.json packages/shared/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/db/package.json packages/db/
+COPY packages/logs/package.json packages/logs/
+COPY packages/backend/package.json packages/backend/
 RUN pnpm install --frozen-lockfile --filter @felafel/orchestrator...
 
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY packages/contracts packages/contracts
 COPY packages/db packages/db
+COPY packages/logs packages/logs
+COPY packages/backend packages/backend
 COPY apps/orchestrator apps/orchestrator
 
 RUN pnpm --filter @felafel/orchestrator build

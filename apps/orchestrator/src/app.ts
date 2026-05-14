@@ -29,20 +29,24 @@ export interface BuildAppOptions {
   db: Db;
 }
 
-export type BuildAppResult = ReturnType<typeof createHonoApp>;
-
 /**
  * Build the orchestrator's Hono app: delegates the framework wiring
  * (cors + request-logger middleware + OTel bootstrap) to
  * `createHonoApp` from `@felafel/backend` (PAI-168 C3), then mounts
  * the orchestrator's OpenAPI routes onto the returned app. The
  * `db` is captured in each route handler's closure as before.
+ *
+ * The return type is intentionally inferred (not annotated) — the
+ * `.openapi(...)` chain narrows the app type with every route
+ * registered, and `AppType` is exported from that narrowed shape so
+ * the renderer's `hc<AppType>` client gets full route inference.
  * @param opts - dependency-injection options
  * @param opts.db - the Drizzle DB handle the routes will use
- * @returns the configured Hono app + the OTel SDK handle (for
- *   `sdk.shutdown()` on SIGTERM) + the parent logger.
+ * @returns `{ app, sdk, logger }` — the route-narrowed app + the
+ *   OTel SDK handle (for `sdk.shutdown()` on SIGTERM) + the parent
+ *   logger.
  */
-export function buildApp(opts: BuildAppOptions): BuildAppResult {
+export function buildApp(opts: BuildAppOptions) {
   const { app: base, sdk, logger } = createHonoApp({
     service: "felafel-orchestrator",
   });
@@ -146,4 +150,4 @@ export function buildApp(opts: BuildAppOptions): BuildAppResult {
   return { app, sdk, logger };
 }
 
-export type AppType = BuildAppResult["app"];
+export type AppType = ReturnType<typeof buildApp>["app"];
