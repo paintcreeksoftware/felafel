@@ -33,3 +33,5 @@ export {
 export { createTelemetryResource } from "@felafel/logs/resource";
 
 export { withTracedOperation } from "@felafel/logs/tracing";
+
+export { bootstrap, type BootstrapOptions } from "@felafel/logs/bootstrap";
