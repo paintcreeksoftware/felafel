@@ -1,9 +1,12 @@
+import { hostname } from "node:os";
+
 import { describe, expect, it } from "vitest";
 
 import { createLogger } from "@felafel/logs";
 
 interface LogLine {
   service: string;
+  node: string;
   msg: string;
   [key: string]: unknown;
 }
@@ -43,5 +46,26 @@ describe("createLogger", () => {
     expect(sink.lines).toHaveLength(1);
     expect(sink.lines[0]!.service).toBe("felafel-worker");
     expect(sink.lines[0]!.msg).toBe("hello");
+  });
+
+  it("defaults `node` to os.hostname()", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.node).toBe(hostname());
+  });
+
+  it("uses an explicit `node` binding when provided", () => {
+    const sink = makeSink();
+    const logger = createLogger(
+      { service: "felafel-worker", node: "homelab-1" },
+      sink,
+    );
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.node).toBe("homelab-1");
   });
 });
