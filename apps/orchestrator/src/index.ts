@@ -1,23 +1,24 @@
 import { serve } from "@hono/node-server";
 import { createDb } from "@felafel/db";
-import { createLogger } from "@felafel/logs";
 import { buildApp } from "@felafel/orchestrator/app";
 import { Defaults, EnvVars } from "@felafel/orchestrator/constants";
 import { startSweep } from "@felafel/orchestrator/sweep";
-
-const logger = createLogger({ service: "felafel-orchestrator" });
 
 const port = Number(process.env[EnvVars.PORT] ?? Defaults.PORT);
 const hostname = process.env[EnvVars.HOST] ?? Defaults.HOST;
 const dataDir = process.env[EnvVars.DATA_DIR];
 
 if (!dataDir) {
-  logger.error({ envVar: EnvVars.DATA_DIR }, "startup.config.missing");
+  // Pre-buildApp: no logger yet (buildApp owns the OTel bootstrap).
+  // Use stderr directly for this one-shot startup error so the
+  // operator sees the misconfig at the same place the rest of the
+  // log stream lands.
+  process.stderr.write(`${EnvVars.DATA_DIR} is required\n`);
   process.exit(1);
 }
 
 const { db, close: closeDb } = createDb(dataDir);
-const app = buildApp({ db });
+const { app, sdk, logger } = buildApp({ db });
 const stopSweep = startSweep({ db, logger });
 
 serve({ fetch: app.fetch, port, hostname }, (info) => {
@@ -37,6 +38,13 @@ function shutdown(signal: string): void {
   logger.info({ signal }, "shutdown.start");
   stopSweep();
   closeDb();
+  // sdk.shutdown is async; we don't await because process.exit is the
+  // canonical termination and the OTel exporters' batch flush is
+  // best-effort here. .catch keeps a stray rejection from being
+  // unhandled if the process happens to outlive the call.
+  sdk.shutdown().catch(() => {
+    /* swallow — process is exiting anyway */
+  });
   process.exit(0);
 }
 
