@@ -21,4 +21,12 @@ describe("bootstrap", () => {
     expect(logger.bindings().service).toBe("felafel-worker");
     expect(typeof sdk.shutdown).toBe("function");
   });
+
+  it("forwards an explicit version into the logger's bindings", () => {
+    const { logger: l } = bootstrap({
+      service: "felafel-worker",
+      version: "9.9.9",
+    });
+    expect(l.bindings().version).toBe("9.9.9");
+  });
 });
