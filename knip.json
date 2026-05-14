@@ -34,6 +34,13 @@
       "entry": ["tests/**/*.{test,spec}.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
     },
+    "packages/logs": {
+      "entry": ["tests/**/*.{test,spec}.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"],
+      "ignoreDependencies": [
+        "pino-pretty"
+      ]
+    },
     "packages/tailscale": {
       "entry": [
         "src/ui/window.d.ts"

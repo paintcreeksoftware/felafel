@@ -95,4 +95,24 @@ describe("createLogger", () => {
 
     expect(sink.lines[0]!.version).toBe("1.2.3");
   });
+
+  it("respects the LOG_LEVEL env var", () => {
+    const prev = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = "debug";
+    try {
+      const sink = makeSink();
+      const logger = createLogger({ service: "felafel-worker" }, sink);
+
+      logger.debug("dbg");
+
+      expect(sink.lines[0]!.msg).toBe("dbg");
+      expect(sink.lines[0]!.level).toBe(20);
+    } finally {
+      if (prev === undefined) {
+        delete process.env.LOG_LEVEL;
+      } else {
+        process.env.LOG_LEVEL = prev;
+      }
+    }
+  });
 });

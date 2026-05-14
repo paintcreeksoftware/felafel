@@ -33,14 +33,24 @@ export function createLogger(
   opts: CreateLoggerOptions,
   destination?: DestinationStream,
 ): Logger {
+  const usePrettyTransport =
+    !destination && process.env.NODE_ENV !== "production";
+
   return pino(
     {
+      level: process.env.LOG_LEVEL ?? "info",
       base: {
         service: opts.service,
         node: opts.node ?? hostname(),
         pid: process.pid,
         version: opts.version ?? process.env.npm_package_version,
       },
+      ...(usePrettyTransport && {
+        transport: {
+          target: "pino-pretty",
+          options: { colorize: true },
+        },
+      }),
     },
     destination,
   );
