@@ -4,9 +4,7 @@
 
     "auth_setup": "github requires GITHUB_PERSONAL_ACCESS_TOKEN in the parent shell at Claude Code launch (or substitute via `gh auth token` if you prefer not to keep a long-lived PAT). linear uses OAuth on first connect (mcp.linear.app handles the flow). context7 is unauthenticated. The other servers do not require credentials.",
 
-    "TODO_PAI_147_sandbox_runner": "Reserved slot for a sandbox-runner MCP. Candidate providers: e2b (https://e2b.dev) and modal (https://modal.com). Activation deferred until a concrete sandboxed-execution use case appears (e.g. agent running untrusted generated code; eval framework needing isolated runs). Activate by adding an entry under mcpServers with the provider's recommended command.",
-
-    "TODO_PAI_149_python_reference_servers": "The Anthropic reference servers for time, fetch, and git are Python packages run via `uvx`, which is NOT currently provisioned in this Dev Container. Tracked in PAI-149 (https://linear.app/paint-creek-software/issue/PAI-149). Once uv ships, add under mcpServers: time = uvx mcp-server-time; fetch = uvx mcp-server-fetch; git = uvx mcp-server-git --repository /workspaces/felafel."
+    "TODO_PAI_147_sandbox_runner": "Reserved slot for a sandbox-runner MCP. Candidate providers: e2b (https://e2b.dev) and modal (https://modal.com). Activation deferred until a concrete sandboxed-execution use case appears (e.g. agent running untrusted generated code; eval framework needing isolated runs). Activate by adding an entry under mcpServers with the provider's recommended command."
   },
 
   "mcpServers": {
@@ -42,6 +40,21 @@
         "@modelcontextprotocol/server-filesystem",
         "/workspaces/felafel"
       ]
+    },
+
+    "time": {
+      "command": "uvx",
+      "args": ["mcp-server-time"]
+    },
+
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git", "--repository", "/workspaces/felafel"]
     }
   }
 }
