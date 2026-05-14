@@ -3,5 +3,18 @@
     "allow": [
       "Bash(git commit:*)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /workspaces/felafel/scripts/stop-hook.sh"
+          }
+        ]
+      }
+    ]
   }
 }
