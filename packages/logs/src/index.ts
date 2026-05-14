@@ -23,3 +23,9 @@ export type Service =
   | "felafel-desktop-main"
   | "felafel-desktop-renderer"
   | "felafel-worker";
+
+export {
+  createLogger,
+  type CreateLoggerOptions,
+  type Logger,
+} from "@felafel/logs/logger";
