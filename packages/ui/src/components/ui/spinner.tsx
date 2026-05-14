@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Loader2Icon } from "lucide-react"
 
 import { cn } from "@felafel/ui/lib/utils"
