@@ -1,0 +1,41 @@
+{
+  "name": "@felafel/logs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-agnostic Pino + OpenTelemetry primitives for Felafel: createLogger, bootstrap, withTracedOperation, createTelemetryResource, plus a browser entry with createRendererSDK. Single source of truth for the unified log shape contract (service + node + pid + version + traceId/spanId bindings). Workspace-only; never published.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./bootstrap": "./src/bootstrap.ts",
+    "./browser": "./src/browser.ts",
+    "./logger": "./src/logger.ts",
+    "./resource": "./src/resource.ts",
+    "./tracing": "./src/tracing.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "format": "oxfmt",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@opentelemetry/context-async-hooks": "^2.7.1",
+    "@types/node": "^25.8.0",
+    "pathe": "^2.0.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.76.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
+    "@opentelemetry/resources": "^2.7.1",
+    "@opentelemetry/sdk-node": "^0.218.0",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
+    "@opentelemetry/sdk-trace-web": "^2.7.1",
+    "pino": "^10.3.1",
+    "pino-pretty": "^13.1.3"
+  }
+}

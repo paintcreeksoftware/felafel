@@ -1,0 +1,157 @@
+import { hostname } from "node:os";
+
+import {
+  ROOT_CONTEXT,
+  TraceFlags,
+  context,
+  trace,
+} from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { createLogger } from "@felafel/logs";
+
+const contextManager = new AsyncLocalStorageContextManager();
+beforeAll(() => {
+  contextManager.enable();
+  context.setGlobalContextManager(contextManager);
+});
+afterAll(() => {
+  context.disable();
+  contextManager.disable();
+});
+
+interface LogLine {
+  service: string;
+  node: string;
+  pid: number;
+  version?: string;
+  time: number;
+  level: number;
+  traceId?: string;
+  spanId?: string;
+  msg: string;
+  [key: string]: unknown;
+}
+
+interface Sink {
+  lines: LogLine[];
+  write: (chunk: string) => void;
+}
+
+/**
+ * Build a pino-compatible destination stream that collects emitted JSON
+ * lines into an in-memory array, so tests can assert on log shape
+ * without touching stderr or the filesystem.
+ * @returns A {@link Sink} with a `lines` array and a `write` method.
+ */
+function makeSink(): Sink {
+  const lines: LogLine[] = [];
+  return {
+    lines,
+    write(chunk: string) {
+      for (const raw of chunk.split("\n")) {
+        if (raw.trim()) {
+          lines.push(JSON.parse(raw) as LogLine);
+        }
+      }
+    },
+  };
+}
+
+describe("createLogger", () => {
+  it("emits log lines with the `service` binding", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+
+    logger.info("hello");
+
+    expect(sink.lines).toHaveLength(1);
+    expect(sink.lines[0]!.service).toBe("felafel-worker");
+    expect(sink.lines[0]!.msg).toBe("hello");
+  });
+
+  it("defaults `node` to os.hostname()", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.node).toBe(hostname());
+  });
+
+  it("uses an explicit `node` binding when provided", () => {
+    const sink = makeSink();
+    const logger = createLogger(
+      { service: "felafel-worker", node: "homelab-1" },
+      sink,
+    );
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.node).toBe("homelab-1");
+  });
+
+  it("emits `pid`, `time`, and `level` on every line", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.pid).toBe(process.pid);
+    expect(typeof sink.lines[0]!.time).toBe("number");
+    expect(sink.lines[0]!.level).toBe(30);
+  });
+
+  it("uses an explicit `version` binding when provided", () => {
+    const sink = makeSink();
+    const logger = createLogger(
+      { service: "felafel-worker", version: "1.2.3" },
+      sink,
+    );
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.version).toBe("1.2.3");
+  });
+
+  it("injects traceId + spanId into log lines emitted inside an active OTel span context (C6)", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+    const wrapped = trace.wrapSpanContext({
+      traceId: "0af7651916cd43dd8448eb211c80319c",
+      spanId: "b7ad6b7169203331",
+      traceFlags: TraceFlags.SAMPLED,
+    });
+
+    context.with(trace.setSpan(ROOT_CONTEXT, wrapped), () => {
+      logger.info("inside-span");
+    });
+    logger.info("outside-span");
+
+    expect(sink.lines[0]!.traceId).toBe("0af7651916cd43dd8448eb211c80319c");
+    expect(sink.lines[0]!.spanId).toBe("b7ad6b7169203331");
+    expect(sink.lines[1]!.traceId).toBeUndefined();
+    expect(sink.lines[1]!.spanId).toBeUndefined();
+  });
+
+  it("respects the LOG_LEVEL env var", () => {
+    const prev = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = "debug";
+    try {
+      const sink = makeSink();
+      const logger = createLogger({ service: "felafel-worker" }, sink);
+
+      logger.debug("dbg");
+
+      expect(sink.lines[0]!.msg).toBe("dbg");
+      expect(sink.lines[0]!.level).toBe(20);
+    } finally {
+      if (prev === undefined) {
+        delete process.env.LOG_LEVEL;
+      } else {
+        process.env.LOG_LEVEL = prev;
+      }
+    }
+  });
+});
