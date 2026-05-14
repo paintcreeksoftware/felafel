@@ -12,12 +12,17 @@ import type { Service } from "@felafel/logs";
  * the logger's `node` binding (host hostname), so worker-1 vs worker-2
  * are distinguishable in both streams.
  * @param service - Service identity from the union.
+ * @param version - Optional explicit version; falls back to
+ *   `process.env.npm_package_version`.
  * @returns A configured OTel `Resource`.
  */
-export function createTelemetryResource(service: Service): Resource {
+export function createTelemetryResource(
+  service: Service,
+  version?: string,
+): Resource {
   return resourceFromAttributes({
     "service.name": service,
     "service.instance.id": hostname(),
-    "service.version": process.env.npm_package_version,
+    "service.version": version ?? process.env.npm_package_version,
   });
 }

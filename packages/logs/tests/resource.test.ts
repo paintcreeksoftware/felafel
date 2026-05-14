@@ -12,4 +12,9 @@ describe("createTelemetryResource", () => {
     expect(attrs["service.name"]).toBe("felafel-worker");
     expect(attrs["service.instance.id"]).toBe(hostname());
   });
+
+  it("uses an explicit version when provided", () => {
+    const resource = createTelemetryResource("felafel-worker", "1.2.3");
+    expect(resource.attributes["service.version"]).toBe("1.2.3");
+  });
 });
