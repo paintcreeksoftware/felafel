@@ -9,10 +9,7 @@ const hostname = process.env[EnvVars.HOST] ?? Defaults.HOST;
 const dataDir = process.env[EnvVars.DATA_DIR];
 
 if (!dataDir) {
-  // Pre-buildApp: no logger yet (buildApp owns the OTel bootstrap).
-  // Use stderr directly for this one-shot startup error so the
-  // operator sees the misconfig at the same place the rest of the
-  // log stream lands.
+  // No logger yet — buildApp owns the bootstrap.
   process.stderr.write(`${EnvVars.DATA_DIR} is required\n`);
   process.exit(1);
 }
@@ -34,23 +31,23 @@ serve({ fetch: app.fetch, port, hostname }, (info) => {
  * termination it expects.
  * @param signal - the POSIX signal name that triggered shutdown
  */
-function shutdown(signal: string): void {
+async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "shutdown.start");
   stopSweep();
   closeDb();
-  // sdk.shutdown is async; we don't await because process.exit is the
-  // canonical termination and the OTel exporters' batch flush is
-  // best-effort here. .catch keeps a stray rejection from being
-  // unhandled if the process happens to outlive the call.
-  sdk.shutdown().catch(() => {
-    /* swallow — process is exiting anyway */
-  });
+  // 2s cap so a hung exporter can't pin the process open.
+  await Promise.race([
+    sdk.shutdown(),
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, 2_000);
+    }),
+  ]);
   process.exit(0);
 }
 
 process.on("SIGTERM", () => {
-  shutdown("SIGTERM");
+  void shutdown("SIGTERM");
 });
 process.on("SIGINT", () => {
-  shutdown("SIGINT");
+  void shutdown("SIGINT");
 });
