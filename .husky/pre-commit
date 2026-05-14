@@ -58,6 +58,12 @@ pnpm db:check
 # resolves via `exports` at build time — they're free to drift, and they
 # did on PAI-139 #57. See PAI-143.
 pnpm lint:exports
+# `lint:dead-fields` catches exported-interface (and type-alias-with-
+# object-literal) properties that are never read anywhere in the
+# package's TS sources. Knip + tsc + eslint all stay silent on
+# property-level dead code; the ts-morph script (PAI-170) closes the
+# gap. v1 scope: packages/{logs,backend}.
+pnpm lint:dead-fields
 # `knip` catches dead exports, dead files, and unlisted dependencies
 # (imports from packages not in the consuming workspace's package.json).
 # Same coverage as CI's knip job — running it locally too shifts the
