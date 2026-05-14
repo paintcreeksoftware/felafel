@@ -12,6 +12,12 @@ import type { Service } from "@felafel/logs";
 export interface BootstrapOptions {
   /** Top-level service identity (PAI-168 C2 contract). */
   service: Service;
+  /**
+   * Optional explicit service version; falls back to
+   * `process.env.npm_package_version` for both the logger's `version`
+   * binding and the OTel resource's `service.version` attribute.
+   */
+  version?: string;
 }
 
 /**
@@ -31,7 +37,7 @@ export function bootstrap(opts: BootstrapOptions): {
 } {
   const url = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   const sdk = new NodeSDK({
-    resource: createTelemetryResource(opts.service),
+    resource: createTelemetryResource(opts.service, opts.version),
     ...(url && { traceExporter: new OTLPTraceExporter({ url }) }),
     instrumentations: [
       getNodeAutoInstrumentations({
@@ -40,5 +46,8 @@ export function bootstrap(opts: BootstrapOptions): {
     ],
   });
   sdk.start();
-  return { logger: createLogger({ service: opts.service }), sdk };
+  return {
+    logger: createLogger({ service: opts.service, version: opts.version }),
+    sdk,
+  };
 }
