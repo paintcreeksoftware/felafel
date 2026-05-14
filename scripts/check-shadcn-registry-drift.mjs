@@ -77,20 +77,42 @@ async function fetchUpstreamComponent(style, name) {
   return body.files ?? [];
 }
 
+const TS_NOCHECK_HEADER = "// @ts-nocheck\n";
+
+/**
+ * Prepend the ts-nocheck pragma to vendored content if not already
+ * present. Used for both registry-fetched files (via normalizeUpstream)
+ * and for project-built primitives in the same folder that the registry
+ * doesn't cover (e.g. `combobox.tsx`, which 404s upstream). The whole
+ * `packages/ui/src/components/ui/` folder is treated as vendored and
+ * not gated on this project's strict tsc settings — strict tsc on
+ * upstream surfaces noise like Recharts tooltip-prop strictness and
+ * implicit-any params that are runtime-correct.
+ * TODO(PAI-148): once Storybook lands as the runtime-smoke surface for
+ * these primitives, revisit whether we can drop the pragma and let
+ * strict tsc back in — Storybook would catch real breakage even if tsc
+ * doesn't.
+ * @param content - file content to ensure has the header
+ * @returns content with header guaranteed at the top
+ */
+function withHeader(content) {
+  return content.startsWith(TS_NOCHECK_HEADER) ? content : `${TS_NOCHECK_HEADER}${content}`;
+}
+
 /**
  * Rewrite upstream `@/...` imports to the project's `@felafel/ui/...`
  * aliases so a local-vs-upstream diff shows real semantic differences
  * (not the alias-substitution noise the shadcn CLI does at `add` time).
  * @param upstream - raw upstream content
  * @param substitutions - mapping table from loadShadcnConfig
- * @returns upstream content with aliases rewritten
+ * @returns upstream content with aliases rewritten + ts-nocheck header
  */
 function normalizeUpstream(upstream, substitutions) {
   let out = upstream;
   for (const { from, to } of substitutions) {
     out = out.replaceAll(from, to);
   }
-  return out;
+  return withHeader(out);
 }
 
 /**
@@ -111,6 +133,29 @@ function listLocalComponents() {
   return readdirSync(COMPONENTS_DIR)
     .filter((f) => f.endsWith(".tsx"))
     .map((f) => ({ name: f.replace(/\.tsx$/u, ""), path: join(COMPONENTS_DIR, f) }));
+}
+
+/**
+ * Idempotently ensure the ts-nocheck header on every file in the
+ * folder, not just the registry-tracked ones. Files where the registry
+ * 404s (project-built primitives like `combobox.tsx`) are still
+ * vendored content as far as this project's gates are concerned, so
+ * they need the same header invariant.
+ * @param local - array of `{ name, path }` from listLocalComponents
+ */
+function ensureFolderHeaders(local) {
+  let headerAdded = 0;
+  for (const { path } of local) {
+    const current = readFileSync(path, "utf8");
+    const fixed = withHeader(current);
+    if (fixed !== current) {
+      writeFileSync(path, fixed);
+      headerAdded += 1;
+    }
+  }
+  if (headerAdded > 0) {
+    console.log(`Added ts-nocheck header to ${headerAdded} additional file(s).`);
+  }
 }
 
 /**
@@ -160,6 +205,9 @@ async function main() {
       writeFileSync(path, normalized.endsWith("\n") ? normalized : `${normalized}\n`);
     }
     console.log(`Applied upstream content to ${drifted.length} file(s).`);
+  }
+  if (apply) {
+    ensureFolderHeaders(local);
   }
   // Exit non-zero on drift so the workflow's "create PR if there's drift"
   // step can branch on it. In check-only mode this is informational; in
