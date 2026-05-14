@@ -16,6 +16,8 @@ export interface CreateLoggerOptions {
    * unified log stream.
    */
   node?: string;
+  /** Service version. Defaults to `process.env.npm_package_version`. */
+  version?: string;
 }
 
 /**
@@ -36,6 +38,8 @@ export function createLogger(
       base: {
         service: opts.service,
         node: opts.node ?? hostname(),
+        pid: process.pid,
+        version: opts.version ?? process.env.npm_package_version,
       },
     },
     destination,

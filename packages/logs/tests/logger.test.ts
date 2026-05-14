@@ -7,6 +7,10 @@ import { createLogger } from "@felafel/logs";
 interface LogLine {
   service: string;
   node: string;
+  pid: number;
+  version?: string;
+  time: number;
+  level: number;
   msg: string;
   [key: string]: unknown;
 }
@@ -67,5 +71,28 @@ describe("createLogger", () => {
     logger.info("hi");
 
     expect(sink.lines[0]!.node).toBe("homelab-1");
+  });
+
+  it("emits `pid`, `time`, and `level` on every line", () => {
+    const sink = makeSink();
+    const logger = createLogger({ service: "felafel-worker" }, sink);
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.pid).toBe(process.pid);
+    expect(typeof sink.lines[0]!.time).toBe("number");
+    expect(sink.lines[0]!.level).toBe(30);
+  });
+
+  it("uses an explicit `version` binding when provided", () => {
+    const sink = makeSink();
+    const logger = createLogger(
+      { service: "felafel-worker", version: "1.2.3" },
+      sink,
+    );
+
+    logger.info("hi");
+
+    expect(sink.lines[0]!.version).toBe("1.2.3");
   });
 });
