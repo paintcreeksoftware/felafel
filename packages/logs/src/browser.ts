@@ -1,5 +1,11 @@
+import {
+  SimpleSpanProcessor,
+  type SpanExporter,
+} from "@opentelemetry/sdk-trace-base";
+import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import pino, { type DestinationStream } from "pino";
 
+import { createTelemetryResource } from "@felafel/logs/resource";
 import type { Service } from "@felafel/logs";
 
 /** Options accepted by the browser-entry {@link createLogger}. */
@@ -43,3 +49,33 @@ export function createLogger(
 }
 
 export { type Logger } from "pino";
+
+/** Options accepted by {@link createRendererSDK}. */
+export interface CreateRendererSDKOptions {
+  /** Top-level service identity (PAI-168 C8 contract). */
+  service: Service;
+  /**
+   * Exporter the provider will forward finished spans to. The renderer
+   * pattern (PAI-178) is an IPC-backed exporter that ships spans over
+   * `Channels.OtelSpan` to the main process; `@felafel/logs` stays free
+   * of electron IPC by accepting the exporter as an injected dep.
+   */
+  exporter: SpanExporter;
+}
+
+/**
+ * Build a renderer-side OTel `WebTracerProvider` configured with the
+ * service identity (matching the logger's `service` binding per C6)
+ * and a simple span processor that forwards to the provided exporter.
+ * Caller is responsible for `provider.register({...})`.
+ * @param opts - Service identity + injected exporter.
+ * @returns A configured (but unregistered) `WebTracerProvider`.
+ */
+export function createRendererSDK(
+  opts: CreateRendererSDKOptions,
+): WebTracerProvider {
+  return new WebTracerProvider({
+    resource: createTelemetryResource(opts.service),
+    spanProcessors: [new SimpleSpanProcessor(opts.exporter)],
+  });
+}
