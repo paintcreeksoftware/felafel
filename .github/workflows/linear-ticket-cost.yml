@@ -1,0 +1,118 @@
+name: Linear ticket cost comment
+
+# When a `PAI-NN-*` PR merges, lift any `claude-cost-block` stamped
+# into its PR body and post it as a comment on the matching Linear
+# issue. The stamping itself is the agent's job (run
+# `scripts/stamp-pr-cost.sh <pr-number>` before flipping the PR to
+# ready — see CLAUDE.md FinOps section); this workflow is the
+# consumer that mirrors the stamp into Linear at merge time.
+#
+# Auto-Done flipping is intentionally **not** done here — Linear's
+# existing GitHub integration already moves an issue to Done when a
+# branch matching its `gitBranchName` merges. Duplicating that here
+# would cause double-state-flips.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  post-cost-comment:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract PAI-NN from branch name
+        id: ticket
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          ticket=$(echo "$BRANCH" | grep -oE '^PAI-[0-9]+' || true)
+          if [ -z "$ticket" ]; then
+            echo "::notice::branch '$BRANCH' has no PAI-NN prefix; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          number=${ticket#PAI-}
+          echo "identifier=$ticket"  >> "$GITHUB_OUTPUT"
+          echo "team=PAI"            >> "$GITHUB_OUTPUT"
+          echo "number=$number"      >> "$GITHUB_OUTPUT"
+
+      - name: Extract cost block from PR body
+        id: cost
+        if: steps.ticket.outputs.skip != 'true'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          block=$(printf '%s' "$PR_BODY" | awk '
+            /<!-- claude-cost-block:start -->/{flag=1; next}
+            /<!-- claude-cost-block:end -->/{flag=0}
+            flag
+          ')
+          if [ -z "$block" ]; then
+            echo "::notice::PR body has no <!-- claude-cost-block --> markers; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Stash in a file because GITHUB_OUTPUT multi-line is fiddly.
+          printf '%s\n' "$block" > /tmp/cost-block.md
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve Linear issue UUID
+        id: issue
+        if: steps.cost.outputs.found == 'true'
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          TEAM:   ${{ steps.ticket.outputs.team }}
+          NUMBER: ${{ steps.ticket.outputs.number }}
+        run: |
+          if [ -z "$LINEAR_API_KEY" ]; then
+            echo "::error::LINEAR_API_KEY is not set; aborting"
+            exit 1
+          fi
+          query=$(jq -nc --arg team "$TEAM" --argjson number "$NUMBER" '{
+            query: "query IssueByIdentifier($team: String!, $number: Float!) { issues(filter: { team: { key: { eq: $team } }, number: { eq: $number } }, first: 1) { nodes { id } } }",
+            variables: { team: $team, number: $number }
+          }')
+          response=$(curl -fsS -X POST https://api.linear.app/graphql \
+            -H "Authorization: $LINEAR_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data "$query")
+          uuid=$(jq -r '.data.issues.nodes[0].id // empty' <<<"$response")
+          if [ -z "$uuid" ]; then
+            echo "::error::No Linear issue found for PAI-$NUMBER"
+            echo "::error::response: $response"
+            exit 1
+          fi
+          echo "uuid=$uuid" >> "$GITHUB_OUTPUT"
+
+      - name: Post comment to Linear issue
+        if: steps.issue.outputs.uuid != ''
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          ISSUE_UUID:     ${{ steps.issue.outputs.uuid }}
+          IDENTIFIER:     ${{ steps.ticket.outputs.identifier }}
+          PR_NUMBER:      ${{ github.event.pull_request.number }}
+          PR_URL:         ${{ github.event.pull_request.html_url }}
+        run: |
+          body=$(printf '## Cost summary (auto-stamped from [PR #%s](%s))\n\n%s\n' \
+            "$PR_NUMBER" "$PR_URL" "$(cat /tmp/cost-block.md)")
+          mutation=$(jq -nc --arg uuid "$ISSUE_UUID" --arg body "$body" '{
+            query: "mutation CommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id url } } }",
+            variables: { input: { issueId: $uuid, body: $body } }
+          }')
+          response=$(curl -fsS -X POST https://api.linear.app/graphql \
+            -H "Authorization: $LINEAR_API_KEY" \
+            -H "Content-Type: application/json" \
+            --data "$mutation")
+          success=$(jq -r '.data.commentCreate.success' <<<"$response")
+          if [ "$success" != "true" ]; then
+            echo "::error::Linear commentCreate did not succeed"
+            echo "::error::response: $response"
+            exit 1
+          fi
+          url=$(jq -r '.data.commentCreate.comment.url' <<<"$response")
+          echo "::notice::Posted cost comment to $IDENTIFIER → $url"
