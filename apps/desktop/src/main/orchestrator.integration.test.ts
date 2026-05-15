@@ -24,8 +24,11 @@ vi.mock("electron", () => ({
   },
 }));
 
+import { createLogger } from "@felafel/logs";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { TailscaleManager } from "@felafel/tailscale";
+
+const testLogger = createLogger({ service: "felafel-desktop-main" });
 
 const devDataDir = join(here, "..", "..", ".dev-orchestrator-data");
 
@@ -37,7 +40,7 @@ describe("OrchestratorManager lifecycle", () => {
     // Real TailscaleManager — at runtime its findBinary will return null
     // on hosts without Tailscale (CI), and the manager treats that as
     // "skip serve setup" rather than failing. No mocking needed.
-    manager = new OrchestratorManager(new TailscaleManager());
+    manager = new OrchestratorManager(new TailscaleManager(), testLogger);
   });
 
   afterEach(async () => {

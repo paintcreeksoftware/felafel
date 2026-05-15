@@ -4,8 +4,11 @@
 // The full lifecycle (real spawn + /health) lives in
 // orchestrator.integration.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLogger } from "@felafel/logs";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { type TailscaleManager } from "@felafel/tailscale";
+
+const testLogger = createLogger({ service: "felafel-desktop-main" });
 
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => "/tmp" } }));
 
@@ -46,7 +49,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
 
   it("no-ops when Tailscale isn't connected", async () => {
     const ts = mockTailscale();
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(ts.publishServe).not.toHaveBeenCalled();
     expect(ts.unpublishServe).not.toHaveBeenCalled();
@@ -54,7 +57,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
 
   it("publishes when connected and no prior mapping exists", async () => {
     const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(ts.publishServe).toHaveBeenCalledWith({ tailnetPort: 9090, localPort: 54321 });
     expect(ts.unpublishServe).not.toHaveBeenCalled();
@@ -65,7 +68,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
       probeStatus: vi.fn().mockResolvedValue(connectedStatus),
       readServePublished: vi.fn().mockResolvedValue({ targetLocalPort: 11111 }),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(ts.unpublishServe).toHaveBeenCalledWith({ tailnetPort: 9090 });
     expect(ts.publishServe).toHaveBeenCalledWith({ tailnetPort: 9090, localPort: 54321 });
@@ -76,7 +79,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
       probeStatus: vi.fn().mockResolvedValue(connectedStatus),
       readServePublished: vi.fn().mockResolvedValue({ targetLocalPort: 54321 }),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(ts.unpublishServe).not.toHaveBeenCalled();
   });
@@ -86,8 +89,8 @@ describe("OrchestratorManager.setupTailnetServe", () => {
       probeStatus: vi.fn().mockResolvedValue(connectedStatus),
       publishServe: vi.fn().mockRejectedValue(new Error("publish failed")),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
+    const errorSpy = vi.spyOn(testLogger, "error");
     await expect(m.setupTailnetServe(54321)).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
@@ -96,7 +99,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
   it("respects FELAFEL_ORCHESTRATOR_TAILNET_PORT when set", async () => {
     process.env.FELAFEL_ORCHESTRATOR_TAILNET_PORT = "12345";
     const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(ts.publishServe).toHaveBeenCalledWith({ tailnetPort: 12345, localPort: 54321 });
   });
@@ -105,7 +108,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
 describe("OrchestratorManager.getServeDegradation", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    errorSpy = vi.spyOn(testLogger, "error");
   });
   afterEach(() => {
     errorSpy.mockRestore();
@@ -113,7 +116,7 @@ describe("OrchestratorManager.getServeDegradation", () => {
 
   it("returns null when setupTailnetServe ran without error", async () => {
     const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(m.getServeDegradation()).toBeNull();
   });
@@ -135,7 +138,7 @@ describe("OrchestratorManager.getServeDegradation", () => {
       probeStatus: vi.fn().mockResolvedValue(connectedStatus),
       publishServe: vi.fn().mockRejectedValue(taggedError),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(m.getServeDegradation()).toEqual({
       reason: "Felafel doesn't have permission to talk to the Tailscale daemon socket.",
@@ -148,7 +151,7 @@ describe("OrchestratorManager.getServeDegradation", () => {
       probeStatus: vi.fn().mockResolvedValue(connectedStatus),
       publishServe: vi.fn().mockRejectedValue(new Error("something untyped")),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(m.getServeDegradation()).toEqual({ reason: "something untyped" });
   });
@@ -159,7 +162,7 @@ describe("OrchestratorManager.getServeDegradation", () => {
       probeStatus: vi.fn().mockResolvedValue(connectedStatus),
       publishServe: vi.fn().mockRejectedValueOnce(new Error("first failure")).mockResolvedValueOnce(),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     await m.setupTailnetServe(54321);
     expect(m.getServeDegradation()).not.toBeNull();
     // Second run succeeds → degradation reset to null.
@@ -179,7 +182,7 @@ describe("OrchestratorManager.refreshTailnetServe", () => {
 
   it("is a no-op (returns current degradation) before start() bound a port", async () => {
     const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     expect(m.currentLocalPort).toBeNull();
     expect(await m.refreshTailnetServe()).toBeNull();
     expect(ts.publishServe).not.toHaveBeenCalled();
@@ -187,7 +190,7 @@ describe("OrchestratorManager.refreshTailnetServe", () => {
 
   it("re-attempts serve setup when start() has bound a port", async () => {
     const ts = mockTailscale({ probeStatus: vi.fn().mockResolvedValue(connectedStatus) });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     m.currentLocalPort = 54321;
     await m.refreshTailnetServe();
     expect(ts.publishServe).toHaveBeenCalledWith({ tailnetPort: 9090, localPort: 54321 });
@@ -217,7 +220,7 @@ describe("OrchestratorManager.refreshTailnetServe", () => {
         .mockRejectedValueOnce(taggedError)
         .mockResolvedValueOnce(),
     });
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     m.currentLocalPort = 54321;
     const first = await m.refreshTailnetServe();
     expect(first).toEqual({
@@ -239,7 +242,7 @@ describe("OrchestratorManager.stop", () => {
     manager: OrchestratorManager & Privates;
     kill: ReturnType<typeof vi.fn>;
   } {
-    const m = new OrchestratorManager(ts) as OrchestratorManager & Privates;
+    const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
     const kill = vi.fn();
     m.process = {
       kill,
