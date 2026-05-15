@@ -6,7 +6,10 @@
 // on the test machine.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execa } from "execa";
+import { createLogger, Service } from "@felafel/logs";
 import { TailscaleManager } from "@felafel/tailscale";
+
+const testLogger = createLogger({ service: Service.DESKTOP_MAIN });
 
 vi.mock("execa");
 
@@ -19,7 +22,7 @@ describe("TailscaleManager serve methods (with mocked execa)", () => {
 
   beforeEach(() => {
     process.env.FELAFEL_TAILSCALE_FAKE = stubBinary;
-    manager = new TailscaleManager();
+    manager = new TailscaleManager(testLogger);
     vi.mocked(execa).mockReset();
   });
 
