@@ -108,3 +108,72 @@ The caller has no remote tracking yet, no PR.
   (`<type>(<scope>): <what changed> [PAI-NN]`).
 - Auto-assign: PAI-148's GitHub Action handles assignment to
   `yingw787` on `pull_request: opened`. No manual `--assignee` flag.
+
+## §2 about-to-push
+
+The caller is about to `git push` to an open PR's branch.
+
+**Verification (run BEFORE the push):**
+
+- `gh pr view <N> --json mergeStateStatus,baseRefName,headRefOid` — note
+  `mergeStateStatus`.
+
+**Commands to run, by state:**
+
+- If `mergeStateStatus: BEHIND` →
+  1. `git fetch origin`
+  2. `git rebase origin/main`
+  3. `git push --force-with-lease`
+  4. **Refresh the PR body** (`gh pr edit <N> --body "..."`) to
+     match the current state, then re-stamp marker zones via
+     `pnpm pr:ready <N>` if the PR is draft, or
+     `bash scripts/stamp-pr-cost.sh <N>` if already ready.
+- If `mergeStateStatus: CLEAN | UNSTABLE | HAS_HOOKS` → fine to push:
+  1. `git push`
+  2. Continue to **after-push** below.
+- If `mergeStateStatus: DIRTY` → conflict; abort and tell the caller
+  to resolve before more commits.
+
+**After-push (always):**
+
+1. **Refresh the PR body** if it materially drifted from current
+   state: `gh pr edit <N> --body "<new content>"`. If the PR body
+   was just stamped via `pnpm pr:ready`, preserve the
+   `<!-- claude-cost-block:* -->` and `<!-- claude-drift-snapshot:* -->`
+   marker zones verbatim. **Never overwrite a stamped body without
+   re-splicing the markers** — CI workflows lift them on the
+   `ready_for_review` event.
+2. Arm a CI monitor:
+
+   ```bash
+   prev=""; while true; do
+     s=$(gh pr checks <N> --json name,bucket 2>/dev/null || echo '[]')
+     cur=$(jq -r '.[] | select(.bucket!="pending") | "\(.name): \(.bucket)"' \
+       <<<"$s" | sort)
+     comm -13 <(echo "$prev") <(echo "$cur")
+     prev=$cur
+     jq -e 'length>0 and all(.bucket!="pending")' <<<"$s" >/dev/null 2>&1 \
+       && break
+     sleep 30
+   done; echo "[ci-watch] all checks settled"
+   ```
+
+   Timeout: 30 min (`1800000` ms). No need to ask the caller before
+   arming — the Monitor tool is for exactly this.
+3. **Pushed ≠ done.** The caller must NOT claim "ready" / "all
+   green" / "passed CI" until the CI monitor reports all checks
+   passing. If any check fails, fix and re-push; arm a fresh
+   monitor on the new commit.
+
+**Why each step:**
+
+- Rebase check: every push is a chance for the branch to drift; catch
+  `BEHIND` programmatically rather than waiting for the user to point
+  it out.
+- Body refresh: the PR body becomes stale fast; reviewers rely on it
+  matching the current state. Marker-zone preservation is critical
+  because PAI-166's CI workflows lift the stamped data on the
+  `ready_for_review` event.
+- Monitor: PR-state notifications during follow-on work are not user
+  input — they're CI moving. The caller continues their other work
+  while the monitor streams.
