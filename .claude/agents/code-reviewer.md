@@ -122,13 +122,16 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 
 - **Contracts over conventions.** For any rule the PR introduces or
   enforces, ask: what's the contract layer? Conventions ("everyone
-  agrees to do X") are only acceptable when no contract is feasible.
-  Strength order: type system (opaque types, union literals,
-  required params) → factory functions (one public way to build) →
-  lint rules (`no-restricted-imports`, `no-restricted-syntax`,
-  custom rules) → runtime assertions → convention. Flag any new
-  design rule that defaults to "we'll all remember to do X" when a
-  contract layer is reachable.
+  agrees to do X") are only acceptable when no contract is feasible
+  OR when the contract would cost more than the violation rate
+  justifies (e.g. a custom AST rule for a one-off pattern that
+  appears in two files). Strength order: type system (opaque
+  types, union literals, required params) → factory functions
+  (one public way to build) → lint rules (`no-restricted-imports`,
+  `no-restricted-syntax`, custom rules) → runtime assertions →
+  convention. Flag any new design rule that defaults to "we'll all
+  remember to do X" when a contract layer is reachable AND the cost
+  is proportional.
 - **Smaller is better.** Default to the smallest correct version
   at every layer: fewer LOC, fewer abstractions, fewer files,
   fewer helpers, fewer deps, shorter docs, fewer bullets. Three

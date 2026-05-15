@@ -111,7 +111,11 @@ The caller has no remote tracking yet, no PR.
 
 ## §2 about-to-push
 
-The caller is about to `git push` to an open PR's branch.
+The caller is about to `git push` to an open PR's branch. Covers
+plain pushes AND amend-then-force-push (`git commit --amend` →
+`git push --force-with-lease`); the verification + monitor arming
+apply identically. The rebase branch already uses force-push, so
+amend adds no new logic path.
 
 **Verification (run BEFORE the push):**
 
