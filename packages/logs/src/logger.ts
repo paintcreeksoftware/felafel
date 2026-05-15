@@ -34,16 +34,22 @@ export function createLogger(
   opts: CreateLoggerOptions,
   destination?: DestinationStream,
 ): Logger {
-  // pino-pretty runs as a worker thread, which means pino does a
-  // dynamic `require("pino-pretty")` at construction time. In bundled
-  // Electron/Node entries (desktop main, orchestrator sidecar) the
-  // bundle's CJS-wrapped pino can't resolve that require, and the
-  // whole process crashes at startup. Default the transport OFF and
-  // require an explicit `FELAFEL_LOG_PRETTY=1` opt-in for the dev-mode
-  // colored output. The structured JSON (pino's default destination —
-  // stderr) is what every consumer actually needs.
+  // pino-pretty runs as a worker thread; pino does a dynamic
+  // `require("pino-pretty")` at construction. In bundled Electron/Node
+  // entries the bundle's CJS-wrapped pino can't resolve that require,
+  // so a runtime-true branch would crash the process at startup.
+  //
+  // The gate below depends on `process.env.NODE_ENV !== "production"`
+  // being statically known at bundle time. The desktop main +
+  // orchestrator sidecar bundlers (electron-vite + tsup) substitute
+  // `process.env.NODE_ENV` with the literal `"production"` via
+  // explicit `define`, so the entire pino-pretty branch is dead-code-
+  // eliminated from production bundles. In dev mode (electron-vite
+  // dev for the renderer host, `pnpm --filter @felafel/logs test`
+  // for tests), `process.env.NODE_ENV` is `"development"` at runtime
+  // and the transport loads normally (pino-pretty is in node_modules).
   const usePrettyTransport =
-    !destination && process.env.FELAFEL_LOG_PRETTY === "1";
+    !destination && process.env.NODE_ENV !== "production";
 
   return pino(
     {

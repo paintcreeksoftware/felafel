@@ -41,9 +41,22 @@ import react from "@vitejs/plugin-react";
 const nodeAlias = { "@felafel/desktop": resolve(__dirname, "src") };
 const rendererAlias = { "@felafel/desktop": resolve(__dirname, "src/renderer/src") };
 
+// `process.env.NODE_ENV = "production"` substituted at build time. Vite
+// does this automatically for the renderer config but NOT for main /
+// preload (Node contexts), so we have to spell it out. Without it the
+// production bundle reads the env var at runtime — typically unset in
+// CI / packaged AppImages — and code like
+// `process.env.NODE_ENV !== "production"` evaluates to `true`, which is
+// how pino tried to spawn pino-pretty as a worker thread and crashed the
+// process at startup (PAI-172 e2e regression).
+const PRODUCTION_DEFINE = {
+  "process.env.NODE_ENV": JSON.stringify("production"),
+};
+
 export default defineConfig({
   main: {
     resolve: { alias: nodeAlias },
+    define: PRODUCTION_DEFINE,
     build: {
       externalizeDeps: false,
       rollupOptions: {
@@ -53,6 +66,7 @@ export default defineConfig({
   },
   preload: {
     resolve: { alias: nodeAlias },
+    define: PRODUCTION_DEFINE,
     build: {
       externalizeDeps: false,
       rollupOptions: {
