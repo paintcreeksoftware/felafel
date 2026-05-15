@@ -26,17 +26,21 @@ const heartbeatMs = Number(
 );
 
 if (!orchestratorUrl) {
-  console.error(`${EnvVars.ORCHESTRATOR_URL} is required`);
+  // No logger yet — buildApp owns the bootstrap.
+  process.stderr.write(`${EnvVars.ORCHESTRATOR_URL} is required\n`);
   process.exit(1);
 }
 
 const id = loadOrCreateIdentity(identityPath);
-const app = buildApp({ orchestratorUrl });
+const { app, sdk, logger } = buildApp({ orchestratorUrl });
 
-console.log(`worker started: id=${id} hostname=${hostname()}`);
+logger.info({ workerId: id, hostname: hostname() }, "startup.identity");
 
 const server = serve({ fetch: app.fetch, port, hostname: bindHost }, (info) => {
-  console.log(`worker listening on http://${info.address}:${info.port.toString()}`);
+  logger.info(
+    { address: info.address, port: info.port },
+    "startup.listening",
+  );
 });
 
 const controlPlaneUrl = `http://${advertiseHost}:${port.toString()}`;
@@ -45,6 +49,7 @@ const stopHeartbeat = startHeartbeat({
   controlPlaneUrl,
   orchestratorUrl,
   intervalMs: heartbeatMs,
+  logger,
 });
 
 // `@hono/node-server`'s `serve()` returns a union (http | http2 | secure variants).
@@ -53,6 +58,8 @@ const stopHeartbeat = startHeartbeat({
 const shutdown = createShutdownHandler({
   server: server as Server,
   stopHeartbeat,
+  sdk,
+  logger,
 });
 
 /**
