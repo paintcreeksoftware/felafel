@@ -34,8 +34,16 @@ export function createLogger(
   opts: CreateLoggerOptions,
   destination?: DestinationStream,
 ): Logger {
+  // pino-pretty runs as a worker thread, which means pino does a
+  // dynamic `require("pino-pretty")` at construction time. In bundled
+  // Electron/Node entries (desktop main, orchestrator sidecar) the
+  // bundle's CJS-wrapped pino can't resolve that require, and the
+  // whole process crashes at startup. Default the transport OFF and
+  // require an explicit `FELAFEL_LOG_PRETTY=1` opt-in for the dev-mode
+  // colored output. The structured JSON (pino's default destination —
+  // stderr) is what every consumer actually needs.
   const usePrettyTransport =
-    !destination && process.env.NODE_ENV !== "production";
+    !destination && process.env.FELAFEL_LOG_PRETTY === "1";
 
   return pino(
     {
