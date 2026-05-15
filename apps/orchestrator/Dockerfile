@@ -27,8 +27,17 @@ COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY packages/contracts packages/contracts
 COPY packages/db packages/db
-COPY packages/logs packages/logs
-COPY packages/backend packages/backend
+# packages/logs and packages/backend have non-workspace npm deps, so
+# `pnpm install` above created `node_modules/` with symlinks under
+# them. A bulk `COPY packages/logs packages/logs` would try to
+# overlay the host's `node_modules/@types/node` onto the container's
+# existing symlink and fail with "cannot copy to non-directory".
+# Copy just the source + manifest; the install-layer symlinks stay
+# untouched.
+COPY packages/logs/src packages/logs/src
+COPY packages/logs/package.json packages/logs/
+COPY packages/backend/src packages/backend/src
+COPY packages/backend/package.json packages/backend/
 COPY apps/orchestrator apps/orchestrator
 
 RUN pnpm --filter @felafel/orchestrator build
