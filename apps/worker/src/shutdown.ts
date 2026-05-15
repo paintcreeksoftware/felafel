@@ -13,6 +13,15 @@ import type { Logger } from "@felafel/logs";
  */
 const SHUTDOWN_TIMEOUT_MS = 5_000;
 
+/**
+ * Cap on awaiting `sdk.shutdown()` during graceful shutdown. The OTel
+ * exporters do a best-effort flush of pending spans; a hung exporter
+ * (network partition, collector down) shouldn't pin the process open
+ * past this deadline. Same value the orchestrator's SIGTERM handler
+ * uses.
+ */
+const OTEL_FLUSH_TIMEOUT_MS = 2_000;
+
 /** Sentinel returned by {@link raceTimeout} when the deadline fires first. */
 const TIMEOUT = Symbol("shutdown-timeout");
 
@@ -94,12 +103,12 @@ export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => P
       logger.error({ err: error }, "shutdown.close-error");
       exitCode = 1;
     }
-    // Best-effort OTel flush; 2s cap so a hung exporter can't pin the
+    // Best-effort OTel flush; capped so a hung exporter can't pin the
     // process. Same pattern as orchestrator's SIGTERM handler.
     await Promise.race([
       sdk.shutdown(),
       new Promise<void>((resolve) => {
-        setTimeout(resolve, 2_000);
+        setTimeout(resolve, OTEL_FLUSH_TIMEOUT_MS);
       }),
     ]);
     return exitCode;

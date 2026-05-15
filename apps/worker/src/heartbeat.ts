@@ -63,10 +63,8 @@ export function startHeartbeat(opts: StartHeartbeatOptions): () => void {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const durationMs = Date.now() - startMs;
-      if (res.ok) {
-        opts.logger.debug({ durationMs }, "heartbeat.complete");
-      } else {
+      if (!res.ok) {
+        const durationMs = Date.now() - startMs;
         opts.logger.error(
           { status: res.status, statusText: res.statusText, durationMs },
           "heartbeat.failed",
