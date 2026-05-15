@@ -237,3 +237,65 @@ all-green / done.
   `ready_for_review` to save Actions minutes). A monitor armed on a
   draft watches for jobs that won't fire — flipping to ready is what
   actually triggers the suite the monitor expects.
+
+## §4 just-merged
+
+A monitor watching `gh pr view <N> --json state` just reported
+`MERGED`, or the user pinged that they merged.
+
+**Verification:**
+
+- `gh pr view <N> --json mergedAt,state -q '"\(.state) at \(.mergedAt)"'` →
+  expect `MERGED at <timestamp>`.
+
+**Commands to run, in order:**
+
+1. Auto-cleanup (current branch + main fast-forward + delete merged
+   branch):
+
+   ```bash
+   BRANCH="<merged-branch>"
+   current=$(git -C /workspaces/felafel branch --show-current 2>/dev/null)
+   if [ "$current" = "$BRANCH" ]; then
+     git -C /workspaces/felafel checkout main && \
+       git -C /workspaces/felafel pull --ff-only && \
+       git -C /workspaces/felafel branch -D "$BRANCH"
+   else
+     git -C /workspaces/felafel fetch origin --prune && \
+       git -C /workspaces/felafel branch -D "$BRANCH" 2>/dev/null || true
+   fi
+   ```
+
+   The if-current check matters: if the caller started a new feature
+   branch while the merge-state monitor was waiting, an unconditional
+   `git checkout main` would yank them off mid-edit.
+2. **Memory-promoter drift check** — invoke the `memory-promoter`
+   subagent inline via the Agent tool (not via `claude -p`), passing
+   the just-merged ticket as context. Skip if the user explicitly
+   said "skip the drift check" or if the PR closed without merge.
+3. **Session-start branch prune** — at the start of the NEXT session,
+   delete `PAI-*` branches where remote is gone AND PR is
+   MERGED/CLOSED:
+
+   ```bash
+   git fetch origin --prune
+   for b in $(git branch --list 'PAI-*' --format '%(refname:short)'); do
+     # Only delete if remote is gone AND a corresponding PR exists in MERGED/CLOSED state
+     ...
+   done
+   ```
+
+   Leave OPEN-PR or no-PR-yet branches alone. (See
+   `scripts/prune-stale-branches.sh` if it exists.)
+
+**Why each step:**
+
+- Cleanup: removes the manual "82 is merged" / "83 is merged" handoff
+  loop. The merge event is observable; cleanup is mechanical.
+- Memory-promoter inline (not `claude -p`): spawning
+  `claude -p --agent memory-promoter` costs a fresh context window
+  and loses the just-merged PR's context. The Agent tool runs the
+  same prompt in-session. Reserve the script-spawned form for
+  out-of-session fallback (cron, teammate's merge while idle).
+- Stale-branch prune: ambient hygiene; not session-start critical but
+  done at session-start by convention so the local view stays clean.
