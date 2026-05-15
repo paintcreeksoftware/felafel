@@ -18,6 +18,17 @@ export default defineConfig({
   outExtension: () => ({ js: ".mjs" }),
   clean: true,
   platform: "node",
+  // Statically substitute `process.env.NODE_ENV = "production"` at build
+  // time. Without it the bundle reads NODE_ENV at runtime; the
+  // container/AppImage typically leaves it unset, and code like
+  // `process.env.NODE_ENV !== "production"` then evaluates `true` —
+  // which is how pino tried to spawn pino-pretty as a worker thread and
+  // crashed the orchestrator at startup (PAI-171 / PAI-172 regression).
+  // The orchestrator only ships in production-bundled form (container,
+  // AppImage sidecar), so substituting unconditionally is correct.
+  env: {
+    NODE_ENV: "production",
+  },
   // Inline EVERY runtime dep into the bundle. The orchestrator ships
   // as a *sidecar* inside the desktop AppImage (`electron-builder.yml`'s
   // `extraResources`), and there's no node_modules tree beside it.
