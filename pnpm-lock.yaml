@@ -415,6 +415,9 @@ importers:
 
   packages/tailscale:
     dependencies:
+      '@felafel/logs':
+        specifier: workspace:*
+        version: link:../logs
       '@felafel/shared':
         specifier: workspace:*
         version: link:../shared

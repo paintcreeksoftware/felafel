@@ -4,6 +4,7 @@
 // remediation when one is known). No IO, no spawn — testable in
 // isolation. Lives outside `manager.ts` to keep the TailscaleManager
 // class under the 300-line source-file cap. See PAI-140.
+import type { Logger } from "@felafel/logs";
 import { STDERR_PREVIEW_MAX_LEN } from "@felafel/tailscale/constants";
 
 /** Classification of a `tailscale up` failure. */
@@ -71,12 +72,14 @@ export function matchesNoDaemonStderr(stderr: string): boolean {
  * @param stderr - combined stderr (stdout can be appended) from the CLI run
  * @param exitCode - CLI exit code, or null if it timed out
  * @param timedOut - true when the outer AbortController fired
+ * @param logger - service-bound logger for the unmatched-stderr breadcrumb
  * @returns the classified failure
  */
 export function classifyUpError(
   stderr: string,
   exitCode: number | null,
   timedOut: boolean,
+  logger: Logger,
 ): UpErrorClassification {
   if (timedOut) {
     return {
@@ -110,7 +113,10 @@ export function classifyUpError(
       message: "Tailscale rejected the auth key — check it isn't expired or revoked.",
     };
   }
-  console.warn("[tailscale] Unmatched stderr from tailscale up:", stderr.slice(0, STDERR_PREVIEW_MAX_LEN));
+  logger.warn(
+    { stderrPreview: stderr.slice(0, STDERR_PREVIEW_MAX_LEN) },
+    "tailscale.up.classify.unmatched",
+  );
   return {
     kind: "unknown",
     message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale up exited with code ${exitCode}`,
@@ -125,12 +131,14 @@ export function classifyUpError(
  * @param stderr - combined stderr (stdout can be appended) from the CLI run
  * @param exitCode - CLI exit code, or null if it timed out
  * @param timedOut - true when the outer AbortController fired
+ * @param logger - service-bound logger for the unmatched-stderr breadcrumb
  * @returns the classified failure
  */
 export function classifyServeError(
   stderr: string,
   exitCode: number | null,
   timedOut: boolean,
+  logger: Logger,
 ): ServeErrorClassification {
   if (timedOut) {
     return {
@@ -169,7 +177,10 @@ export function classifyServeError(
       message: "That Tailnet port is already published by another process.",
     };
   }
-  console.warn("[tailscale] Unmatched stderr from tailscale serve:", stderr.slice(0, STDERR_PREVIEW_MAX_LEN));
+  logger.warn(
+    { stderrPreview: stderr.slice(0, STDERR_PREVIEW_MAX_LEN) },
+    "tailscale.serve.classify.unmatched",
+  );
   return {
     kind: "unknown",
     message: stderr.trim().slice(0, STDERR_PREVIEW_MAX_LEN) || `tailscale serve exited with code ${exitCode}`,
