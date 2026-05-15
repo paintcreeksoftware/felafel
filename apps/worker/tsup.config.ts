@@ -1,8 +1,11 @@
 import { defineConfig } from "tsup";
 
-// Mirrors apps/orchestrator/tsup.config.ts, minus the node:sqlite prefix
-// shim — the worker has no DB and doesn't trigger esbuild's "node:" stripping
-// bug for sqlite imports.
+// Mirrors apps/orchestrator/tsup.config.ts. See that file for the
+// full rationale on noExternal/external split + NODE_ENV substitution;
+// the worker takes the same shape because it has the same bundling
+// constraints (workspace TS-source deps inlined, pino + OTel CJS-
+// dynamic-require packages externalized, NODE_ENV substituted so the
+// pino-pretty branch is dead-code-eliminated in production).
 export default defineConfig({
   entry: ["src/index.ts"],
   format: "esm",
@@ -11,5 +14,19 @@ export default defineConfig({
   outExtension: () => ({ js: ".mjs" }),
   clean: true,
   platform: "node",
-  noExternal: ["@felafel/shared"],
+  env: {
+    NODE_ENV: "production",
+  },
+  noExternal: [
+    "@felafel/backend",
+    "@felafel/logs",
+    "@felafel/shared",
+    "@felafel/tailscale",
+    "@hono/node-server",
+    "@hono/zod-openapi",
+    "hono",
+    "p-retry",
+    "pathe",
+    "zod",
+  ],
 });
