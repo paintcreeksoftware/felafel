@@ -2,8 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type AddressInfo } from "node:net";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { createLogger, Service } from "@felafel/logs";
 import { startHeartbeat } from "@felafel/worker/heartbeat";
 import { type WorkerRegistration } from "@felafel/shared";
+
+const testLogger = createLogger({ service: Service.WORKER });
 
 interface FakeOrchestrator {
   url: string;
@@ -86,6 +89,7 @@ describe("startHeartbeat", () => {
       controlPlaneUrl: "http://127.0.0.1:9091",
       orchestratorUrl: fake.url,
       intervalMs: 60_000,
+      logger: testLogger,
     });
     try {
       await waitFor(() => fake.received.length > 0, 1000);
@@ -103,6 +107,7 @@ describe("startHeartbeat", () => {
       controlPlaneUrl: "http://127.0.0.1:9091",
       orchestratorUrl: fake.url,
       intervalMs: 50,
+      logger: testLogger,
     });
     try {
       await waitFor(() => fake.received.length >= 3, 1000);
@@ -117,6 +122,7 @@ describe("startHeartbeat", () => {
       controlPlaneUrl: "http://127.0.0.1:9091",
       orchestratorUrl: fake.url,
       intervalMs: 50,
+      logger: testLogger,
     });
     await waitFor(() => fake.received.length > 0, 1000);
     stop();
