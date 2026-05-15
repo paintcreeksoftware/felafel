@@ -19,6 +19,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@felafel/logs": "workspace:*",
     "@felafel/shared": "workspace:*",
     "@felafel/tailscale": "workspace:*",
     "@felafel/ui": "workspace:*",

@@ -9,6 +9,7 @@
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
 import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
+import { createLogger, type Logger, Service } from "@felafel/logs";
 import {
   Channels,
   type OrchestratorStatus,
@@ -48,8 +49,14 @@ class DesktopApp {
   // recover the latest state on mount. Mirrors orchestratorUrl above but
   // carries the full discriminated union.
   private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
+  private readonly logger: Logger = createLogger({
+    service: Service.DESKTOP_MAIN,
+  });
   private readonly tailscale = new TailscaleManager();
-  private readonly orchestrator = new OrchestratorManager(this.tailscale);
+  private readonly orchestrator = new OrchestratorManager(
+    this.tailscale,
+    this.logger.child({ component: "orchestrator" }),
+  );
 
   /**
    * Wire IPC handlers and Electron lifecycle hooks. Idempotent in practice
@@ -160,7 +167,7 @@ class DesktopApp {
       try {
         await this.orchestrator.stop();
       } catch (error) {
-        console.error("[main] orchestrator.stop failed:", error);
+        this.logger.error({ err: error }, "orchestrator.stop.failed");
       }
       app.exit(0);
       })();
@@ -198,7 +205,7 @@ class DesktopApp {
         ...(tailnetServe ? { degradations: { tailnetServe } } : {}),
       });
     } catch (error) {
-      console.error("[main] orchestrator.start failed:", error);
+      this.logger.error({ err: error }, "orchestrator.start.failed");
       this.broadcastOrchestrator({
         kind: "error",
         message: error instanceof Error ? error.message : String(error),

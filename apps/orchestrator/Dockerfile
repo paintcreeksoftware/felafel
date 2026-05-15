@@ -56,11 +56,6 @@ COPY --from=builder /deploy/dist ./dist
 # path because import.meta.dirname there points at the source file.
 COPY --from=builder /deploy/node_modules/@felafel/db/migrations ./migrations
 
-# Setting NODE_ENV=production keeps pino on its zero-transport default
-# (JSON to stderr). Without it, createLogger() in @felafel/logs spawns
-# pino-pretty as a worker thread; that has its own resolution path and
-# fails in slim/distroless images the same way as native modules.
-ENV NODE_ENV=production
 ENV ORCHESTRATOR_DATA_DIR=/data
 ENV ORCHESTRATOR_HOST=0.0.0.0
 ENV ORCHESTRATOR_PORT=9090

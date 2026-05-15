@@ -24,6 +24,21 @@ export type Service =
   | "felafel-desktop-renderer"
   | "felafel-worker";
 
+/**
+ * Named accessors for every member of {@link Service}. Consumers should
+ * prefer `Service.DESKTOP_MAIN` etc. over the raw string literal so
+ * the per-service identity flows from one place. Adding a new service
+ * means adding it BOTH to the union above and to this const — the
+ * `satisfies` constraint guarantees the const stays in sync (a missing
+ * member is a compile error).
+ */
+export const Service = {
+  ORCHESTRATOR: "felafel-orchestrator",
+  DESKTOP_MAIN: "felafel-desktop-main",
+  DESKTOP_RENDERER: "felafel-desktop-renderer",
+  WORKER: "felafel-worker",
+} as const satisfies Record<string, Service>;
+
 export {
   createLogger,
   type CreateLoggerOptions,

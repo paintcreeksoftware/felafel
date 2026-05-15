@@ -3,6 +3,7 @@
 // a child and points the renderer at it over IPC.
 import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
+import type { Logger } from "@felafel/logs";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 import { ensureDataDir } from "@felafel/desktop/main/orchestrator-data-dir";
 import { resolveScriptPath } from "@felafel/desktop/main/orchestrator-paths";
@@ -45,6 +46,7 @@ const SIGTERM_GRACE_MS = 5_000;
 export class OrchestratorManager {
   private process: ResultPromise | null = null;
   private readonly tailscale: TailscaleManager;
+  private readonly logger: Logger;
   // Tailnet port we published a `tailscale serve` mapping for during the
   // last successful start(). Null when start() ran on a Tailscale-less
   // host or the publish itself failed — stop() uses this to skip the
@@ -73,9 +75,14 @@ export class OrchestratorManager {
    * Tailnet port via `tailscale serve` when Tailscale is connected. The
    * dependency is required (not optional) so the wiring is visible at
    * the construction site instead of being silently disabled when missing.
+   * @param logger - service-bound logger, typically the desktop main
+   * logger's `child({ component: "orchestrator" })`. Required so sidecar
+   * lifecycle events land in the unified log stream alongside the rest
+   * of the desktop main process's output.
    */
-  constructor(tailscale: TailscaleManager) {
+  constructor(tailscale: TailscaleManager, logger: Logger) {
     this.tailscale = tailscale;
+    this.logger = logger;
   }
 
   /**
@@ -121,7 +128,7 @@ export class OrchestratorManager {
     });
 
     this.process.on("exit", (code, signal) => {
-      console.error(`[orchestrator] exited code=${code} signal=${signal}`);
+      this.logger.error({ code, signal }, "orchestrator.child.exited");
       this.process = null;
     });
 
@@ -195,9 +202,9 @@ export class OrchestratorManager {
       // doesn't try to unpublish something that was never published.
       this.publishedTailnetPort = tailnetPort;
     } catch (error) {
-      console.error(
-        `[orchestrator] tailscale serve setup failed (loopback still works, remote dispatch will not):`,
-        error,
+      this.logger.error(
+        { err: error },
+        "orchestrator.tailscale-serve.failed",
       );
       // Capture structured degradation for the renderer if the thrown
       // error carries the typed classification (always, when it came

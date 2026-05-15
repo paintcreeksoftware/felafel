@@ -77,6 +77,9 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@felafel/logs':
+        specifier: workspace:*
+        version: link:../../packages/logs
       '@felafel/shared':
         specifier: workspace:*
         version: link:../../packages/shared
