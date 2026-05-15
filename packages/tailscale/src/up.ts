@@ -137,7 +137,7 @@ async function buildUpInvocation(
     logger.warn(
       // Falls back to --authkey= which leaks the key via /proc/<pid>/cmdline.
       // Surface the regression so it's grep-able post-deploy.
-      "tailscale.up.authkey-stdin.unsupported",
+      "tailscale.up.authkey.stdin-unsupported",
     );
     return {
       args: ["up", "--timeout=30s", `--authkey=${authkey}`],
