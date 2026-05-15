@@ -52,7 +52,9 @@ class DesktopApp {
   private readonly logger: Logger = createLogger({
     service: Service.DESKTOP_MAIN,
   });
-  private readonly tailscale = new TailscaleManager();
+  private readonly tailscale = new TailscaleManager(
+    this.logger.child({ component: "tailscale" }),
+  );
   private readonly orchestrator = new OrchestratorManager(
     this.tailscale,
     this.logger.child({ component: "orchestrator" }),
