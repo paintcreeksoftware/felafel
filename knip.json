@@ -20,7 +20,14 @@
     },
     "apps/orchestrator": {
       "entry": ["tests/**/*.{test,spec}.ts"],
-      "project": ["src/**/*.ts", "tests/**/*.ts"]
+      "project": ["src/**/*.ts", "tests/**/*.ts"],
+      "ignoreDependencies": [
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/exporter-trace-otlp-http",
+        "@opentelemetry/resources",
+        "@opentelemetry/sdk-node",
+        "pino"
+      ]
     },
     "apps/worker": {
       "entry": ["tests/**/*.{test,spec}.ts"],

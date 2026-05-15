@@ -88,9 +88,11 @@ jobs:
 
       - name: Smoke-test container (/health)
         run: |
-          # Run with a tmpfs-mounted data dir so SQLite has somewhere writable.
-          # Bind to a random port; query /health; tear down.
-          docker run -d --rm \
+          # Run with a tmpfs-mounted data dir so SQLite has somewhere
+          # writable. NOT using --rm so that if the orchestrator
+          # process crashes, the exited container still exists for
+          # `docker logs` to read.
+          docker run -d \
             --name felafel-orchestrator-ci \
             -e ORCHESTRATOR_DATA_DIR=/data \
             -v /tmp/felafel-data:/data \
@@ -104,10 +106,13 @@ jobs:
             fi
             if [ "$i" -eq 20 ]; then
               echo "Container failed to become healthy within 10s"
-              docker logs felafel-orchestrator-ci
-              docker stop felafel-orchestrator-ci
+              echo "--- docker logs felafel-orchestrator-ci ---"
+              docker logs felafel-orchestrator-ci || true
+              echo "--- docker inspect (state) ---"
+              docker inspect --format '{{json .State}}' felafel-orchestrator-ci || true
+              docker rm -f felafel-orchestrator-ci || true
               exit 1
             fi
             sleep 0.5
           done
-          docker stop felafel-orchestrator-ci
+          docker rm -f felafel-orchestrator-ci

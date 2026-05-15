@@ -9,16 +9,20 @@ const hostname = process.env[EnvVars.HOST] ?? Defaults.HOST;
 const dataDir = process.env[EnvVars.DATA_DIR];
 
 if (!dataDir) {
-  console.error(`${EnvVars.DATA_DIR} is required`);
+  // No logger yet — buildApp owns the bootstrap.
+  process.stderr.write(`${EnvVars.DATA_DIR} is required\n`);
   process.exit(1);
 }
 
 const { db, close: closeDb } = createDb(dataDir);
-const app = buildApp({ db });
-const stopSweep = startSweep({ db });
+const { app, sdk, logger } = buildApp({ db });
+const stopSweep = startSweep({ db, logger });
 
 serve({ fetch: app.fetch, port, hostname }, (info) => {
-  console.log(`orchestrator listening on http://${info.address}:${info.port.toString()}`);
+  logger.info(
+    { address: info.address, port: info.port },
+    "startup.listening",
+  );
 });
 
 /**
@@ -27,16 +31,23 @@ serve({ fetch: app.fetch, port, hostname }, (info) => {
  * termination it expects.
  * @param signal - the POSIX signal name that triggered shutdown
  */
-function shutdown(signal: string): void {
-  console.log(`received ${signal}, shutting down...`);
+async function shutdown(signal: string): Promise<void> {
+  logger.info({ signal }, "shutdown.start");
   stopSweep();
   closeDb();
+  // 2s cap so a hung exporter can't pin the process open.
+  await Promise.race([
+    sdk.shutdown(),
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, 2_000);
+    }),
+  ]);
   process.exit(0);
 }
 
 process.on("SIGTERM", () => {
-  shutdown("SIGTERM");
+  void shutdown("SIGTERM");
 });
 process.on("SIGINT", () => {
-  shutdown("SIGINT");
+  void shutdown("SIGINT");
 });

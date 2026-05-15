@@ -1,6 +1,4 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
-import { cors } from "hono/cors";
-
+import { createHonoApp } from "@felafel/backend";
 import {
   type Db,
   deleteWorker,
@@ -32,23 +30,26 @@ export interface BuildAppOptions {
 }
 
 /**
- * Build the orchestrator's Hono app: applies CORS, mounts the OpenAPI
- * routes, attaches the DB handle so each request resolves it from
- * context, and registers the global error handler.
+ * Build the orchestrator's Hono app: delegates the framework wiring
+ * (cors + request-logger middleware + OTel bootstrap) to
+ * `createHonoApp` from `@felafel/backend` (PAI-168 C3), then mounts
+ * the orchestrator's OpenAPI routes onto the returned app. The
+ * `db` is captured in each route handler's closure as before.
+ *
+ * The return type is intentionally inferred (not annotated) — the
+ * `.openapi(...)` chain narrows the app type with every route
+ * registered, and `AppType` is exported from that narrowed shape so
+ * the renderer's `hc<AppType>` client gets full route inference.
  * @param opts - dependency-injection options
  * @param opts.db - the Drizzle DB handle the routes will use
- * @returns the configured Hono app, ready for `serve`
+ * @returns `{ app, sdk, logger }` — the route-narrowed app + the
+ *   OTel SDK handle (for `sdk.shutdown()` on SIGTERM) + the parent
+ *   logger.
  */
 export function buildApp(opts: BuildAppOptions) {
-  // The orchestrator binds to 127.0.0.1 only (or, in container mode, behind a
-  // Tailnet ACL), so the network layer already gates access. Allowing all
-  // origins is what makes the Electron renderer's cross-origin fetch work in
-  // dev (renderer is served by Vite at http://localhost:5173 while the
-  // orchestrator listens on http://127.0.0.1:909x — different origins).
-  // .use() must run before the .openapi() chain because chaining .use()
-  // returns the base Hono type and loses OpenAPIHono's route narrowing.
-  const base = new OpenAPIHono();
-  base.use("*", cors());
+  const { app: base, sdk, logger } = createHonoApp({
+    service: "felafel-orchestrator",
+  });
 
   const app = base
     .openapi(healthRoute, (c) => c.json({ ok: true } as const))
@@ -146,7 +147,7 @@ export function buildApp(opts: BuildAppOptions) {
     info: { title: "Felafel Orchestrator", version: "0.1.0" },
   });
 
-  return app;
+  return { app, sdk, logger };
 }
 
-export type AppType = ReturnType<typeof buildApp>;
+export type AppType = ReturnType<typeof buildApp>["app"];

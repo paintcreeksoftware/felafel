@@ -33,10 +33,27 @@ export default defineConfig({
   // returns, the AppImage's extraResources packaging needs a parallel
   // node_modules path or the dep should be evaluated for replacement
   // by a built-in / pure-JS alternative first.
+  // Inline workspace TS-source packages + framework deps so the
+  // sidecar runs without a node_modules tree (PAI-90 invariant).
+  // @felafel/logs and @felafel/backend MUST be inlined because their
+  // package.json `main` points at `./src/*.ts` — Node can't run TS
+  // source directly, only the bundler can.
+  //
+  // pino + OTel auto-instrumentations are explicitly externalized
+  // because they use CJS dynamic require to load transports +
+  // instrumentations at runtime, which esbuild can't follow into a
+  // single-file ESM bundle (`Dynamic require of "os" is not
+  // supported`). They resolve at runtime via the Node module-walk
+  // from the bundle's location: the container path's `pnpm deploy
+  // --prod` produces the right tree; the AppImage sidecar path
+  // needs the same tree shipped via extraResources (follow-up
+  // PAI-183).
   noExternal: [
-    "@felafel/shared",
+    "@felafel/backend",
     "@felafel/contracts",
     "@felafel/db",
+    "@felafel/logs",
+    "@felafel/shared",
     "@hono/node-server",
     "@hono/zod-openapi",
     "hono",
@@ -44,6 +61,19 @@ export default defineConfig({
     "drizzle-zod",
     "pathe",
     "zod",
+  ],
+  external: [
+    "pino",
+    "pino-pretty",
+    "@opentelemetry/api",
+    "@opentelemetry/sdk-node",
+    "@opentelemetry/sdk-trace-base",
+    "@opentelemetry/sdk-trace-node",
+    "@opentelemetry/sdk-trace-web",
+    "@opentelemetry/exporter-trace-otlp-http",
+    "@opentelemetry/auto-instrumentations-node",
+    "@opentelemetry/resources",
+    "@opentelemetry/context-async-hooks",
   ],
   onSuccess: async () => {
     // tsup's onSuccess signature requires a Promise return. All the

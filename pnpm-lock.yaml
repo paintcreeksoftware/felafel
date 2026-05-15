@@ -150,9 +150,15 @@ importers:
 
   apps/orchestrator:
     dependencies:
+      '@felafel/backend':
+        specifier: workspace:*
+        version: link:../../packages/backend
       '@felafel/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@felafel/logs':
+        specifier: workspace:*
+        version: link:../../packages/logs
       '@felafel/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -162,12 +168,30 @@ importers:
       '@hono/zod-openapi':
         specifier: ^1.1.0
         version: 1.3.0(hono@4.12.16)(zod@4.3.6)
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
+      '@opentelemetry/auto-instrumentations-node':
+        specifier: ^0.76.0
+        version: 0.76.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.1(@opentelemetry/api@1.9.1))
+      '@opentelemetry/exporter-trace-otlp-http':
+        specifier: ^0.218.0
+        version: 0.218.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources':
+        specifier: ^2.7.1
+        version: 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-node':
+        specifier: ^0.218.0
+        version: 0.218.0(@opentelemetry/api@1.9.1)
       hono:
         specifier: ^4.10.0
         version: 4.12.16
       pathe:
         specifier: ^2.0.0
         version: 2.0.3
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
       zod:
         specifier: ^4.0.0
         version: 4.3.6

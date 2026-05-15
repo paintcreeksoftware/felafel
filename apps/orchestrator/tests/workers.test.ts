@@ -9,7 +9,7 @@ import {
   insertRun,
   markRunDispatched,
 } from "@felafel/db";
-import { buildApp } from "@felafel/orchestrator/app";
+import { type AppType, buildApp } from "@felafel/orchestrator/app";
 import { type Worker, type WorkerRegistration } from "@felafel/shared";
 
 /**
@@ -34,7 +34,7 @@ function sampleReg(overrides: Partial<WorkerRegistration> = {}): WorkerRegistrat
  * @returns the Response from the POST
  */
 async function postWorker(
-  app: ReturnType<typeof buildApp>,
+  app: AppType,
   reg: WorkerRegistration,
 ): Promise<Response> {
   return await app.request("/workers", {
@@ -59,14 +59,14 @@ describe("/workers", () => {
   });
 
   it("GET /workers returns empty list initially", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/workers");
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([]);
   });
 
   it("POST /workers registers a worker", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const reg = sampleReg();
     const res = await postWorker(app, reg);
     expect(res.status).toBe(200);
@@ -80,7 +80,7 @@ describe("/workers", () => {
   });
 
   it("POST /workers with same id upserts (no duplicate)", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const id = randomUUID();
     await postWorker(app, sampleReg({ id, hostname: "first" }));
     const res = await postWorker(app, sampleReg({ id, hostname: "second" }));
@@ -97,7 +97,7 @@ describe("/workers", () => {
   it("workers persist across orchestrator restarts", async () => {
     const reg = sampleReg();
     {
-      const app = buildApp({ db: handle.db });
+      const { app } = buildApp({ db: handle.db });
       const res = await postWorker(app, reg);
       expect(res.status).toBe(200);
     }
@@ -105,7 +105,7 @@ describe("/workers", () => {
 
     const reopened = createDb(dataDir);
     try {
-      const app = buildApp({ db: reopened.db });
+      const { app } = buildApp({ db: reopened.db });
       const listRes = await app.request("/workers");
       const list = (await listRes.json()) as Worker[];
       expect(list).toHaveLength(1);
@@ -116,7 +116,7 @@ describe("/workers", () => {
   });
 
   it("POST /workers rejects invalid payload", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/workers", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -126,7 +126,7 @@ describe("/workers", () => {
   });
 
   it("POST /workers rejects payload without controlPlaneUrl", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/workers", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -136,7 +136,7 @@ describe("/workers", () => {
   });
 
   it("DELETE /workers/{id} removes a worker with no referencing runs", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const reg = sampleReg();
     await postWorker(app, reg);
 
@@ -149,13 +149,13 @@ describe("/workers", () => {
   });
 
   it("DELETE /workers/{id} returns 404 for an unknown id", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request(`/workers/${randomUUID()}`, { method: "DELETE" });
     expect(res.status).toBe(404);
   });
 
   it("DELETE /workers/{id} returns 409 when runs reference the worker", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const reg = sampleReg();
     await postWorker(app, reg);
 

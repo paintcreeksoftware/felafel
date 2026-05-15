@@ -20,14 +20,14 @@ describe("GET /health", () => {
   });
 
   it("returns ok: true", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/health");
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ ok: true });
   });
 
   it("publishes an OpenAPI spec at /openapi.json", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/openapi.json");
     expect(res.status).toBe(200);
     const spec = (await res.json()) as { paths: Record<string, unknown> };
@@ -36,7 +36,7 @@ describe("GET /health", () => {
   });
 
   it("answers CORS preflight for cross-origin renderer fetches", async () => {
-    const app = buildApp({ db: handle.db });
+    const { app } = buildApp({ db: handle.db });
     const res = await app.request("/workers", {
       method: "OPTIONS",
       headers: {

@@ -22,10 +22,14 @@ export interface BootstrapOptions {
 
 /**
  * Initialize the OpenTelemetry SDK + the Felafel logger together (PAI-168
- * C2). Returns a started SDK handle (callers can shut it down on process
- * exit) and a logger pre-bound with the service identity. The SDK exports
- * to `OTEL_EXPORTER_OTLP_ENDPOINT` when set; otherwise it runs without an
- * exporter so no spans leave the process.
+ * C2). Returns an SDK handle and a logger pre-bound with the service
+ * identity. The SDK is started — and auto-instrumentations registered —
+ * only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; otherwise the returned
+ * `sdk` is constructed but inert (no patches applied to global APIs, no
+ * spans collected). This matches the PAI-168 plan's "no-op when unset"
+ * contract and keeps test suites that don't set the env var from
+ * accumulating one SDK + one set of global patches per `bootstrap`
+ * call.
  *
  * Single-import contract — entry points get observability in one call.
  * @param opts - Service identity.
@@ -45,7 +49,9 @@ export function bootstrap(opts: BootstrapOptions): {
       }),
     ],
   });
-  sdk.start();
+  if (url) {
+    sdk.start();
+  }
   return {
     logger: createLogger({ service: opts.service, version: opts.version }),
     sdk,
