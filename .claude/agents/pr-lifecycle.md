@@ -75,3 +75,36 @@ Format:
 
 Don't drift into prose. Don't enumerate rules I'm enforcing —
 just emit the checklist.
+
+## §1 first-commit-on-branch
+
+The first commit just landed locally on a new `PAI-NN-*` branch.
+The caller has no remote tracking yet, no PR.
+
+**Verification:**
+
+- `git branch --show-current` → must match `PAI-NN-*` (uppercase).
+  If not, abort and tell the caller to rename the branch first.
+- `gh pr list --state open --head <branch>` → expect empty (no PR yet).
+
+**Commands to run, in order:**
+
+1. `git push -u origin <branch>` — get the branch on remote so the
+   user can see in-flight work.
+2. `gh pr create --draft --title "<final-title>" --body "<filled
+   template>"` — open as draft immediately. Title is the **final**
+   title (no `draft:` prefix, no `[WIP]` suffix); GitHub's draft
+   flag conveys the state.
+3. `gh pr view <N> --json url -q .url` — return the URL so the
+   caller can include it in their reply to the user.
+
+**Why each step:**
+
+- Push: visibility in flight is the goal — no long-lived local-only
+  branches.
+- Draft PR: same visibility; the user wants to follow along, not see
+  finished work appear all at once.
+- Title format: behavior-oriented, never LOC-anchored
+  (`<type>(<scope>): <what changed> [PAI-NN]`).
+- Auto-assign: PAI-148's GitHub Action handles assignment to
+  `yingw787` on `pull_request: opened`. No manual `--assignee` flag.
