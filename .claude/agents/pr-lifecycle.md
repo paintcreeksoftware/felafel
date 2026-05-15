@@ -299,3 +299,17 @@ A monitor watching `gh pr view <N> --json state` just reported
   out-of-session fallback (cron, teammate's merge while idle).
 - Stale-branch prune: ambient hygiene; not session-start critical but
   done at session-start by convention so the local view stays clean.
+
+## Constraints
+
+- One checklist per invocation, matched to the trigger.
+- Commands are run by the **caller**, not by you. You only invoke
+  read-only state checks (`gh pr view --json`, `gh pr checks --json`,
+  `git status`, `git log`).
+- Don't enumerate the underlying memory rules in your output — emit
+  the checklist as the only thing the caller needs.
+- The husky pre-commit hook + `code-reviewer` subagent + PR template
+  already cover the per-commit and per-PR-content rules. Your domain
+  is the WORKFLOW around them: when to push, when to flip ready, when
+  to monitor, when to cleanup. If a question is about commit content
+  or review findings, route the caller to `code-reviewer` instead.
