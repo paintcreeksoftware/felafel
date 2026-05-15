@@ -9,17 +9,13 @@
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
 import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
-import { createLogger, type Logger } from "@felafel/logs";
+import { createLogger, type Logger, Service } from "@felafel/logs";
 import {
   Channels,
   type OrchestratorStatus,
   type TailscaleStatus,
 } from "@felafel/shared";
-import {
-  DesktopEnvVars,
-  DesktopService,
-  Platform,
-} from "@felafel/desktop/main/constants";
+import { DesktopEnvVars, Platform } from "@felafel/desktop/main/constants";
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
 import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
@@ -54,7 +50,7 @@ class DesktopApp {
   // carries the full discriminated union.
   private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
   private readonly logger: Logger = createLogger({
-    service: DesktopService.MAIN,
+    service: Service.DESKTOP_MAIN,
   });
   private readonly tailscale = new TailscaleManager();
   private readonly orchestrator = new OrchestratorManager(

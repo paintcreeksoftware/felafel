@@ -4,12 +4,11 @@
 // The full lifecycle (real spawn + /health) lives in
 // orchestrator.integration.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createLogger } from "@felafel/logs";
-import { DesktopService } from "@felafel/desktop/main/constants";
+import { createLogger, Service } from "@felafel/logs";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { type TailscaleManager } from "@felafel/tailscale";
 
-const testLogger = createLogger({ service: DesktopService.MAIN });
+const testLogger = createLogger({ service: Service.DESKTOP_MAIN });
 
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => "/tmp" } }));
 

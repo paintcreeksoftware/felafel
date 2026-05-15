@@ -56,14 +56,3 @@ export const WindowSize = {
   WIDTH: 1200,
   HEIGHT: 800,
 } as const;
-
-/**
- * Service identities the desktop processes register with `@felafel/logs`.
- * The string values must remain members of the `Service` union in
- * `packages/logs/src/index.ts` (PAI-168 C6 — `service.name` resource
- * attribute and the logger's `service` binding share identity).
- */
-export const DesktopService = {
-  /** Electron main process. */
-  MAIN: "felafel-desktop-main",
-} as const;
