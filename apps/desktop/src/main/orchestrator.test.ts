@@ -5,10 +5,11 @@
 // orchestrator.integration.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLogger } from "@felafel/logs";
+import { DesktopService } from "@felafel/desktop/main/constants";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { type TailscaleManager } from "@felafel/tailscale";
 
-const testLogger = createLogger({ service: "felafel-desktop-main" });
+const testLogger = createLogger({ service: DesktopService.MAIN });
 
 vi.mock("electron", () => ({ app: { isPackaged: false, getPath: () => "/tmp" } }));
 
@@ -90,7 +91,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
       publishServe: vi.fn().mockRejectedValue(new Error("publish failed")),
     });
     const m = new OrchestratorManager(ts, testLogger) as OrchestratorManager & Privates;
-    const errorSpy = vi.spyOn(testLogger, "error");
+    const errorSpy = vi.spyOn(testLogger, "error").mockImplementation(() => {});
     await expect(m.setupTailnetServe(54321)).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
@@ -108,7 +109,7 @@ describe("OrchestratorManager.setupTailnetServe", () => {
 describe("OrchestratorManager.getServeDegradation", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    errorSpy = vi.spyOn(testLogger, "error");
+    errorSpy = vi.spyOn(testLogger, "error").mockImplementation(() => {});
   });
   afterEach(() => {
     errorSpy.mockRestore();

@@ -25,10 +25,11 @@ vi.mock("electron", () => ({
 }));
 
 import { createLogger } from "@felafel/logs";
+import { DesktopService } from "@felafel/desktop/main/constants";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
 import { TailscaleManager } from "@felafel/tailscale";
 
-const testLogger = createLogger({ service: "felafel-desktop-main" });
+const testLogger = createLogger({ service: DesktopService.MAIN });
 
 const devDataDir = join(here, "..", "..", ".dev-orchestrator-data");
 

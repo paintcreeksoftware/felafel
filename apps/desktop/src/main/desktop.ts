@@ -15,7 +15,11 @@ import {
   type OrchestratorStatus,
   type TailscaleStatus,
 } from "@felafel/shared";
-import { DesktopEnvVars, Platform } from "@felafel/desktop/main/constants";
+import {
+  DesktopEnvVars,
+  DesktopService,
+  Platform,
+} from "@felafel/desktop/main/constants";
 import { applyAppIdentity } from "@felafel/desktop/main/identity";
 import { applyMainAppMenu } from "@felafel/desktop/main/menu";
 import { OrchestratorManager } from "@felafel/desktop/main/orchestrator";
@@ -50,7 +54,7 @@ class DesktopApp {
   // carries the full discriminated union.
   private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
   private readonly logger: Logger = createLogger({
-    service: "felafel-desktop-main",
+    service: DesktopService.MAIN,
   });
   private readonly tailscale = new TailscaleManager();
   private readonly orchestrator = new OrchestratorManager(
