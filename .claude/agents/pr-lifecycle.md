@@ -177,3 +177,63 @@ The caller is about to `git push` to an open PR's branch.
 - Monitor: PR-state notifications during follow-on work are not user
   input — they're CI moving. The caller continues their other work
   while the monitor streams.
+
+## §3 about-to-claim-ready
+
+The caller is about to tell the user the PR is ready / merge-ready /
+all-green / done.
+
+**Verification:**
+
+- `gh pr view <N> --json state,isDraft,mergeStateStatus,title` — note
+  `isDraft` (must be `true` if this is the first ready-flip) and
+  `title` (must not start with `draft:`, `[WIP]`, `(draft)`).
+- `gh pr checks <N>` — every required check must be passing or
+  N/A. **If anything is pending or failing, STOP** — the caller is
+  premature.
+- `pnpm code-reviewer <N>` (or equivalent: invoke the
+  `code-reviewer` subagent against the PR) — findings addressed or
+  N/A'd inline.
+
+**Commands to run, in order (ONLY if all verification passes):**
+
+1. **Always use `pnpm pr:ready <N>`, never bare `gh pr ready <N>`.**
+   The wrapper atomically stamps the
+   `<!-- claude-cost-block:* -->` and
+   `<!-- claude-drift-snapshot:* -->` marker zones into the PR body
+   BEFORE the ready flip. PAI-166's CI workflows lift them on the
+   `ready_for_review` event; bare `gh pr ready` skips the stamping
+   and the workflows post a "stamp zone empty" warning comment.
+
+   ```bash
+   pnpm pr:ready <N>
+   ```
+
+2. **Retitle if the title still starts with `draft:` / `[WIP]`:**
+
+   ```bash
+   gh pr edit <N> --title "<clean conventional-commit title>"
+   ```
+
+   The retitle + ready-flip are one atomic action.
+3. Arm the full PR-lifecycle monitor chain (CI → merge-state →
+   auto-cleanup → memory-promoter drift check). See §4 just-merged
+   for the merge-state monitor template the caller chains after CI
+   reports all-green. Caller can use a single Monitor with two
+   sequential while-loops, or two Monitors in sequence.
+
+**Why each step:**
+
+- Pre-ready CI gate: `pushed ≠ done`; the done line is every required
+  check passing. Don't tell the user "ready" while a job is still
+  pending or red.
+- `pnpm pr:ready` specifically: bare `gh pr ready` leaves the cost +
+  drift marker zones empty, and PAI-166's CI fires a warning comment
+  saying the hook didn't run. Half-stamped state is the signal that
+  the local hook was bypassed.
+- Retitle: a `draft:` prefix on a non-draft PR is just as wrong as
+  draft state with no prefix. Both pieces flip together.
+- Draft PRs don't run the full CI suite (workflows gate on
+  `ready_for_review` to save Actions minutes). A monitor armed on a
+  draft watches for jobs that won't fire — flipping to ready is what
+  actually triggers the suite the monitor expects.
