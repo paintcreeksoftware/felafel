@@ -39,11 +39,17 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 
 ### Commits & PR shape
 
-- **One logical change per commit.** Each commit represents one
-  concern — no "refactor + new feature + lint fix" bundles. Check
-  via `git log <merge-base>..HEAD --oneline` + spot reads. Atomic
-  semantic seams (file, class, method); when splitting, the seam is
-  semantic, not LOC-midpoint.
+- **One function per commit** (strict form of "one logical change").
+  Each commit moves exactly one function, class, or component —
+  even when two functions are tightly coupled (e.g. `apply()` calls
+  `build()`, both moving together as a public+helper pair). Split
+  along the function seam, not the cluster. The PR end-state is
+  semantic + working; intermediate commits can leave one module
+  temporarily importing another's helper. Working-tree-at-each-commit
+  is a PR-level invariant in this project, not a commit-level one.
+  Check via `git log <merge-base>..HEAD --oneline` + spot reads;
+  flag any commit that moves a cluster as one unit when the cluster
+  decomposes into discrete functions.
 - **PR LOC cap 500–750.** Reviewable code only; lockfiles and
   snapshots don't count. Check with
   `git diff --stat <merge-base> -- ':!*lock*' ':!**/snapshots/**'`.
@@ -58,6 +64,17 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   capability surface changed (architecture shift, new top-level
   capability, removed capability, tech-stack shift at the boundary).
   N/A for bug fixes / internal refactors / dep swaps / doc-only.
+- **PR body aligns with the template.** Read
+  `.github/PULL_REQUEST_TEMPLATE.md` and verify the PR's body
+  follows its H2/H3 structure verbatim — `Summary`, `Linear
+  ticket`, `Test plan`, `12-factor deviations`, `Notes for
+  reviewer`. Sections that don't apply get `N/A` inline rather
+  than being silently omitted. Flag freeform bodies that ignore
+  the template; the template encodes the working agreements.
+- **PR title is behavior-oriented, not metric-anchored.** No LOC
+  suffixes (`<300 LOC`, `(reduces by 130 lines)`, `fits cap`,
+  `~450 lines`) in the title — the body explains the math. Title
+  format: `<type>(<scope>): <what changed> [PAI-NN]`.
 
 ### Code style (judgement, not auto-enforced)
 
@@ -101,6 +118,25 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   the same change. Flag `pnpm dlx`, `npx`, or `node_modules/.bin/…`
   in the diff.
 
+### Design principles
+
+- **Contracts over conventions.** For any rule the PR introduces or
+  enforces, ask: what's the contract layer? Conventions ("everyone
+  agrees to do X") are only acceptable when no contract is feasible.
+  Strength order: type system (opaque types, union literals,
+  required params) → factory functions (one public way to build) →
+  lint rules (`no-restricted-imports`, `no-restricted-syntax`,
+  custom rules) → runtime assertions → convention. Flag any new
+  design rule that defaults to "we'll all remember to do X" when a
+  contract layer is reachable.
+- **Smaller is better.** Default to the smallest correct version
+  at every layer: fewer LOC, fewer abstractions, fewer files,
+  fewer helpers, fewer deps, shorter docs, fewer bullets. Three
+  similar lines beats a helper used twice. PR descriptions
+  shouldn't carry per-PR LOC estimates — the cap is enforcement at
+  commit time, not a design metric. Flag inflated proposals,
+  premature abstractions, and bullet-graveyards.
+
 ### Libraries & service design
 
 - **Prefer mature libraries** for solved problems (`execa`,
@@ -129,6 +165,21 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   `.husky/pre-commit` hook, the matching CI workflow under
   `.github/workflows/`, the README/docs, and the memory file if the
   check encodes a policy. Flag any one-of-four landing in isolation.
+- **GitHub Actions cron schedules use off-minute slots.** Any new
+  or modified `schedule: - cron:` in `.github/workflows/*.yml`
+  must avoid `:00` / `:05` / `:15` / `:30` / `:45` — GitHub queues
+  hammer those slots and runs get delayed. Pick `:17`, `:23`,
+  `:37`, `:53`, or any other off-minute. Flag a `cron: 0 * * * *`
+  or similar on sight.
+- **SQL migration filenames are descriptive snake_case.** Reject
+  any new file under `packages/db/migrations/` or
+  `apps/orchestrator/migrations/` named with drizzle-kit's default
+  `<adjective>_<noun>` pattern (`0042_absent_iceman.sql`,
+  `0043_lyrical_doctor.sql`, etc.). Require verb-led snake_case:
+  `0042_add_workers_table.sql`, `0043_backfill_run_status.sql`,
+  `0000_initial_schema.sql`. Both the `.sql` file and its `tag`
+  in `migrations/meta/_journal.json` must rename together. Safe
+  pre-deploy; unsafe post-deploy.
 
 ### Testing & state
 
