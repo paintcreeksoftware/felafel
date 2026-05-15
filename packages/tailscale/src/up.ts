@@ -18,6 +18,7 @@
 // CLI with `tailscale up --help` once and cache the result on the
 // per-manager `UpFlowCache`.
 import { execa } from "execa";
+import type { Logger } from "@felafel/logs";
 import { type TailscaleConnectResult } from "@felafel/shared";
 import { classifyUpError } from "@felafel/tailscale/classify";
 
@@ -64,19 +65,22 @@ export function makeUpFlowCache(): UpFlowCache {
  * @param binary - resolved path to the `tailscale` binary
  * @param authkey - optional pre-auth key; piped via stdin when supported
  * @param cache - manager-owned cache for the --authkey-stdin probe
+ * @param logger - service-bound logger, threaded into the classifier + the
+ *   authkey-stdin-fallback warning
  * @returns the connect outcome
  */
 export async function runUpFlow(
   binary: string,
   authkey: string | undefined,
   cache: UpFlowCache,
+  logger: Logger,
 ): Promise<TailscaleConnectResult> {
   const ac = new AbortController();
   const outerTimer = setTimeout(() => {
     ac.abort();
   }, UP_OUTER_TIMEOUT_MS);
   try {
-    const invocation = await buildUpInvocation(binary, authkey, cache);
+    const invocation = await buildUpInvocation(binary, authkey, cache, logger);
     const attempt = await attemptUpSpawn(binary, invocation, ac.signal);
     if (!attempt.ok) {
       return attempt.error;
@@ -86,7 +90,7 @@ export async function runUpFlow(
       return { ok: true, kind: "connected" };
     }
     const combined = `${captured.stdout}\n${captured.stderr}`;
-    const cls = classifyUpError(combined, captured.exitCode, timedOut);
+    const cls = classifyUpError(combined, captured.exitCode, timedOut, logger);
     if (cls.kind === "eacces") {
       return {
         ok: false,
@@ -116,20 +120,24 @@ export async function runUpFlow(
  * @param binary - resolved path to the `tailscale` binary
  * @param authkey - optional pre-auth key
  * @param cache - manager-owned cache for the --authkey-stdin probe
+ * @param logger - service-bound logger for the authkey-stdin-fallback warning
  * @returns argv + optional stdin payload to feed `attemptUpSpawn`
  */
 async function buildUpInvocation(
   binary: string,
   authkey: string | undefined,
   cache: UpFlowCache,
+  logger: Logger,
 ): Promise<{ args: string[]; stdin: string | undefined }> {
   if (!authkey) {
     return { args: ["up", "--timeout=5s"], stdin: undefined };
   }
   const useStdin = await supportsAuthkeyStdin(binary, cache);
   if (!useStdin) {
-    console.warn(
-      "[tailscale] --authkey-stdin not supported by installed CLI; falling back to --authkey= (leaks the key via /proc/<pid>/cmdline)",
+    logger.warn(
+      // Falls back to --authkey= which leaks the key via /proc/<pid>/cmdline.
+      // Surface the regression so it's grep-able post-deploy.
+      "tailscale.up.authkey-stdin.unsupported",
     );
     return {
       args: ["up", "--timeout=30s", `--authkey=${authkey}`],
