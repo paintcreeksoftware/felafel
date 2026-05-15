@@ -1,7 +1,17 @@
 import { Agent, createServer, request, type Server } from "node:http";
 import { type AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { NodeSDK } from "@opentelemetry/sdk-node";
+import { createLogger, Service } from "@felafel/logs";
 import { createShutdownHandler } from "@felafel/worker/shutdown";
+
+const testLogger = createLogger({ service: Service.WORKER });
+// Real SDK has a slow shutdown teardown; a mock with a resolving
+// shutdown() is enough for the createShutdownHandler tests, which
+// only assert exit codes from the server-close logic.
+const noopSdk = {
+  shutdown: vi.fn().mockResolvedValue(true),
+} as unknown as NodeSDK;
 
 describe("createShutdownHandler", () => {
   let server: Server;
@@ -44,7 +54,7 @@ describe("createShutdownHandler", () => {
     });
 
     const stopHeartbeat = vi.fn();
-    const shutdown = createShutdownHandler({ server, stopHeartbeat });
+    const shutdown = createShutdownHandler({ server, stopHeartbeat, sdk: noopSdk, logger: testLogger });
 
     const start = Date.now();
     const code = await shutdown("SIGTERM");
@@ -58,7 +68,7 @@ describe("createShutdownHandler", () => {
 
   it("resolves quickly when no connections are open", async () => {
     const stopHeartbeat = vi.fn();
-    const shutdown = createShutdownHandler({ server, stopHeartbeat });
+    const shutdown = createShutdownHandler({ server, stopHeartbeat, sdk: noopSdk, logger: testLogger });
 
     const code = await shutdown("SIGINT");
 
@@ -74,7 +84,7 @@ describe("createShutdownHandler", () => {
     });
 
     const stopHeartbeat = vi.fn();
-    const shutdown = createShutdownHandler({ server, stopHeartbeat });
+    const shutdown = createShutdownHandler({ server, stopHeartbeat, sdk: noopSdk, logger: testLogger });
 
     const code = await shutdown("SIGTERM");
 

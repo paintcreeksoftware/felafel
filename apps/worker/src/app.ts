@@ -1,5 +1,6 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
 import pRetry from "p-retry";
+import { createHonoApp } from "@felafel/backend";
+import { Service } from "@felafel/logs";
 import { type RunComplete } from "@felafel/shared";
 import { CompleteCallbackRetry } from "@felafel/worker/constants";
 import { healthRoute } from "@felafel/worker/routes/health";
@@ -27,24 +28,30 @@ export interface BuildAppOptions {
  *   to the orchestrator's `/runs/:id/complete`. v0 logs the payload; PAI-75
  *   swaps in real execution and may post `ok: false` on process failure.
  * @param opts - app configuration; see {@link BuildAppOptions}
- * @returns an OpenAPIHono app instance ready to hand to `@hono/node-server`'s `serve()`
+ * @returns `{ app, sdk, logger }` — the route-narrowed app + the OTel
+ *   SDK handle (for `sdk.shutdown()` on SIGTERM) + the parent logger
+ *   (for the entry point and the non-HTTP modules: heartbeat, shutdown).
  */
 export function buildApp(opts: BuildAppOptions) {
-  const app = new OpenAPIHono()
+  const { app: base, sdk, logger } = createHonoApp({
+    service: Service.WORKER,
+  });
+
+  const app = base
     .openapi(healthRoute, (c) => c.json({ ok: true } as const))
     .openapi(runJobRoute, (c) => {
       const { runId, payload } = c.req.valid("json");
       // Fire-and-forget: ack the dispatch immediately and run the body of
       // the job in the next tick so the orchestrator's outbound request
-      // returns fast. PAI-75 will swap the console.log for actual
-      // execution against PAI-72's workstation container.
+      // returns fast. PAI-75 will swap the log line for actual execution
+      // against PAI-72's workstation container.
       // Wrap async body in a void IIFE — setImmediate's callback type
       // is void-returning, so handing it an async function is a
       // misused-promise. The detached body still does its work; we
       // explicitly mark the floating promise as intentional.
       setImmediate(() => {
         void (async () => {
-        console.log("received job", runId, JSON.stringify(payload));
+        logger.info({ runId, payload }, "job.received");
         const ack: RunComplete = { ok: true };
         try {
           await pRetry(
@@ -72,12 +79,12 @@ export function buildApp(opts: BuildAppOptions) {
           );
         } catch (error) {
           // After exhausting retries the orchestrator's 5-minute sweep will
-          // flip this run to `failed` with `error: 'dispatch timeout'`. Log
-          // loud + grep-able by runId so we can correlate the symptom on the
-          // orchestrator side back to a real callback failure here.
-          console.error(
-            `complete callback failed permanently (runId=${runId}):`,
-            error,
+          // flip this run to `failed` with `error: 'dispatch timeout'`. The
+          // structured runId binding lets the operator correlate the
+          // orchestrator-side symptom back to the worker's callback failure.
+          logger.error(
+            { runId, err: error },
+            "job.complete.callback-exhausted",
           );
         }
         })();
@@ -91,7 +98,7 @@ export function buildApp(opts: BuildAppOptions) {
     info: { title: "Felafel Worker", version: "0.1.0" },
   });
 
-  return app;
+  return { app, sdk, logger };
 }
 
 /**
@@ -100,4 +107,4 @@ export function buildApp(opts: BuildAppOptions) {
  * tooling — server-to-server calls go through `packages/shared` schemas
  * with plain `fetch()`, not `hc<AppType>`).
  */
-export type WorkerAppType = ReturnType<typeof buildApp>;
+export type WorkerAppType = ReturnType<typeof buildApp>["app"];

@@ -98,7 +98,7 @@ describe("/jobs/run", () => {
   });
 
   it("accepts a valid JobAssignment with 202", async () => {
-    const app = buildApp({ orchestratorUrl: fake.url });
+    const { app } = buildApp({ orchestratorUrl: fake.url });
     const res = await app.request("/jobs/run", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -113,7 +113,7 @@ describe("/jobs/run", () => {
 
   it("posts ok:true to /runs/:id/complete after handling the job", async () => {
     const runId = randomUUID();
-    const app = buildApp({ orchestratorUrl: fake.url });
+    const { app } = buildApp({ orchestratorUrl: fake.url });
     const res = await app.request("/jobs/run", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -126,7 +126,7 @@ describe("/jobs/run", () => {
   });
 
   it("rejects payload missing runId with 400", async () => {
-    const app = buildApp({ orchestratorUrl: fake.url });
+    const { app } = buildApp({ orchestratorUrl: fake.url });
     const res = await app.request("/jobs/run", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -136,7 +136,7 @@ describe("/jobs/run", () => {
   });
 
   it("rejects payload with non-uuid runId", async () => {
-    const app = buildApp({ orchestratorUrl: fake.url });
+    const { app } = buildApp({ orchestratorUrl: fake.url });
     const res = await app.request("/jobs/run", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -152,7 +152,7 @@ describe("/jobs/run completion-callback retry", () => {
     const flakey = await startFakeOrchestrator({ failuresBeforeSuccess: 2 });
     try {
       const runId = randomUUID();
-      const app = buildApp({ orchestratorUrl: flakey.url });
+      const { app } = buildApp({ orchestratorUrl: flakey.url });
       const res = await app.request("/jobs/run", {
         method: "POST",
         headers: { "content-type": "application/json" },

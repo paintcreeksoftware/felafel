@@ -3,6 +3,8 @@
 // `@felafel/worker/hosts` for `resolveHosts`.
 import { type Server } from "node:http";
 import { promisify } from "node:util";
+import type { NodeSDK } from "@opentelemetry/sdk-node";
+import type { Logger } from "@felafel/logs";
 
 /**
  * Maximum time the worker spends draining open connections during graceful
@@ -10,6 +12,15 @@ import { promisify } from "node:util";
  * in-flight request would otherwise stall {@link Server.close}.
  */
 const SHUTDOWN_TIMEOUT_MS = 5_000;
+
+/**
+ * Cap on awaiting `sdk.shutdown()` during graceful shutdown. The OTel
+ * exporters do a best-effort flush of pending spans; a hung exporter
+ * (network partition, collector down) shouldn't pin the process open
+ * past this deadline. Same value the orchestrator's SIGTERM handler
+ * uses.
+ */
+const OTEL_FLUSH_TIMEOUT_MS = 2_000;
 
 /** Sentinel returned by {@link raceTimeout} when the deadline fires first. */
 const TIMEOUT = Symbol("shutdown-timeout");
@@ -20,6 +31,15 @@ interface ShutdownDeps {
   server: Server;
   /** Stops the heartbeat interval; returned by `startHeartbeat`. */
   stopHeartbeat: () => void;
+  /**
+   * OTel SDK handle returned by `buildApp`. Shutdown gives the exporters
+   * a 2s flush window before the process exits — best-effort because
+   * `process.exit` is synchronous and the SDK's batch processor may
+   * still have unflushed spans.
+   */
+  sdk: NodeSDK;
+  /** Service-bound logger; the shutdown line lands in the unified stream. */
+  logger: Logger;
 }
 
 /**
@@ -57,9 +77,9 @@ function raceTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIM
  *   with the exit code (0 on clean close, 1 on close error or timeout)
  */
 export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => Promise<number> {
-  const { server, stopHeartbeat } = deps;
+  const { server, stopHeartbeat, sdk, logger } = deps;
   return async (signal: string): Promise<number> => {
-    console.log(`received ${signal}, shutting down...`);
+    logger.info({ signal }, "shutdown.start");
     stopHeartbeat();
     // Boot idle keep-alives so close()'s drain doesn't wait on them. This
     // is the actual bug fix — without it, an idle orchestrator keep-alive
@@ -68,17 +88,29 @@ export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => P
 
     const closeAsync = promisify(server.close.bind(server));
 
+    let exitCode = 0;
     try {
       const result = await raceTimeout(closeAsync(), SHUTDOWN_TIMEOUT_MS);
       if (result === TIMEOUT) {
-        console.error(`shutdown timed out after ${SHUTDOWN_TIMEOUT_MS.toString()}ms, forcing exit`);
+        logger.error(
+          { timeoutMs: SHUTDOWN_TIMEOUT_MS },
+          "shutdown.timeout",
+        );
         server.closeAllConnections();
-        return 1;
+        exitCode = 1;
       }
-      return 0;
     } catch (error) {
-      console.error("server close error:", error);
-      return 1;
+      logger.error({ err: error }, "shutdown.close-error");
+      exitCode = 1;
     }
+    // Best-effort OTel flush; capped so a hung exporter can't pin the
+    // process. Same pattern as orchestrator's SIGTERM handler.
+    await Promise.race([
+      sdk.shutdown(),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, OTEL_FLUSH_TIMEOUT_MS);
+      }),
+    ]);
+    return exitCode;
   };
 }
