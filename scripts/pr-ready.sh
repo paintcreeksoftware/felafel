@@ -90,7 +90,7 @@ if [ -z "$drift" ]; then
 fi
 drift_marker='<!-- claude-drift-comment -->'
 # shellcheck disable=SC2016 # backticks in the format string are markdown fences, not command substitution
-drift_body=$(printf '%s\n## Memory drift snapshot\n\n```\n%s\n```' "$drift_marker" "$drift")
+drift_body=$(printf '%s\n## Memory drift snapshot\n\n%s\n' "$drift_marker" "$drift")
 upsert_comment "$drift_marker" "$drift_body"
 echo "[pr-ready] posted drift comment"
 
