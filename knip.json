@@ -15,6 +15,7 @@
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
       "ignoreDependencies": [
         "@felafel/ui",
+        "pino-roll",
         "tailwindcss"
       ]
     },
