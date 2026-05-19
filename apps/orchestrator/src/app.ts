@@ -11,6 +11,7 @@ import {
   markRunFailed,
   upsertWorker,
 } from "@felafel/db";
+import { withTracedOperation } from "@felafel/logs";
 import { dispatchToWorker } from "@felafel/orchestrator/dispatch";
 import { healthRoute } from "@felafel/orchestrator/routes/health";
 import {
@@ -54,9 +55,15 @@ export function buildApp(opts: BuildAppOptions) {
   const app = base
     .openapi(healthRoute, (c) => c.json({ ok: true } as const))
     .openapi(listWorkersRoute, (c) => c.json(listWorkers(opts.db)))
-    .openapi(registerWorkerRoute, (c) =>
-      c.json(upsertWorker(opts.db, c.req.valid("json"))),
-    )
+    .openapi(registerWorkerRoute, async (c) => {
+      const body = c.req.valid("json");
+      const worker = await withTracedOperation(
+        "worker.upsert",
+        () => upsertWorker(opts.db, body),
+        logger,
+      );
+      return c.json(worker);
+    })
     .openapi(deleteWorkerRoute, (c) => {
       const { id } = c.req.valid("param");
       const result = deleteWorker(opts.db, id);
