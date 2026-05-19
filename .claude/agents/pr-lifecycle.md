@@ -86,8 +86,22 @@ The caller has no remote tracking yet, no PR.
 - `git branch --show-current` → must match `PAI-NN-*` (uppercase).
   If not, abort and tell the caller to rename the branch first.
 - `gh pr list --state open --head <branch>` → expect empty (no PR yet).
+- `gh pr list --state closed --head <branch> --json number,title,mergedAt`
+  → if non-empty AND `mergedAt` is null, a recoverable closed PR
+  exists. Prefer reopen-and-force-push over fresh-create (see the
+  reopen branch below) to preserve PR number, review comments, CI
+  history, and Linear backlinks.
 
 **Commands to run, in order:**
+
+A. **Reopen branch** — closed-not-merged PR found for `<branch>`:
+
+1. `git push --force-with-lease origin <branch>` — recreate the
+   remote branch at the new commits.
+2. `gh pr reopen <N>` — GitHub reattaches the branch by name.
+3. `gh pr view <N> --json url -q .url` — return the URL.
+
+B. **Fresh-create branch** — no closed PR or merged-and-closed:
 
 1. `git push -u origin <branch>` — get the branch on remote so the
    user can see in-flight work.
@@ -100,6 +114,15 @@ The caller has no remote tracking yet, no PR.
 
 **Why each step:**
 
+- Reopen-first check: if work was pushed, closed (direction
+  reverted, reviewer feedback caused a pivot), and the user now
+  asks for a redo, the original PR is usually recoverable.
+  Reopening preserves the PR number, review comments + reactions
+  from the closed cycle, CI history, the Linear ticket's
+  backlink, and any auto-attached cost/drift marker comments —
+  fresh-create throws all of that away. Carve-out: open fresh if
+  the new direction is 100% unrelated to the closed diff (same
+  problem space, completely different intent).
 - Push: visibility in flight is the goal — no long-lived local-only
   branches.
 - Draft PR: same visibility; the user wants to follow along, not see
@@ -129,9 +152,10 @@ amend adds no new logic path.
   2. `git rebase origin/main`
   3. `git push --force-with-lease`
   4. **Refresh the PR body** (`gh pr edit <N> --body "..."`) to
-     match the current state, then re-stamp marker zones via
-     `pnpm pr:ready <N>` if the PR is draft, or
-     `bash scripts/stamp-pr-cost.sh <N>` if already ready.
+     match the current state. If the PR is already ready, also
+     re-run `pnpm pr:ready <N>` to refresh the cost + drift
+     comments — the script is idempotent and edits the marker
+     comments in place.
 - If `mergeStateStatus: CLEAN | UNSTABLE | HAS_HOOKS` → fine to push:
   1. `git push`
   2. Continue to **after-push** below.
@@ -141,12 +165,12 @@ amend adds no new logic path.
 **After-push (always):**
 
 1. **Refresh the PR body** if it materially drifted from current
-   state: `gh pr edit <N> --body "<new content>"`. If the PR body
-   was just stamped via `pnpm pr:ready`, preserve the
-   `<!-- claude-cost-block:* -->` and `<!-- claude-drift-snapshot:* -->`
-   marker zones verbatim. **Never overwrite a stamped body without
-   re-splicing the markers** — CI workflows lift them on the
-   `ready_for_review` event.
+   state: `gh pr edit <N> --body "<new content>"`. The PR body
+   carries only the template-shaped narrative — cost + drift live
+   in marker comments (`<!-- claude-cost-comment -->` and
+   `<!-- claude-drift-comment -->`) posted by `pnpm pr:ready`,
+   not in the body. Body edits are safe; the comments are managed
+   independently and idempotently by the script.
 2. Arm a CI monitor:
 
    ```bash
@@ -202,12 +226,14 @@ all-green / done.
 **Commands to run, in order (ONLY if all verification passes):**
 
 1. **Always use `pnpm pr:ready <N>`, never bare `gh pr ready <N>`.**
-   The wrapper atomically stamps the
-   `<!-- claude-cost-block:* -->` and
-   `<!-- claude-drift-snapshot:* -->` marker zones into the PR body
-   BEFORE the ready flip. PAI-166's CI workflows lift them on the
-   `ready_for_review` event; bare `gh pr ready` skips the stamping
-   and the workflows post a "stamp zone empty" warning comment.
+   The wrapper atomically posts two PR comments — cost summary
+   and memory-drift snapshot, identified by hidden markers
+   `<!-- claude-cost-comment -->` and
+   `<!-- claude-drift-comment -->` — BEFORE the ready flip. The
+   data sources are local-only (`~/.claude/projects/.../*.jsonl`
+   for cost, the memory-promoter agent for drift), so a CI-only
+   path can't reproduce them. Bare `gh pr ready` ships without
+   either signal.
 
    ```bash
    pnpm pr:ready <N>
@@ -231,10 +257,14 @@ all-green / done.
 - Pre-ready CI gate: `pushed ≠ done`; the done line is every required
   check passing. Don't tell the user "ready" while a job is still
   pending or red.
-- `pnpm pr:ready` specifically: bare `gh pr ready` leaves the cost +
-  drift marker zones empty, and PAI-166's CI fires a warning comment
-  saying the hook didn't run. Half-stamped state is the signal that
-  the local hook was bypassed.
+- `pnpm pr:ready` specifically: bare `gh pr ready` skips both
+  the cost summary and the drift snapshot entirely. The data
+  lives on the local host (Claude Code's session JSONL for cost,
+  the memory-promoter agent's view of
+  `~/.claude/projects/.../memory/` for drift); a CI-only path
+  can't produce either, so the wrapper is the only place that
+  emits them. Missing marker comments on a ready PR = local hook
+  bypassed.
 - Retitle: a `draft:` prefix on a non-draft PR is just as wrong as
   draft state with no prefix. Both pieces flip together.
 - Draft PRs don't run the full CI suite (workflows gate on

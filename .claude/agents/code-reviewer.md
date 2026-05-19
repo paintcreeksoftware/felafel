@@ -39,21 +39,31 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 
 ### Commits & PR shape
 
-- **One function per commit** (strict form of "one logical change").
-  Each commit moves exactly one function, class, or component —
-  even when two functions are tightly coupled (e.g. `apply()` calls
-  `build()`, both moving together as a public+helper pair). Split
-  along the function seam, not the cluster. The PR end-state is
-  semantic + working; intermediate commits can leave one module
-  temporarily importing another's helper. Working-tree-at-each-commit
-  is a PR-level invariant in this project, not a commit-level one.
-  Check via `git log <merge-base>..HEAD --oneline` + spot reads;
-  flag any commit that moves a cluster as one unit when the cluster
-  decomposes into discrete functions.
+- **Atomic semantic splits.** Each commit owns ONE concern — one
+  function, class, component, file, or interface change. When two
+  units are tightly coupled (e.g. `apply()` calls `build()`, or a
+  type plus its first user), split along the semantic seam, not
+  the LOC midpoint, even though it means two commits for one
+  conceptual move. The PR end-state is semantic + working;
+  intermediate commits can leave one module temporarily importing
+  another's helper. Working-tree-at-each-commit is a PR-level
+  invariant in this project, not a commit-level one. Check via
+  `git log <merge-base>..HEAD --oneline` + spot reads; flag any
+  commit that moves a cluster as one unit when the cluster
+  decomposes into discrete pieces along a visible seam.
 - **PR LOC cap 500–750.** Reviewable code only; lockfiles and
   snapshots don't count. Check with
   `git diff --stat <merge-base> -- ':!*lock*' ':!**/snapshots/**'`.
   If over, the PR should split into stacked or sequential PRs.
+- **No 100-line cap workarounds.** The hard cap in
+  `.husky/pre-commit` has no escape — the prior `ALLOW_BIG_COMMIT`
+  env var was removed for being reached too readily. The only way
+  to land an over-cap commit is `--no-verify`, which is also
+  forbidden. Flag any commit/PR body suggesting the cap be raised
+  or re-bypassed, and any commit whose net reviewable churn would
+  have failed the hook (a sign of `--no-verify`). Split along the
+  smallest behavioral delta — one function across 4–6 commits is
+  normal in this repo.
 - **Test plan is PR-specific only.** The PR body's "Test plan"
   lists ONLY verification beyond pre-commit + CI. Usually empty /
   N/A. Flag bloated plans that re-state hook content.
@@ -174,6 +184,13 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   hammer those slots and runs get delayed. Pick `:17`, `:23`,
   `:37`, `:53`, or any other off-minute. Flag a `cron: 0 * * * *`
   or similar on sight.
+- **Workflow changes tested with `act` before push.** Any PR
+  touching `.github/workflows/*.yml` should run the affected
+  workflow locally via `act` first; CI is too slow as the first
+  feedback loop. Flag a workflow diff with no `act` invocation
+  trace in the PR body or commit messages, unless the change is
+  trivially obvious (renaming a step name, bumping an action's
+  `@v3` → `@v4` tag, etc.).
 - **SQL migration filenames are descriptive snake_case.** Reject
   any new file under `packages/db/migrations/` or
   `apps/orchestrator/migrations/` named with drizzle-kit's default
