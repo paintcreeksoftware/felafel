@@ -26,6 +26,8 @@
     "cost:since": "bash scripts/cost.sh --since",
     "post-merge:sync": "bash scripts/post-merge-memory-sync.sh",
     "pr:ready": "bash scripts/pr-ready.sh",
+    "audit:console": "bash scripts/observability/audit-console-leakage.sh",
+    "audit:log-shape": "bash scripts/observability/audit-log-shape.sh",
     "prune:branches": "bash scripts/prune-stale-branches.sh",
     "db:check": "pnpm --filter @felafel/db db:check",
     "prepare": "husky"
