@@ -184,6 +184,13 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   hammer those slots and runs get delayed. Pick `:17`, `:23`,
   `:37`, `:53`, or any other off-minute. Flag a `cron: 0 * * * *`
   or similar on sight.
+- **Workflow changes tested with `act` before push.** Any PR
+  touching `.github/workflows/*.yml` should run the affected
+  workflow locally via `act` first; CI is too slow as the first
+  feedback loop. Flag a workflow diff with no `act` invocation
+  trace in the PR body or commit messages, unless the change is
+  trivially obvious (renaming a step name, bumping an action's
+  `@v3` → `@v4` tag, etc.).
 - **SQL migration filenames are descriptive snake_case.** Reject
   any new file under `packages/db/migrations/` or
   `apps/orchestrator/migrations/` named with drizzle-kit's default
