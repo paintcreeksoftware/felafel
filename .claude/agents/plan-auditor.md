@@ -42,10 +42,43 @@ e.g. "### PR 3 — slash commands"), search for evidence in this order:
 4. **Missing** — nothing found in (1), (2), or (3) after trying
    reasonable keyword variants.
 
+After populating the status rows, run the **Governance flags** pass
+below. These check the plan's execution hygiene rather than its
+content, and surface as a separate bullet list under the main table.
+
+## Governance flags
+
+Run these checks once per audit; emit a one-line bullet for each
+flag that fires (omit silent ones).
+
+- **Tickets per deliverable.** Every plan deliverable (each PR
+  section) should have a matching Linear sub-issue under the
+  plan's parent ticket. Decomposition is expected at plan-approval
+  time, not piecemeal as PRs open. Flag deliverables with no
+  corresponding sub-issue: a multi-PR umbrella without per-PR
+  tickets risks the parent ticket auto-closing on the first
+  merge. Cross-reference via
+  `mcp__claude_ai_Linear__list_issues` with `parentId: <parent>`.
+- **Branch on in-flight.** For any deliverable marked **In
+  flight**, expect a `PAI-NN-*` branch already pushed (the work
+  should start with branch creation from main, before any edits).
+  Flag in-flight deliverables with no remote branch — likely the
+  caller started editing on the wrong base.
+- **Plan markdown hard-wrap.** Open the plan file; if any prose
+  line outside tables/code fences exceeds ~80 columns, flag it.
+  (Tables and fenced code blocks are exempt.)
+- **Retrospective candidate.** If most deliverables are Done and
+  only a long tail of Pending / Missing remain, suggest writing
+  a successor `v2` plan with a retrospective on what shipped and
+  a fresh next-iteration scope, keeping the current file as
+  historical v1.
+
 ## Output
 
 A single markdown table, one row per plan deliverable, plus a brief
-summary above it. No prose afterward — let the table speak.
+summary above it. After the table, emit the **Governance flags**
+bullet list (only the flags that fired; omit the section entirely if
+all checks pass). No prose afterward — let the table and flags speak.
 
 ```markdown
 **Plan**: `<path>` — audited against `<branch>` at <commit-sha>.
@@ -58,6 +91,13 @@ summary above it. No prose afterward — let the table speak.
 | PR 6 | <title from plan> | In flight | open draft #99 on `PAI-153-plan-auditor` |
 | PR 7 | <title from plan> | Pending | [PAI-154](https://linear.app/...) (Backlog) |
 | PR 9 | <title from plan> | Missing | no branch, no PR, no Linear ticket matching `todo-tracker` |
+
+**Governance flags:**
+
+- PR 4, PR 5 have no matching Linear sub-issue under PAI-147.
+- PR 6 is In flight but no `PAI-NN-*` branch on remote — caller may
+  be editing on main.
+- Plan markdown has 12 prose lines > 80 cols (e.g. lines 47, 89, 142).
 ```
 
 Evidence column must cite specific commit SHAs (short form), PR
