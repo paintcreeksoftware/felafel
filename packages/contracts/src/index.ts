@@ -7,6 +7,7 @@
 //   @felafel/shared re-exports for non-DB consumers.
 
 export {
+  ForwardedSpanSchema,
   JobAssignmentSchema,
   RunCompleteSchema,
   RunSchema,
@@ -16,6 +17,7 @@ export {
   WorkerRegistrationSchema,
   WorkerSchema,
   WorkerStatusSchema,
+  type ForwardedSpan,
   type JobAssignment,
   type Run,
   type RunComplete,

@@ -136,3 +136,30 @@ export const RunCompleteSchema = z.object({
   error: z.string().optional(),
 });
 export type RunComplete = z.infer<typeof RunCompleteSchema>;
+
+/**
+ * Renderer → main IPC payload for `Channels.OtelSpan` (PAI-178). The
+ * renderer's IpcSpanExporter flattens a finished OTel `ReadableSpan` to
+ * this JSON-safe shape; the main-side handler parses it, seeds the
+ * renderer's parent context, and re-emits through the main SDK so the
+ * renderer trace stays contiguous across the IPC hop.
+ *
+ * `kind`, `status.code` are OTel numeric enums. Hi-res timing is
+ * preserved as `[seconds, nanoseconds]` tuples — the OTel TS SDK's
+ * native `HrTime` shape.
+ */
+export const ForwardedSpanSchema = z.object({
+  name: z.string(),
+  kind: z.number().int(),
+  startTime: z.tuple([z.number(), z.number()]),
+  endTime: z.tuple([z.number(), z.number()]),
+  attributes: z.record(z.string(), z.unknown()),
+  status: z.object({
+    code: z.number().int(),
+    message: z.string().optional(),
+  }),
+  traceId: z.string(),
+  spanId: z.string(),
+  parentSpanId: z.string().optional(),
+});
+export type ForwardedSpan = z.infer<typeof ForwardedSpanSchema>;

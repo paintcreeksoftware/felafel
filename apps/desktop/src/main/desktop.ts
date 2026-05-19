@@ -8,12 +8,14 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
+import { context, TraceFlags, trace } from "@opentelemetry/api";
 import type { NodeSDK } from "@opentelemetry/sdk-node";
 import { app, BrowserWindow, globalShortcut } from "electron";
 import type { Logger } from "@felafel/logs";
 import { tracedHandle } from "@felafel/shared/traced-ipc";
 import {
   Channels,
+  ForwardedSpanSchema,
   type OrchestratorStatus,
   type TailscaleStatus,
 } from "@felafel/shared";
@@ -27,6 +29,14 @@ import {
   wireExternalLinkAllowlist,
 } from "@felafel/desktop/main/window";
 import { TailscaleManager } from "@felafel/tailscale";
+
+/**
+ * OTel tracer name for renderer spans re-emitted on the main side.
+ * Renderer spans cluster under this scope once main's SDK exports
+ * them. Mirrors the named-const pattern of `TRACER_NAME` in
+ * `@felafel/shared/traced-ipc` and `@felafel/logs/tracing`.
+ */
+const RENDERER_FORWARDER_TRACER = "felafel-desktop-renderer-forwarder";
 
 /**
  * Top-level desktop main-process owner. Composes the orchestrator +
@@ -113,6 +123,34 @@ class DesktopApp {
       const result = await this.tailscale.runUp(key);
       void this.broadcastProbeStatus();
       return result;
+    });
+    // PAI-178 renderer-span forwarder. The renderer's IpcSpanExporter
+    // ships finished spans here; we parse via the shared
+    // ForwardedSpanSchema (fail-fast on malformed payloads via the
+    // tracedHandle catch path), seed a SpanContext from the renderer's
+    // own trace + parent IDs so the re-emitted span joins the renderer's
+    // trace, then end with the renderer's endTime so duration is
+    // preserved across the IPC hop.
+    tracedHandle(Channels.OtelSpan, this.logger, (_event, ...args) => {
+      const serialized = ForwardedSpanSchema.parse(args[0]);
+      const parentCtx = trace.setSpanContext(context.active(), {
+        traceId: serialized.traceId,
+        spanId: serialized.parentSpanId ?? serialized.spanId,
+        traceFlags: TraceFlags.SAMPLED,
+        isRemote: true,
+      });
+      const tracer = trace.getTracer(RENDERER_FORWARDER_TRACER);
+      const span = tracer.startSpan(
+        serialized.name,
+        {
+          kind: serialized.kind,
+          startTime: serialized.startTime,
+          attributes: serialized.attributes,
+        },
+        parentCtx,
+      );
+      span.setStatus(serialized.status);
+      span.end(serialized.endTime);
     });
   }
 

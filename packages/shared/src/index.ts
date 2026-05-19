@@ -9,9 +9,15 @@
 // @felafel/contracts), NOT in main/, preload/, or renderer/ — otherwise
 // the three processes drift out of sync silently.
 
-import { WorkerArchSchema, WorkerOsSchema, type WorkerRegistration } from "@felafel/contracts";
+import {
+  WorkerArchSchema,
+  WorkerOsSchema,
+  type ForwardedSpan,
+  type WorkerRegistration,
+} from "@felafel/contracts";
 
 export {
+  ForwardedSpanSchema,
   JobAssignmentSchema,
   RunCompleteSchema,
   RunSchema,
@@ -21,6 +27,7 @@ export {
   WorkerRegistrationSchema,
   WorkerSchema,
   WorkerStatusSchema,
+  type ForwardedSpan,
   type JobAssignment,
   type Run,
   type RunComplete,
@@ -65,6 +72,13 @@ export const Channels = {
   TailscaleStatus: "ts:status",
   TailscaleConnect: "ts:connect",
   TailscaleRefresh: "ts:refresh",
+  /**
+   * Renderer-to-main span forwarder (PAI-178). The renderer can't post
+   * OTLP directly (Electron CORS), so its `IpcSpanExporter` ships each
+   * finished span over this channel and the main process re-emits it
+   * through its own OTel SDK.
+   */
+  OtelSpan: "otel:span",
 } as const;
 
 export type OrchestratorStatus =
@@ -131,4 +145,11 @@ export interface DesktopApi {
   tailscaleRefresh: () => Promise<TailscaleStatus>;
   tailscaleConnect: (authkey?: string) => Promise<TailscaleConnectResult>;
   onTailscaleStatus: (handler: (status: TailscaleStatus) => void) => () => void;
+  /**
+   * Ship a finished renderer span to main for re-emission through main's
+   * OTel SDK. The renderer is context-isolated and can't reach
+   * `ipcRenderer` directly; the preload bridges the OtelSpan channel
+   * (PAI-178).
+   */
+  shipOtelSpan: (span: ForwardedSpan) => Promise<void>;
 }

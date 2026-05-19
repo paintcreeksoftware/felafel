@@ -1,3 +1,4 @@
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   SimpleSpanProcessor,
   type SpanExporter,
@@ -5,8 +6,7 @@ import {
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import pino, { type DestinationStream } from "pino";
 
-import { createTelemetryResource } from "@felafel/logs/resource";
-import type { Service } from "@felafel/logs";
+import type { Service } from "@felafel/logs/service";
 
 /** Options accepted by the browser-entry {@link createLogger}. */
 export interface CreateBrowserLoggerOptions {
@@ -74,8 +74,13 @@ export interface CreateRendererSDKOptions {
 export function createRendererSDK(
   opts: CreateRendererSDKOptions,
 ): WebTracerProvider {
+  // Inline the resource here rather than reusing createTelemetryResource
+  // from @felafel/logs/resource — that module imports `node:os` for
+  // hostname(), which vite externalizes for the renderer bundle and the
+  // build fails. The renderer has no hostname-like identity anyway;
+  // service.instance.id is omitted, traces correlate via traceId.
   return new WebTracerProvider({
-    resource: createTelemetryResource(opts.service),
+    resource: resourceFromAttributes({ "service.name": opts.service }),
     spanProcessors: [new SimpleSpanProcessor(opts.exporter)],
   });
 }
