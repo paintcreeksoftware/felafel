@@ -4,6 +4,7 @@
 import { type Server } from "node:http";
 import { promisify } from "node:util";
 import type { NodeSDK } from "@opentelemetry/sdk-node";
+import { shutdownBackend } from "@felafel/backend";
 import type { Logger } from "@felafel/logs";
 
 /**
@@ -12,15 +13,6 @@ import type { Logger } from "@felafel/logs";
  * in-flight request would otherwise stall {@link Server.close}.
  */
 const SHUTDOWN_TIMEOUT_MS = 5_000;
-
-/**
- * Cap on awaiting `sdk.shutdown()` during graceful shutdown. The OTel
- * exporters do a best-effort flush of pending spans; a hung exporter
- * (network partition, collector down) shouldn't pin the process open
- * past this deadline. Same value the orchestrator's SIGTERM handler
- * uses.
- */
-const OTEL_FLUSH_TIMEOUT_MS = 2_000;
 
 /** Sentinel returned by {@link raceTimeout} when the deadline fires first. */
 const TIMEOUT = Symbol("shutdown-timeout");
@@ -103,14 +95,7 @@ export function createShutdownHandler(deps: ShutdownDeps): (signal: string) => P
       logger.error({ err: error }, "shutdown.close-error");
       exitCode = 1;
     }
-    // Best-effort OTel flush; capped so a hung exporter can't pin the
-    // process. Same pattern as orchestrator's SIGTERM handler.
-    await Promise.race([
-      sdk.shutdown(),
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, OTEL_FLUSH_TIMEOUT_MS);
-      }),
-    ]);
+    await shutdownBackend(sdk, logger);
     return exitCode;
   };
 }

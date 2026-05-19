@@ -59,6 +59,13 @@
         "pino-pretty"
       ]
     },
+    "packages/shared": {
+      "entry": ["tests/**/*.{test,spec}.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"],
+      "ignoreDependencies": [
+        "electron"
+      ]
+    },
     "packages/tailscale": {
       "entry": [
         "src/ui/window.d.ts"

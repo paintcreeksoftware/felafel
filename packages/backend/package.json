@@ -2,14 +2,15 @@
   "name": "@felafel/backend",
   "version": "0.0.0",
   "private": true,
-  "description": "HTTP framework layer for Felafel services. Owns the Hono app factory (createHonoApp) and the request-logger middleware. Depends on @felafel/logs for the logger + OTel bootstrap; depends on @hono/zod-openapi for the OpenAPIHono primitive. Workspace-only; never published.",
+  "description": "HTTP framework layer for Felafel services. Owns the Hono app factory (createHonoApp), the request-logger middleware, and shutdownBackend — the bounded-cap OTel flush helper every service calls on SIGTERM. Depends on @felafel/logs for the logger + OTel bootstrap; depends on @hono/zod-openapi for the OpenAPIHono primitive. Workspace-only; never published.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./hono": "./src/hono.ts",
-    "./middleware": "./src/middleware.ts"
+    "./middleware": "./src/middleware.ts",
+    "./shutdown": "./src/shutdown.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings=0",

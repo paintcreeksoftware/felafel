@@ -19,10 +19,12 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@felafel/backend": "workspace:*",
     "@felafel/logs": "workspace:*",
     "@felafel/shared": "workspace:*",
     "@felafel/tailscale": "workspace:*",
     "@felafel/ui": "workspace:*",
+    "@opentelemetry/sdk-node": "^0.218.0",
     "execa": "^9.6.1",
     "get-port": "^7.2.0",
     "hono": "^4.10.0",
