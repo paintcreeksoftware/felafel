@@ -203,10 +203,10 @@ raw `pino` / `NodeSDK` / `OpenAPIHono` and drift the shape.
 
 ### Standard log line shape
 
-Every process emits one JSON line per record to stderr (or to a rotated
-file in the packaged Electron orchestrator-sidecar path —
-[`apps/desktop/electron-builder.yml`](apps/desktop/electron-builder.yml)).
-The top-level fields are uniform:
+Every process emits one JSON line per record to stderr (and, for the
+orchestrator child in a packaged build, also to a rotated file —
+see [Orchestrator log file](#orchestrator-log-file) below). The
+top-level fields are uniform:
 
 ```jsonc
 {
@@ -240,6 +240,27 @@ and worker-side `WORKER_*` / `FELAFEL_TAILSCALE_*` env vars
 ([`apps/worker/src/constants.ts`](apps/worker/src/constants.ts)) are
 service-local and documented at their read sites; they're not part of the
 cross-service observability contract.
+
+### Orchestrator log file
+
+In a packaged build the desktop main process has no terminal, so the
+orchestrator child's stderr is teed to a `pino-roll` rotated file under
+Electron's `userData` directory:
+
+| Platform | Path |
+| --- | --- |
+| Linux | `~/.config/Felafel/logs/orchestrator.jsonl` |
+| macOS | `~/Library/Application Support/Felafel/logs/orchestrator.jsonl` |
+| Windows | `%APPDATA%\Felafel\logs\orchestrator.jsonl` |
+
+Rotation: 50 MB per file, up to 5 rotated files retained alongside the
+active one, with a daily cadence layered on top (whichever trips first).
+The parent process's stderr still receives the same lines, so anything
+wrapping the desktop (Docker, systemd, journald) keeps working.
+
+In dev mode (`pnpm dev`, `!app.isPackaged`) this code path is skipped —
+the orchestrator's stderr inherits the parent's so JSONL lines hit the
+developer's terminal directly. No rotated file is written.
 
 ## Orchestrator: embedded vs container
 

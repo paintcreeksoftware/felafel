@@ -29,7 +29,8 @@
     "get-port": "^7.2.0",
     "hono": "^4.10.0",
     "p-retry": "^8.0.0",
-    "pathe": "^2.0.0"
+    "pathe": "^2.0.0",
+    "pino-roll": "^4.0.0"
   },
   "devDependencies": {
     "@felafel/orchestrator": "workspace:*",
