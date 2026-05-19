@@ -8,8 +8,9 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
+import type { NodeSDK } from "@opentelemetry/sdk-node";
 import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
-import { createLogger, type Logger, Service } from "@felafel/logs";
+import type { Logger } from "@felafel/logs";
 import {
   Channels,
   type OrchestratorStatus,
@@ -41,6 +42,11 @@ import { TailscaleManager } from "@felafel/tailscale";
  * desktop app's main process, not the whole `Felafel` project (which also
  * spans the orchestrator and future worker apps).
  */
+interface DesktopAppDeps {
+  logger: Logger;
+  sdk: NodeSDK;
+}
+
 class DesktopApp {
   private mainWindow: BrowserWindow | null = null;
   private orchestratorUrl: string | null = null;
@@ -49,16 +55,20 @@ class DesktopApp {
   // recover the latest state on mount. Mirrors orchestratorUrl above but
   // carries the full discriminated union.
   private orchestratorStatus: OrchestratorStatus = { kind: "starting" };
-  private readonly logger: Logger = createLogger({
-    service: Service.DESKTOP_MAIN,
-  });
-  private readonly tailscale = new TailscaleManager(
-    this.logger.child({ component: "tailscale" }),
-  );
-  private readonly orchestrator = new OrchestratorManager(
-    this.tailscale,
-    this.logger.child({ component: "orchestrator" }),
-  );
+  private readonly logger: Logger;
+  private readonly tailscale: TailscaleManager;
+  private readonly orchestrator: OrchestratorManager;
+
+  constructor(deps: DesktopAppDeps) {
+    this.logger = deps.logger;
+    this.tailscale = new TailscaleManager(
+      this.logger.child({ component: "tailscale" }),
+    );
+    this.orchestrator = new OrchestratorManager(
+      this.tailscale,
+      this.logger.child({ component: "orchestrator" }),
+    );
+  }
 
   /**
    * Wire IPC handlers and Electron lifecycle hooks. Idempotent in practice
@@ -291,8 +301,11 @@ class DesktopApp {
  * harness, hot-reload), introduce an explicit instance guard or
  * `getInstance` accessor at that point — don't paper over a second
  * call with try/catch.
+ * @param deps - logger + OTel SDK constructed by `bootstrap` in
+ *   `index.ts`; the class owns the logger but doesn't own the SDK
+ *   (shutdown wiring lives at the entry point).
  */
-export function startDesktopApp(): void {
-  new DesktopApp().start();
+export function startDesktopApp(deps: DesktopAppDeps): void {
+  new DesktopApp(deps).start();
 }
 
