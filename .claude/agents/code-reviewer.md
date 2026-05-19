@@ -39,17 +39,18 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 
 ### Commits & PR shape
 
-- **One function per commit** (strict form of "one logical change").
-  Each commit moves exactly one function, class, or component —
-  even when two functions are tightly coupled (e.g. `apply()` calls
-  `build()`, both moving together as a public+helper pair). Split
-  along the function seam, not the cluster. The PR end-state is
-  semantic + working; intermediate commits can leave one module
-  temporarily importing another's helper. Working-tree-at-each-commit
-  is a PR-level invariant in this project, not a commit-level one.
-  Check via `git log <merge-base>..HEAD --oneline` + spot reads;
-  flag any commit that moves a cluster as one unit when the cluster
-  decomposes into discrete functions.
+- **Atomic semantic splits.** Each commit owns ONE concern — one
+  function, class, component, file, or interface change. When two
+  units are tightly coupled (e.g. `apply()` calls `build()`, or a
+  type plus its first user), split along the semantic seam, not
+  the LOC midpoint, even though it means two commits for one
+  conceptual move. The PR end-state is semantic + working;
+  intermediate commits can leave one module temporarily importing
+  another's helper. Working-tree-at-each-commit is a PR-level
+  invariant in this project, not a commit-level one. Check via
+  `git log <merge-base>..HEAD --oneline` + spot reads; flag any
+  commit that moves a cluster as one unit when the cluster
+  decomposes into discrete pieces along a visible seam.
 - **PR LOC cap 500–750.** Reviewable code only; lockfiles and
   snapshots don't count. Check with
   `git diff --stat <merge-base> -- ':!*lock*' ':!**/snapshots/**'`.
