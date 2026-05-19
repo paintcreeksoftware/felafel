@@ -190,6 +190,57 @@ In dev, orchestrator data (the SQLite database) lives at
 `apps/desktop/.dev-orchestrator-data/`. In a packaged build it moves to
 `<userData>/orchestrator/` under the OS-standard userData dir.
 
+## Configuration
+
+Every Felafel process emits structured logs through
+[`@felafel/logs`](packages/logs/). One unified shape across the orchestrator,
+desktop main, desktop renderer, and worker so a downstream collector
+(Vector / OTel Collector / Loki promtail) can aggregate without per-source
+parsers. The package owns the Pino factory and the OpenTelemetry SDK
+bootstrap; per-service usage is enforced via the contract lint rules
+([`eslint.config.mjs`](eslint.config.mjs)), so no service can construct a
+raw `pino` / `NodeSDK` / `OpenAPIHono` and drift the shape.
+
+### Standard log line shape
+
+Every process emits one JSON line per record to stderr (or to a rotated
+file in the packaged Electron orchestrator-sidecar path —
+[`apps/desktop/electron-builder.yml`](apps/desktop/electron-builder.yml)).
+The top-level fields are uniform:
+
+```jsonc
+{
+  "time": 1715731200000,            // ms-since-epoch (Pino default)
+  "level": 30,                      // 30 = info; pino-standard level ints
+  "service": "felafel-orchestrator", // one of: felafel-orchestrator,
+                                    //         felafel-desktop-main,
+                                    //         felafel-desktop-renderer,
+                                    //         felafel-worker
+  "node": "homelab-1",              // os.hostname() — worker-1 vs worker-2
+  "pid": 12345,
+  "version": "0.0.0",               // process.env.npm_package_version
+  "msg": "request.complete",        // dot-separated event name
+  "durationMs": 42,                 // present on every *.complete event
+  "traceId": "...",                 // injected when OTel context is active
+  "spanId": "..."
+}
+```
+
+### Environment variables
+
+| Variable | Read by | What it does |
+| --- | --- | --- |
+| `LOG_LEVEL` | `@felafel/logs` | Pino level: `trace` \| `debug` \| `info` (default) \| `warn` \| `error` \| `fatal` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `@felafel/logs`'s `bootstrap` | OTLP/HTTP collector URL (e.g. `http://localhost:4318/v1/traces`). Unset → SDK is constructed but inert; no spans collected, no global API patches applied. Sanctioned no-op for dev. |
+| `NODE_ENV` | Bundler-substituted at build time | `production` in packaged bundles disables the `pino-pretty` transport (otherwise pino spawns a worker thread, which crashes the bundled CJS entry — see [PAI-172_2](https://linear.app/paint-creek-software/issue/PAI-172)). In `pnpm dev`, electron-vite sets it to `development` so the renderer-host main process gets human-readable colored output. |
+
+The orchestrator-side `ORCHESTRATOR_*` env vars
+([`apps/orchestrator/src/constants.ts`](apps/orchestrator/src/constants.ts))
+and worker-side `WORKER_*` / `FELAFEL_TAILSCALE_*` env vars
+([`apps/worker/src/constants.ts`](apps/worker/src/constants.ts)) are
+service-local and documented at their read sites; they're not part of the
+cross-service observability contract.
+
 ## Orchestrator: embedded vs container
 
 By default, the desktop app spawns the orchestrator as a child process bound
