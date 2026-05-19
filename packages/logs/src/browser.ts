@@ -8,8 +8,6 @@ import pino, { type DestinationStream } from "pino";
 
 import type { Service } from "@felafel/logs/service";
 
-export { Service } from "@felafel/logs/service";
-
 /** Options accepted by the browser-entry {@link createLogger}. */
 export interface CreateBrowserLoggerOptions {
   /** Top-level service identity (PAI-168 C1 contract). */

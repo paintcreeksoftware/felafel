@@ -4,7 +4,8 @@
 // auto-cancelled and surfaces as a misleading "request was aborted" error.
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createRendererSDK, Service } from "@felafel/logs/browser";
+import { createRendererSDK } from "@felafel/logs/browser";
+import { Service } from "@felafel/logs/service";
 import App from "@felafel/desktop/App";
 import "@felafel/desktop/index.css";
 import { IpcSpanExporter } from "@felafel/desktop/lib/ipc-span-exporter";
