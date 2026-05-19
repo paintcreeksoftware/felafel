@@ -82,6 +82,17 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'session-start: fetch https://code.claude.com/docs/en/changelog via WebFetch and skim the most recent entries — keeps Claude Code feature knowledge current. See ~/.claude/projects/-workspaces-felafel/memory/feedback_fetch_changelog_session_start.md.'"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
