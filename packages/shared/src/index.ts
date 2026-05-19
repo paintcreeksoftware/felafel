@@ -65,6 +65,13 @@ export const Channels = {
   TailscaleStatus: "ts:status",
   TailscaleConnect: "ts:connect",
   TailscaleRefresh: "ts:refresh",
+  /**
+   * Renderer-to-main span forwarder (PAI-178). The renderer can't post
+   * OTLP directly (Electron CORS), so its `IpcSpanExporter` ships each
+   * finished span over this channel and the main process re-emits it
+   * through its own OTel SDK.
+   */
+  OtelSpan: "otel:span",
 } as const;
 
 export type OrchestratorStatus =
