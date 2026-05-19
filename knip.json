@@ -8,6 +8,7 @@
       "entry": [
         "electron.vite.config.ts",
         "src/main/index.ts",
+        "src/main/pino-roll.d.ts",
         "src/preload/index.ts",
         "src/renderer/src/main.tsx",
         "tests/**/*.{test,spec}.ts"
@@ -15,7 +16,6 @@
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
       "ignoreDependencies": [
         "@felafel/ui",
-        "pino-roll",
         "tailwindcss"
       ]
     },

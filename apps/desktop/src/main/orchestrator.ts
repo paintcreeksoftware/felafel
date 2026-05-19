@@ -1,11 +1,13 @@
 // Orchestrator sidecar lifecycle. The orchestrator is a Hono service shipped
 // as a Node bundle (apps/orchestrator); the desktop main process spawns it as
 // a child and points the renderer at it over IPC.
+import { app } from "electron";
 import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import type { Logger } from "@felafel/logs";
 import { DesktopEnvVars, LOCALHOST } from "@felafel/desktop/main/constants";
 import { ensureDataDir } from "@felafel/desktop/main/orchestrator-data-dir";
+import { teeStderrToRotatedFile } from "@felafel/desktop/main/orchestrator-log-rotation";
 import { resolveScriptPath } from "@felafel/desktop/main/orchestrator-paths";
 import { waitForOrchestratorReady } from "@felafel/desktop/main/orchestrator-readiness";
 import { buildSpawnInvocation } from "@felafel/desktop/main/orchestrator-spawn";
@@ -106,8 +108,14 @@ export class OrchestratorManager {
     const url = `http://${LOCALHOST}:${port}`;
 
     const { command, args, extraEnv } = buildSpawnInvocation(script);
+    // In a packaged build there's no terminal attached, so inheriting
+    // stderr loses the orchestrator's JSONL log stream. Pipe it instead
+    // and tee to a rotated file under `<userData>/logs/`. In dev mode
+    // (`!app.isPackaged`), keep inheriting so the stream still hits
+    // the developer's terminal.
+    const packaged = app.isPackaged;
     this.process = execa(command, args, {
-      stdio: ["ignore", "inherit", "inherit"],
+      stdio: ["ignore", "inherit", packaged ? "pipe" : "inherit"],
       env: {
         ...process.env,
         ...extraEnv,
@@ -126,6 +134,10 @@ export class OrchestratorManager {
       // try/await wrap below doesn't have to swallow a normal exit.
       reject: false,
     });
+
+    if (packaged && this.process.stderr) {
+      await teeStderrToRotatedFile(this.process.stderr, this.logger);
+    }
 
     this.process.on("exit", (code, signal) => {
       this.logger.error({ code, signal }, "orchestrator.child.exited");
