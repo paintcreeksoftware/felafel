@@ -1,10 +1,98 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)"
+      "Edit",
+      "Write",
+      "WebSearch",
+      "WebFetch",
+      "Read",
+
+      "Bash(git *)",
+      "Bash(gh *)",
+
+      "Bash(pnpm *)",
+      "Bash(pnpx *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(tsc *)",
+
+      "Bash(docker *)",
+      "Bash(tailscale *)",
+      "Bash(act *)",
+      "Bash(actionlint *)",
+      "Bash(shellcheck *)",
+      "Bash(claude *)",
+
+      "Bash(python3 *)",
+      "Bash(uv *)",
+
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(jq *)",
+      "Bash(wc *)",
+      "Bash(diff *)",
+      "Bash(sort *)",
+      "Bash(xargs *)",
+      "Bash(read *)",
+      "Bash(env *)",
+      "Bash(echo *)",
+      "Bash(command -v *)",
+      "Bash(type *)",
+      "Bash(which *)",
+      "Bash(identify *)",
+      "Bash(curl *)",
+
+      "Bash(mkdir *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(rm *)",
+      "Bash(chmod *)",
+      "Bash(touch *)",
+      "Bash(truncate *)",
+      "Bash(timeout *)",
+      "Bash(bash *)",
+
+      "Skill(*)",
+      "mcp__claude_ai_Linear__*"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf /workspaces)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push *:main *)",
+      "Bash(git push *:master *)",
+      "Bash(git push origin main *)",
+      "Bash(git push origin master *)"
+    ],
+    "additionalDirectories": [
+      "/home/vscode/.claude/plans",
+      "/tmp",
+      "/workspaces/felafel/.claude",
+      "/workspaces/felafel/.claude/agents"
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'session-start: fetch https://code.claude.com/docs/en/changelog via WebFetch and skim the most recent entries — keeps Claude Code feature knowledge current. See ~/.claude/projects/-workspaces-felafel/memory/feedback_fetch_changelog_session_start.md.'"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
