@@ -86,8 +86,22 @@ The caller has no remote tracking yet, no PR.
 - `git branch --show-current` → must match `PAI-NN-*` (uppercase).
   If not, abort and tell the caller to rename the branch first.
 - `gh pr list --state open --head <branch>` → expect empty (no PR yet).
+- `gh pr list --state closed --head <branch> --json number,title,mergedAt`
+  → if non-empty AND `mergedAt` is null, a recoverable closed PR
+  exists. Prefer reopen-and-force-push over fresh-create (see the
+  reopen branch below) to preserve PR number, review comments, CI
+  history, and Linear backlinks.
 
 **Commands to run, in order:**
+
+A. **Reopen branch** — closed-not-merged PR found for `<branch>`:
+
+1. `git push --force-with-lease origin <branch>` — recreate the
+   remote branch at the new commits.
+2. `gh pr reopen <N>` — GitHub reattaches the branch by name.
+3. `gh pr view <N> --json url -q .url` — return the URL.
+
+B. **Fresh-create branch** — no closed PR or merged-and-closed:
 
 1. `git push -u origin <branch>` — get the branch on remote so the
    user can see in-flight work.
@@ -100,6 +114,15 @@ The caller has no remote tracking yet, no PR.
 
 **Why each step:**
 
+- Reopen-first check: if work was pushed, closed (direction
+  reverted, reviewer feedback caused a pivot), and the user now
+  asks for a redo, the original PR is usually recoverable.
+  Reopening preserves the PR number, review comments + reactions
+  from the closed cycle, CI history, the Linear ticket's
+  backlink, and any auto-attached cost/drift marker comments —
+  fresh-create throws all of that away. Carve-out: open fresh if
+  the new direction is 100% unrelated to the closed diff (same
+  problem space, completely different intent).
 - Push: visibility in flight is the goal — no long-lived local-only
   branches.
 - Draft PR: same visibility; the user wants to follow along, not see
