@@ -2,7 +2,7 @@
   "name": "@felafel/shared",
   "version": "0.0.0",
   "private": true,
-  "description": "Wire-contract surface shared across the Felafel codebase. Re-exports DB-backed schemas from @felafel/contracts and adds the IPC/Tailscale-specific types (Channels, OrchestratorStatus, TailscaleStatus, DesktopApi) that have no DB counterpart. Workspace-only; never published.",
+  "description": "Wire-contract surface shared across the Felafel codebase. Re-exports DB-backed schemas from @felafel/contracts and adds the IPC/Tailscale-specific types (Channels, OrchestratorStatus, TailscaleStatus, DesktopApi) that have no DB counterpart. Also owns the traced-ipc wrappers (tracedHandle / tracedInvoke) that propagate W3C traceparent across the Electron main↔renderer boundary. Workspace-only; never published.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -426,11 +426,14 @@ const config = [
     // owns the IPC wrappers (tracedHandle / tracedInvoke). The trace
     // import from @opentelemetry/api is legitimate here — the helper
     // needs startActiveSpan with an extracted parent context, which
-    // withTracedOperation can't express.
+    // withTracedOperation can't express. The bare `ipcMain.handle`
+    // and `ipcRenderer.invoke` calls are also legitimate here — this
+    // file IS the wrapper that wraps them.
     files: ["packages/shared/src/traced-ipc.ts"],
     rules: {
       "no-restricted-imports": "off",
       "@typescript-eslint/no-restricted-imports": "off",
+      "no-restricted-properties": "off",
     },
   },
   {

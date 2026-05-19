@@ -6,7 +6,7 @@
 // string-literal channel name is a compile error.
 import { performance } from "node:perf_hooks";
 
-import { context, propagation, trace } from "@opentelemetry/api";
+import { context, propagation, SpanStatusCode, trace } from "@opentelemetry/api";
 import {
   ipcMain,
   ipcRenderer,
@@ -55,7 +55,13 @@ export function tracedHandle<C extends ChannelName, R>(
       async (span) => {
         const start = performance.now();
         try {
-          return await handler(event, ...userArgs);
+          const result = await handler(event, ...userArgs);
+          span.setStatus({ code: SpanStatusCode.OK });
+          return result;
+        } catch (error) {
+          span.setStatus({ code: SpanStatusCode.ERROR });
+          span.recordException(error as Error);
+          throw error;
         } finally {
           const durationMs = Math.round(performance.now() - start);
           span.end();
