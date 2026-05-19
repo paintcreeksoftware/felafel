@@ -1,32 +1,43 @@
 // Renderer-side OTel SpanExporter that forwards finished spans to the
-// Electron main process via the `Channels.OtelSpan` IPC channel
-// (PAI-178). Wired into the renderer's `WebTracerProvider` by
-// `createRendererSDK` (packages/logs/src/browser.ts).
+// Electron main process via the preload's contextBridge (PAI-178).
+// Wired into the renderer's `WebTracerProvider` by `createRendererSDK`
+// (packages/logs/src/browser.ts).
 import { ExportResultCode, type ExportResult } from "@opentelemetry/core";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-web";
 
-import { Channels, type ForwardedSpan } from "@felafel/shared";
-import { tracedInvoke } from "@felafel/shared/traced-ipc";
+import type { DesktopApi, ForwardedSpan } from "@felafel/shared";
 
 /**
- * Ships each finished span to main over `Channels.OtelSpan`. The renderer
- * can't post OTLP directly (Electron CORS), so main's OTel SDK re-emits.
+ * `window.api` declared by the preload via `contextBridge`. Tightly
+ * typed against the shared `DesktopApi` so a missing `shipOtelSpan`
+ * is a compile error.
+ */
+declare global {
+  interface Window {
+    api: DesktopApi;
+  }
+}
+
+/**
+ * Ships each finished span to main via the preload's contextBridge.
+ * The renderer is context-isolated and can't reach `ipcRenderer`
+ * directly; `window.api.shipOtelSpan(span)` (exposed by the preload)
+ * wraps `tracedInvoke(Channels.OtelSpan, ...)` on the preload side.
  *
  * Serialization choices: `ReadableSpan` carries non-JSON-safe fields
- * (`Resource`, `InstrumentationScope`, the `spanContext()` accessor) that
- * don't survive `structuredClone` over IPC. Each span is flattened to
- * {@link ForwardedSpan} (the shared `@felafel/contracts` schema) —
+ * (`Resource`, `InstrumentationScope`, the `spanContext()` accessor)
+ * that don't survive `structuredClone` over IPC. Each span is flattened
+ * to {@link ForwardedSpan} (the shared `@felafel/contracts` schema) —
  * identity, timing, kind, attributes, status, name, plus trace + span +
  * parent-span IDs so the main-side handler can seed the renderer's
- * parent context and keep the trace contiguous. Resource + scope are
- * dropped on the wire; the forwarder reattaches them under its own
- * tracer identity. `shutdown()` and `forceFlush()` resolve immediately —
- * `export()` invokes `tracedInvoke` per span, so there's no buffer to
- * drain.
+ * parent context. Resource + scope are dropped on the wire; the
+ * forwarder reattaches them under its own tracer identity.
+ * `shutdown()` and `forceFlush()` resolve immediately — `export()`
+ * ships eagerly so there's no buffer to drain.
  */
 export class IpcSpanExporter implements SpanExporter {
   /**
-   * Serialize each finished span and ship it over `Channels.OtelSpan`.
+   * Serialize each finished span and ship it via the contextBridge.
    * @param spans - finished spans to forward to main.
    * @param resultCallback - OTel SDK's completion callback.
    */
@@ -47,7 +58,7 @@ export class IpcSpanExporter implements SpanExporter {
         spanId: ctx.spanId,
         ...(span.parentSpanContext ? { parentSpanId: span.parentSpanContext.spanId } : {}),
       };
-      return tracedInvoke(Channels.OtelSpan, serialized);
+      return window.api.shipOtelSpan(serialized);
     });
     Promise.all(sends)
       .then(() => { resultCallback({ code: ExportResultCode.SUCCESS }); })

@@ -10,6 +10,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import {
   Channels,
   type DesktopApi,
+  type ForwardedSpan,
   type OrchestratorStatus,
   type TailscaleConnectResult,
   type TailscaleStatus,
@@ -38,6 +39,13 @@ const api: DesktopApi = {
     ipcRenderer.on(Channels.TailscaleStatus, listener);
     return () => ipcRenderer.removeListener(Channels.TailscaleStatus, listener);
   },
+  // PAI-178 renderer→main span forwarding. The renderer is
+  // context-isolated and can't reach `ipcRenderer` directly; the
+  // preload bridges the OtelSpan channel here. The renderer's
+  // IpcSpanExporter calls `window.api.shipOtelSpan(span)` rather
+  // than reaching for `tracedInvoke` itself.
+  shipOtelSpan: (span: ForwardedSpan) =>
+    tracedInvoke<typeof Channels.OtelSpan, void>(Channels.OtelSpan, span),
 };
 
 contextBridge.exposeInMainWorld("api", api);

@@ -2,14 +2,9 @@ import { ExportResultCode, type ExportResult } from "@opentelemetry/core";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-web";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const tracedInvokeMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
-vi.mock("@felafel/shared/traced-ipc", () => ({
-  tracedInvoke: (...args: unknown[]) => tracedInvokeMock(...args),
-}));
+import { IpcSpanExporter } from "@felafel/desktop/renderer/src/lib/ipc-span-exporter";
 
-const { IpcSpanExporter } = await import(
-  "@felafel/desktop/renderer/src/lib/ipc-span-exporter"
-);
+const shipMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 
 /**
  * Build a minimally-shaped {@link ReadableSpan} fixture covering only
@@ -38,24 +33,28 @@ function makeSpan(overrides: Partial<ReadableSpan> = {}): ReadableSpan {
 
 describe("IpcSpanExporter", () => {
   beforeEach(() => {
-    tracedInvokeMock.mockReset();
+    shipMock.mockReset();
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { api: { shipOtelSpan: shipMock } },
+    });
   });
 
-  it("ships each span via tracedInvoke + invokes the callback with SUCCESS", async () => {
-    tracedInvokeMock.mockResolvedValue(null);
+  it("ships each span via window.api.shipOtelSpan + invokes the callback with SUCCESS", async () => {
+    shipMock.mockResolvedValue(null);
     const exporter = new IpcSpanExporter();
     const cb = vi.fn<(r: ExportResult) => void>();
 
     exporter.export([makeSpan(), makeSpan({ name: "second" })], cb);
     await vi.waitFor(() => expect(cb).toHaveBeenCalledOnce());
 
-    expect(tracedInvokeMock).toHaveBeenCalledTimes(2);
+    expect(shipMock).toHaveBeenCalledTimes(2);
     expect(cb).toHaveBeenCalledWith({ code: ExportResultCode.SUCCESS });
   });
 
-  it("invokes the callback with FAILED when tracedInvoke rejects", async () => {
+  it("invokes the callback with FAILED when shipOtelSpan rejects", async () => {
     const err = new Error("ipc boom");
-    tracedInvokeMock.mockRejectedValue(err);
+    shipMock.mockRejectedValue(err);
     const exporter = new IpcSpanExporter();
     const cb = vi.fn<(r: ExportResult) => void>();
 
