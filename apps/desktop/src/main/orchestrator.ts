@@ -135,7 +135,14 @@ export class OrchestratorManager {
       reject: false,
     });
 
-    if (packaged && this.process.stderr) {
+    if (packaged) {
+      // stdio[2]="pipe" above guarantees stderr is a Readable. The null
+      // check is a fail-fast guard against an upstream regression rather
+      // than a soft fallback — silently skipping rotation would lose
+      // the orchestrator's JSONL stream entirely in a packaged build.
+      if (!this.process.stderr) {
+        throw new Error("orchestrator.child.stderr.pipe.missing");
+      }
       await teeStderrToRotatedFile(this.process.stderr, this.logger);
     }
 
