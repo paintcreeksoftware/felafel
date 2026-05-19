@@ -9,8 +9,9 @@
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
 import type { NodeSDK } from "@opentelemetry/sdk-node";
-import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
+import { app, BrowserWindow, globalShortcut } from "electron";
 import type { Logger } from "@felafel/logs";
+import { tracedHandle } from "@felafel/shared/traced-ipc";
 import {
   Channels,
   type OrchestratorStatus,
@@ -87,8 +88,8 @@ class DesktopApp {
    * `app.whenReady`.
    */
   private registerIpcHandlers(): void {
-    ipcMain.handle(Channels.OrchestratorUrl, () => this.orchestratorUrl);
-    ipcMain.handle(Channels.OrchestratorStatusGet, () => this.orchestratorStatus);
+    tracedHandle(Channels.OrchestratorUrl, this.logger, () => this.orchestratorUrl);
+    tracedHandle(Channels.OrchestratorStatusGet, this.logger, () => this.orchestratorStatus);
 
     // Tailscale handlers. ts:status returns the cached value (instant);
     // ts:refresh forces a re-probe AND re-attempts the orchestrator's
@@ -98,14 +99,17 @@ class DesktopApp {
     // off a fire-and-forget re-probe so the steady-state status arrives
     // via broadcast even though the Promise resolves with the immediate
     // `up` outcome.
-    ipcMain.handle(Channels.TailscaleStatus, () => this.tailscale.getCachedStatus());
-    ipcMain.handle(Channels.TailscaleRefresh, async () => {
+    tracedHandle(Channels.TailscaleStatus, this.logger, () =>
+      this.tailscale.getCachedStatus(),
+    );
+    tracedHandle(Channels.TailscaleRefresh, this.logger, async () => {
       const status = await this.tailscale.probeStatus();
       this.broadcastTailscale(status);
       await this.refreshOrchestratorServeAndBroadcast();
       return status;
     });
-    ipcMain.handle(Channels.TailscaleConnect, async (_event, key?: string) => {
+    tracedHandle(Channels.TailscaleConnect, this.logger, async (_event, ...args) => {
+      const key = typeof args[0] === "string" ? args[0] : undefined;
       const result = await this.tailscale.runUp(key);
       void this.broadcastProbeStatus();
       return result;
