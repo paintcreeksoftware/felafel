@@ -14,23 +14,25 @@ import {
   type TailscaleConnectResult,
   type TailscaleStatus,
 } from "@felafel/shared";
+import { tracedInvoke } from "@felafel/shared/traced-ipc";
 
 const api: DesktopApi = {
-  // Push notifications from main → renderer. Returns an unsubscribe so React
-  // effects can clean up properly.
-  orchestratorUrl: () => ipcRenderer.invoke(Channels.OrchestratorUrl) as Promise<string>,
+  // Request/response calls use tracedInvoke so the renderer's W3C
+  // traceparent crosses the IPC hop; one-way subscriptions
+  // (ipcRenderer.on) stay bare because they have no response span.
+  orchestratorUrl: () => tracedInvoke<typeof Channels.OrchestratorUrl, string>(Channels.OrchestratorUrl),
   orchestratorStatus: () =>
-    ipcRenderer.invoke(Channels.OrchestratorStatusGet) as Promise<OrchestratorStatus>,
+    tracedInvoke<typeof Channels.OrchestratorStatusGet, OrchestratorStatus>(Channels.OrchestratorStatusGet),
   onOrchestratorStatus: (handler) => {
     const listener = (_event: unknown, status: OrchestratorStatus) => handler(status);
     ipcRenderer.on(Channels.OrchestratorStatus, listener);
     return () => ipcRenderer.removeListener(Channels.OrchestratorStatus, listener);
   },
-  tailscaleStatus: () => ipcRenderer.invoke(Channels.TailscaleStatus) as Promise<TailscaleStatus>,
+  tailscaleStatus: () => tracedInvoke<typeof Channels.TailscaleStatus, TailscaleStatus>(Channels.TailscaleStatus),
   tailscaleRefresh: () =>
-    ipcRenderer.invoke(Channels.TailscaleRefresh) as Promise<TailscaleStatus>,
+    tracedInvoke<typeof Channels.TailscaleRefresh, TailscaleStatus>(Channels.TailscaleRefresh),
   tailscaleConnect: (authkey) =>
-    ipcRenderer.invoke(Channels.TailscaleConnect, authkey) as Promise<TailscaleConnectResult>,
+    tracedInvoke<typeof Channels.TailscaleConnect, TailscaleConnectResult>(Channels.TailscaleConnect, authkey),
   onTailscaleStatus: (handler) => {
     const listener = (_event: unknown, status: TailscaleStatus) => handler(status);
     ipcRenderer.on(Channels.TailscaleStatus, listener);
