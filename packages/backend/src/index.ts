@@ -20,3 +20,8 @@ export {
   createHonoApp,
   type CreateHonoAppOptions,
 } from "@felafel/backend/hono";
+
+export {
+  OTEL_FLUSH_TIMEOUT_MS,
+  shutdownBackend,
+} from "@felafel/backend/shutdown";
