@@ -405,6 +405,15 @@ importers:
       '@felafel/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@felafel/logs':
+        specifier: workspace:*
+        version: link:../logs
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.1
+      electron:
+        specifier: '*'
+        version: 41.3.0
     devDependencies:
       '@types/node':
         specifier: ^24.12.2

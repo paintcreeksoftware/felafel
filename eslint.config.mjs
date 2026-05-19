@@ -418,6 +418,18 @@ const config = [
     },
   },
   {
+    // PAI-168 C5 definition site. `packages/shared/src/traced-ipc.ts`
+    // owns the IPC wrappers (tracedHandle / tracedInvoke). The trace
+    // import from @opentelemetry/api is legitimate here — the helper
+    // needs startActiveSpan with an extracted parent context, which
+    // withTracedOperation can't express.
+    files: ["packages/shared/src/traced-ipc.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
+    },
+  },
+  {
     // Standalone scripts under `scripts/` are operator-facing CLIs;
     // direct stdout/stderr via console.* is the standard idiom there.
     // The unified log stream is for production services.
