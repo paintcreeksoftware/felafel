@@ -85,6 +85,14 @@ The caller has no remote tracking yet, no PR.
 
 - `git branch --show-current` → must match `PAI-NN-*` (uppercase).
   If not, abort and tell the caller to rename the branch first.
+- **Agent-prompt edits reuse the original ticket.** If the commit
+  only touches `.claude/agents/*.md`, check whether the agent's
+  introducing ticket already exists (search Linear with
+  `mcp__claude_ai_Linear__list_issues` for the agent name). If it
+  does, reuse it with the next `_M` suffix (`PAI-NN_M-...`)
+  rather than filing a fresh sub-issue. Agent-prompt tweaks are
+  small enough that a fresh ticket-per-tweak floods the board;
+  the introducing ticket is the natural home.
 - `gh pr list --state open --head <branch>` → expect empty (no PR yet).
 - `gh pr list --state closed --head <branch> --json number,title,mergedAt`
   → if non-empty AND `mergedAt` is null, a recoverable closed PR

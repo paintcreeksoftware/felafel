@@ -111,6 +111,15 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   before reaching for `eslint-disable-next-line` /
   `oxlint-disable-next-line`. Flag any disable comment in the diff
   that has not been justified in the commit body.
+- **No cargo-culted bypass flags.** Flag any commit that adds an
+  override / bypass flag (`--no-*`, `--skip-*`, `-c key=value`,
+  `--force`, `--ignore-*`) without a one-line justification in the
+  commit body confirming the target's current state. A flag
+  overriding a default that isn't enabled in this environment is a
+  no-op (misleading at best); a flag overriding a hook/safety
+  default is a forbidden bypass per the project's pre-commit
+  policy. Check with `git config <key>` / `cat .npmrc` / `env |
+  grep <var>` at the work site, not retroactively in review.
 - **Add lint rules, not one-off fixes.** When a style issue could be
   a lint rule, add the rule in the same PR rather than fixing the
   one instance. Trust enabled rules even when a specific case argues
