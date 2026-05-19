@@ -8,6 +8,7 @@
 // formal singleton (private constructor, static accessor). Calling
 // `startDesktopApp` twice would construct two instances and double-register
 // IPC handlers — don't.
+import { trace } from "@opentelemetry/api";
 import type { NodeSDK } from "@opentelemetry/sdk-node";
 import { app, BrowserWindow, globalShortcut } from "electron";
 import type { Logger } from "@felafel/logs";
@@ -46,6 +47,20 @@ import { TailscaleManager } from "@felafel/tailscale";
 interface DesktopAppDeps {
   logger: Logger;
   sdk: NodeSDK;
+}
+
+/**
+ * Wire shape received over `Channels.OtelSpan` from the renderer's
+ * IpcSpanExporter (PAI-178). Structural match for the serialized span
+ * the renderer ships; main re-emits this through its own SDK.
+ */
+interface ForwardedSpan {
+  name: string;
+  kind: number;
+  startTime: [number, number];
+  endTime: [number, number];
+  attributes: Record<string, unknown>;
+  status: { code: number; message?: string };
 }
 
 class DesktopApp {
@@ -113,6 +128,22 @@ class DesktopApp {
       const result = await this.tailscale.runUp(key);
       void this.broadcastProbeStatus();
       return result;
+    });
+    // PAI-178 renderer-span forwarder. The renderer's IpcSpanExporter
+    // ships finished spans here; we re-emit each one through main's
+    // OTel SDK on a dedicated tracer so renderer spans cluster under
+    // their own scope. Start/end times come from the wire so duration
+    // is preserved across the IPC hop.
+    tracedHandle(Channels.OtelSpan, this.logger, (_event, ...args) => {
+      const serialized = args[0] as ForwardedSpan;
+      const tracer = trace.getTracer("felafel-desktop-renderer-forwarder");
+      const span = tracer.startSpan(serialized.name, {
+        kind: serialized.kind,
+        startTime: serialized.startTime,
+        attributes: serialized.attributes,
+      });
+      span.setStatus(serialized.status);
+      span.end(serialized.endTime);
     });
   }
 

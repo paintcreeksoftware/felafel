@@ -457,6 +457,18 @@ const config = [
     },
   },
   {
+    // PAI-178. The OtelSpan handler in `desktop.ts` re-emits a
+    // renderer-forwarded span with explicit start/end times and the
+    // renderer's `name` / `attributes` / `status`. `withTracedOperation`
+    // can't express that shape (it owns the span lifecycle around a
+    // user `fn`), so this file uses `trace.getTracer` directly — same
+    // pattern (and same carve-out) as `traced-ipc.ts`.
+    files: ["apps/desktop/src/main/desktop.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": "off",
+    },
+  },
+  {
     // Root-level lint config files. The root package isn't a
     // `@felafel/<pkg>` workspace member, so there's no alias form to
     // import the extracted rule-cluster modules in `eslint/` — the

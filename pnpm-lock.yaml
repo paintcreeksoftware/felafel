@@ -92,6 +92,9 @@ importers:
       '@felafel/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@opentelemetry/core':
         specifier: ^2.7.1
         version: 2.7.1(@opentelemetry/api@1.9.1)
