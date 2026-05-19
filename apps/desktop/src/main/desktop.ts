@@ -30,6 +30,14 @@ import {
 import { TailscaleManager } from "@felafel/tailscale";
 
 /**
+ * OTel tracer name for renderer spans re-emitted on the main side.
+ * Renderer spans cluster under this scope once main's SDK exports
+ * them. Mirrors the named-const pattern of `TRACER_NAME` in
+ * `@felafel/shared/traced-ipc` and `@felafel/logs/tracing`.
+ */
+const RENDERER_FORWARDER_TRACER = "felafel-desktop-renderer-forwarder";
+
+/**
  * Top-level desktop main-process owner. Composes the orchestrator +
  * Tailscale managers and wires them up to Electron's lifecycle and IPC
  * channels.
@@ -136,7 +144,7 @@ class DesktopApp {
     // is preserved across the IPC hop.
     tracedHandle(Channels.OtelSpan, this.logger, (_event, ...args) => {
       const serialized = args[0] as ForwardedSpan;
-      const tracer = trace.getTracer("felafel-desktop-renderer-forwarder");
+      const tracer = trace.getTracer(RENDERER_FORWARDER_TRACER);
       const span = tracer.startSpan(serialized.name, {
         kind: serialized.kind,
         startTime: serialized.startTime,
