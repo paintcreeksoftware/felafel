@@ -342,6 +342,10 @@ const config = [
         // would be no better and three lines longer.
         { object: "Math", property: "pow", message: "Use the `**` operator (also enforced by prefer-exponentiation-operator)." },
         { property: "hasOwnProperty", message: "Use Object.hasOwn(obj, prop) (also enforced by prefer-object-has-own)." },
+        // PAI-168 C5. Carved out in `packages/shared/src/traced-ipc.ts`
+        // (the wrapper's definition site).
+        { object: "ipcMain", property: "handle", message: "Use tracedHandle from @felafel/shared/traced-ipc (PAI-168 C5)." },
+        { object: "ipcRenderer", property: "invoke", message: "Use tracedInvoke from @felafel/shared/traced-ipc (PAI-168 C5)." },
       ],
       // Core — Suggestions / sort + ordering
       // All three off. None of them earns a place at the cost of
