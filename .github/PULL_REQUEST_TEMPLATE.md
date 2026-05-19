@@ -67,14 +67,7 @@ miss.
 N/A
 
 <!--
-The marker zones below are populated by `pnpm pr:ready <N>` at
-flip-to-ready time (scripts/pr-ready.sh). Leave them empty in the
-template; the hook stamps them. PAI-166's CI workflows lift the
-stamped data on the `ready_for_review` event.
+Cost summary + memory-drift snapshot are posted as PR comments by
+`pnpm pr:ready <N>` at flip-to-ready time (`scripts/pr-ready.sh`).
+The PR body intentionally stays clean.
 -->
-
-<!-- claude-cost-block:start -->
-<!-- claude-cost-block:end -->
-
-<!-- claude-drift-snapshot:start -->
-<!-- claude-drift-snapshot:end -->
