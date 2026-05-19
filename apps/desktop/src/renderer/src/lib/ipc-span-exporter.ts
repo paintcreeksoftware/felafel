@@ -5,21 +5,8 @@
 import { ExportResultCode, type ExportResult } from "@opentelemetry/core";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-web";
 
-import { Channels } from "@felafel/shared";
+import { Channels, type ForwardedSpan } from "@felafel/shared";
 import { tracedInvoke } from "@felafel/shared/traced-ipc";
-
-/** JSON-safe wire shape for a finished span. See {@link IpcSpanExporter}. */
-interface SerializedSpan {
-  name: string;
-  kind: number;
-  startTime: [number, number];
-  endTime: [number, number];
-  attributes: Record<string, unknown>;
-  status: { code: number; message?: string };
-  traceId: string;
-  spanId: string;
-  parentSpanId?: string;
-}
 
 /**
  * Ships each finished span to main over `Channels.OtelSpan`. The renderer
@@ -28,12 +15,14 @@ interface SerializedSpan {
  * Serialization choices: `ReadableSpan` carries non-JSON-safe fields
  * (`Resource`, `InstrumentationScope`, the `spanContext()` accessor) that
  * don't survive `structuredClone` over IPC. Each span is flattened to
- * {@link SerializedSpan} — identity, timing, kind, attributes, status,
- * name. Resource + scope are dropped on the wire; the main-side handler
- * reattaches them under the forwarder tracer's identity
- * (`felafel-desktop-renderer-forwarder`). `shutdown()` and `forceFlush()`
- * resolve immediately — `export()` invokes `tracedInvoke` per span, so
- * there's no buffer to drain.
+ * {@link ForwardedSpan} (the shared `@felafel/contracts` schema) —
+ * identity, timing, kind, attributes, status, name, plus trace + span +
+ * parent-span IDs so the main-side handler can seed the renderer's
+ * parent context and keep the trace contiguous. Resource + scope are
+ * dropped on the wire; the forwarder reattaches them under its own
+ * tracer identity. `shutdown()` and `forceFlush()` resolve immediately —
+ * `export()` invokes `tracedInvoke` per span, so there's no buffer to
+ * drain.
  */
 export class IpcSpanExporter implements SpanExporter {
   /**
@@ -47,7 +36,7 @@ export class IpcSpanExporter implements SpanExporter {
   ): void {
     const sends = spans.map((span) => {
       const ctx = span.spanContext();
-      const serialized: SerializedSpan = {
+      const serialized: ForwardedSpan = {
         name: span.name,
         kind: span.kind,
         startTime: span.startTime,
