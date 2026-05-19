@@ -16,7 +16,7 @@
 #   ## Cost summary
 #
 #   ```
-#   <output of scripts/cost.sh --since HEAD>
+#   <output of `pnpm cost:since HEAD`>
 #   ```
 #
 #   <!-- claude-drift-comment -->
@@ -65,9 +65,9 @@ upsert_comment() {
 }
 
 echo "[pr-ready] computing cost summary..."
-cost=$(bash scripts/cost.sh --since HEAD)
+cost=$(pnpm cost:since HEAD)
 if [ -z "$cost" ]; then
-  echo "ERROR: scripts/cost.sh returned empty output; aborting" >&2
+  echo "ERROR: pnpm cost:since returned empty output; aborting" >&2
   exit 1
 fi
 cost_marker='<!-- claude-cost-comment -->'
