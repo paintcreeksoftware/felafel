@@ -169,7 +169,11 @@ const config = [
       "no-array-constructor": "error",
       "no-bitwise": "off",
       "no-caller": "error",
-      "no-console": "off",
+      // PAI-168 C9. The unified log stream (PAI-169 / `@felafel/logs`)
+      // is the only sanctioned path for diagnostic output from
+      // production code; console.* would silently bypass it.
+      // Tests + scripts + hooks override below.
+      "no-console": "error",
       "no-continue": "off",
       "no-delete-var": "error",
       "no-div-regex": "error",
@@ -281,7 +285,42 @@ const config = [
         { name: "closed", message: "window.closed is non-standard." },
         { name: "find", message: "window.find is the browser search box; use Array.prototype.find." },
       ],
-      "no-restricted-imports": ["error", {
+      // PAI-168 observability contracts C1, C2, C3, C4. Each rule
+      // forces consumers through a factory in @felafel/logs or
+      // @felafel/backend so OTel init order, log-line shape, and SDK
+      // lifecycle can't drift per service. We use the TypeScript-aware
+      // version because type-only imports (`import type { NodeSDK }`)
+      // don't violate the contract — the consumer is being handed an
+      // SDK instance to annotate, not constructing one. The base ESLint
+      // rule can't see the type-only-ness, so it'd false-positive on
+      // type imports of the banned names.
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": ["error", {
+        paths: [
+          {
+            name: "pino",
+            message: "Use createLogger from @felafel/logs (PAI-168 C1).",
+            allowTypeImports: true,
+          },
+          {
+            name: "@opentelemetry/sdk-node",
+            importNames: ["NodeSDK"],
+            message: "Use bootstrap from @felafel/logs (PAI-168 C2).",
+            allowTypeImports: true,
+          },
+          {
+            name: "@hono/zod-openapi",
+            importNames: ["OpenAPIHono"],
+            message: "Use createHonoApp from @felafel/backend (PAI-168 C3).",
+            allowTypeImports: true,
+          },
+          {
+            name: "@opentelemetry/api",
+            importNames: ["trace"],
+            message: "Use withTracedOperation from @felafel/logs (PAI-168 C4).",
+            allowTypeImports: true,
+          },
+        ],
         // Project rule (memory: no-relative-imports). Carve-outs for
         // window.ts (Vite `?asset` query) + test fixtures are handled
         // by the file-level overrides at the bottom of this file.
@@ -347,11 +386,44 @@ const config = [
     // (`mockImplementation(() => {})`, stream `.on("data", () => {})`).
     // Test fixtures (e.g. `./helpers/fake-worker.ts`) are colocated
     // with the test file by convention and don't go through a
-    // workspace alias.
+    // workspace alias. Test files also legitimately use `console.*`
+    // for spy targets and ad-hoc print statements.
     files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/*.integration.test.ts"],
     rules: {
       "no-empty-function": "off",
       "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
+      "no-console": "off",
+    },
+  },
+  {
+    // PAI-168 C1, C2, C4 definition site. `packages/logs/src/**`
+    // owns the helpers that wrap pino + @opentelemetry/sdk-node +
+    // @opentelemetry/api; the bans don't apply to the package
+    // implementing them.
+    files: ["packages/logs/src/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
+    },
+  },
+  {
+    // PAI-168 C3 definition site. `packages/backend/src/**` owns
+    // `createHonoApp`; the OpenAPIHono ban doesn't apply to the
+    // package implementing it.
+    files: ["packages/backend/src/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
+    },
+  },
+  {
+    // Standalone scripts under `scripts/` are operator-facing CLIs;
+    // direct stdout/stderr via console.* is the standard idiom there.
+    // The unified log stream is for production services.
+    files: ["scripts/**"],
+    rules: {
+      "no-console": "off",
     },
   },
   {
@@ -362,6 +434,7 @@ const config = [
     files: ["apps/desktop/src/main/window.ts"],
     rules: {
       "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
     },
   },
   {
@@ -375,6 +448,7 @@ const config = [
     files: ["eslint.config.mjs", "eslint/**/*.mjs"],
     rules: {
       "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": "off",
       "max-lines": "off",
     },
   },
