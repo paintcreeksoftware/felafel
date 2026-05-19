@@ -1,6 +1,6 @@
 import pRetry from "p-retry";
 import { createHonoApp } from "@felafel/backend";
-import { Service } from "@felafel/logs";
+import { Service, withTracedOperation } from "@felafel/logs";
 import { type RunComplete } from "@felafel/shared";
 import { CompleteCallbackRetry } from "@felafel/worker/constants";
 import { healthRoute } from "@felafel/worker/routes/health";
@@ -49,45 +49,49 @@ export function buildApp(opts: BuildAppOptions) {
       // is void-returning, so handing it an async function is a
       // misused-promise. The detached body still does its work; we
       // explicitly mark the floating promise as intentional.
+      const jobLogger = logger.child({ runId });
       setImmediate(() => {
-        void (async () => {
-        logger.info({ runId, payload }, "job.received");
-        const ack: RunComplete = { ok: true };
-        try {
-          await pRetry(
-            async () => {
-              const res = await fetch(
-                `${opts.orchestratorUrl}/runs/${runId}/complete`,
+        void withTracedOperation(
+          "worker.job.run",
+          async () => {
+            jobLogger.info({ payload }, "job.received");
+            const ack: RunComplete = { ok: true };
+            try {
+              await pRetry(
+                async () => {
+                  const res = await fetch(
+                    `${opts.orchestratorUrl}/runs/${runId}/complete`,
+                    {
+                      method: "POST",
+                      headers: { "content-type": "application/json" },
+                      body: JSON.stringify(ack),
+                    },
+                  );
+                  if (!res.ok) {
+                    throw new Error(
+                      `POST /runs/${runId}/complete returned ${res.status.toString()}`,
+                    );
+                  }
+                },
                 {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify(ack),
+                  retries: CompleteCallbackRetry.MAX_ATTEMPTS - 1,
+                  factor: 2,
+                  minTimeout: CompleteCallbackRetry.INITIAL_DELAY_MS,
+                  maxTimeout: CompleteCallbackRetry.MAX_DELAY_MS,
                 },
               );
-              if (!res.ok) {
-                throw new Error(
-                  `POST /runs/${runId}/complete returned ${res.status.toString()}`,
-                );
-              }
-            },
-            {
-              retries: CompleteCallbackRetry.MAX_ATTEMPTS - 1,
-              factor: 2,
-              minTimeout: CompleteCallbackRetry.INITIAL_DELAY_MS,
-              maxTimeout: CompleteCallbackRetry.MAX_DELAY_MS,
-            },
-          );
-        } catch (error) {
-          // After exhausting retries the orchestrator's 5-minute sweep will
-          // flip this run to `failed` with `error: 'dispatch timeout'`. The
-          // structured runId binding lets the operator correlate the
-          // orchestrator-side symptom back to the worker's callback failure.
-          logger.error(
-            { runId, err: error },
-            "job.complete.callback-exhausted",
-          );
-        }
-        })();
+            } catch (error) {
+              // After exhausting retries the orchestrator's 5-minute sweep
+              // will flip this run to `failed` with
+              // `error: 'dispatch timeout'`. The structured runId binding
+              // (via jobLogger.child) lets the operator correlate the
+              // orchestrator-side symptom back to the worker's callback
+              // failure.
+              jobLogger.error({ err: error }, "job.complete.callback-exhausted");
+            }
+          },
+          jobLogger,
+        );
       });
       // oxlint-disable-next-line no-magic-numbers -- 202 is the published HTTP "Accepted" status
       return c.json({ accepted: true } as const, 202);
