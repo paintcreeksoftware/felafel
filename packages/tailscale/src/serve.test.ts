@@ -7,8 +7,11 @@
 // with the right classification.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execa } from "execa";
+import { createLogger, Service } from "@felafel/logs";
 import { isServeFailureError } from "@felafel/tailscale/classify";
 import { readServePublished, runServeMutation } from "@felafel/tailscale/serve";
+
+const testLogger = createLogger({ service: Service.DESKTOP_MAIN });
 
 vi.mock("execa");
 
@@ -45,7 +48,7 @@ describe("runServeMutation", () => {
   it("resolves cleanly on a zero exit", async () => {
     stubExeca({});
     await expect(
-      runServeMutation(stubBinary, ["serve", "--bg", "--tcp=9090", "tcp://127.0.0.1:54321"]),
+      runServeMutation(stubBinary, ["serve", "--bg", "--tcp=9090", "tcp://127.0.0.1:54321"], testLogger),
     ).resolves.toBeUndefined();
     expect(execa).toHaveBeenCalledWith(
       stubBinary,
@@ -61,7 +64,7 @@ describe("runServeMutation", () => {
     });
     let caught: unknown;
     try {
-      await runServeMutation(stubBinary, ["serve", "--tcp=9090", "off"]);
+      await runServeMutation(stubBinary, ["serve", "--tcp=9090", "off"], testLogger);
     } catch (error) {
       caught = error;
     }
@@ -80,7 +83,7 @@ describe("runServeMutation", () => {
     });
     let caught: unknown;
     try {
-      await runServeMutation(stubBinary, ["serve"]);
+      await runServeMutation(stubBinary, ["serve"], testLogger);
     } catch (error) {
       caught = error;
     }
@@ -94,7 +97,7 @@ describe("runServeMutation", () => {
 describe("readServePublished", () => {
   it("returns null when stdout is empty (no serve config)", async () => {
     stubExeca({ stdout: "" });
-    const result = await readServePublished(stubBinary, 9090);
+    const result = await readServePublished(stubBinary, 9090, testLogger);
     expect(result).toBeNull();
   });
 
@@ -106,7 +109,7 @@ describe("readServePublished", () => {
         },
       }),
     });
-    const result = await readServePublished(stubBinary, 9090);
+    const result = await readServePublished(stubBinary, 9090, testLogger);
     expect(result).toEqual({ targetLocalPort: 54321 });
   });
 
@@ -118,7 +121,7 @@ describe("readServePublished", () => {
         },
       }),
     });
-    const result = await readServePublished(stubBinary, 9090);
+    const result = await readServePublished(stubBinary, 9090, testLogger);
     expect(result).toBeNull();
   });
 });

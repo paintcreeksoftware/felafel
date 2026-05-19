@@ -28,6 +28,7 @@
     "test": "vitest run --exclude '**/*.integration.test.ts'"
   },
   "dependencies": {
+    "@felafel/logs": "workspace:*",
     "@felafel/shared": "workspace:*",
     "@felafel/ui": "workspace:*",
     "execa": "^9.6.1",

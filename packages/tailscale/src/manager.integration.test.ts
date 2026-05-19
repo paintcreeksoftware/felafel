@@ -6,13 +6,14 @@
 // to leave in the always-on test suite, though it lives outside the default
 // `pnpm test` glob and only runs via `pnpm test:integration`.
 import { beforeAll, describe, expect, it } from "vitest";
+import { createLogger, Service } from "@felafel/logs";
 import { TailscaleManager } from "@felafel/tailscale";
 
 let binaryAvailable = false;
 let manager: TailscaleManager;
 
 beforeAll(async () => {
-  manager = new TailscaleManager();
+  manager = new TailscaleManager(createLogger({ service: Service.DESKTOP_MAIN }));
   binaryAvailable = (await manager.findBinary({ refresh: true })) !== null;
 });
 

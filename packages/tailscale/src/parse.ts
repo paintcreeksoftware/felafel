@@ -5,6 +5,7 @@
 // source-file cap and so these helpers can be tested in isolation
 // without instantiating the manager. See PAI-140.
 import { z } from "zod";
+import type { Logger } from "@felafel/logs";
 import { type TailscaleStatus } from "@felafel/shared";
 import { STDERR_PREVIEW_MAX_LEN } from "@felafel/tailscale/constants";
 
@@ -99,11 +100,13 @@ export function parseStatusJson(stdout: string): TailscaleStatus {
  * Funnel) is ignored — we only care about raw TCP forwarding here.
  * @param stdout - raw stdout from `tailscale serve status --json`
  * @param tailnetPort - the Tailnet-side port we want the mapping for
+ * @param logger - service-bound logger for the malformed-output breadcrumb
  * @returns `{ targetLocalPort }` if a TCP forward exists for this port, else null
  */
 export function parseServeConfigJson(
   stdout: string,
   tailnetPort: number,
+  logger: Logger,
 ): { targetLocalPort: number } | null {
   try {
     const result = ServeConfigSchema.safeParse(JSON.parse(stdout));
@@ -112,18 +115,18 @@ export function parseServeConfigJson(
       // (tailscale version mismatch, partial output, etc.). Return null
       // because the call-site treats absence and corruption the same way,
       // but log so the bug is observable instead of silently masked.
-      console.warn(
-        "[tailscale] `serve status --json` failed schema validation:",
-        result.error.message,
+      logger.warn(
+        { err: result.error.message },
+        "tailscale.serve.parse.schema-failed",
       );
       return null;
     }
     const targetLocalPort = result.data.TCP?.[String(tailnetPort)]?.TCPForward;
     return targetLocalPort === undefined ? null : { targetLocalPort };
   } catch {
-    console.warn(
-      "[tailscale] malformed `serve status --json` output:",
-      stdout.slice(0, STDERR_PREVIEW_MAX_LEN),
+    logger.warn(
+      { stdoutPreview: stdout.slice(0, STDERR_PREVIEW_MAX_LEN) },
+      "tailscale.serve.parse.malformed",
     );
     return null;
   }

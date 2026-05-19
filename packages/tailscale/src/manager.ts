@@ -12,6 +12,7 @@
 // in-flight de-dup promises, and the per-flow caches; the modules above
 // own the IO.
 import which from "which";
+import type { Logger } from "@felafel/logs";
 import { type TailscaleConnectResult, type TailscaleStatus } from "@felafel/shared";
 import { LOCALHOST, TailscaleEnvVars } from "@felafel/tailscale/constants";
 import { runProbe } from "@felafel/tailscale/probe";
@@ -23,6 +24,12 @@ import { makeUpFlowCache, runUpFlow, type UpFlowCache } from "@felafel/tailscale
  * path + last status + in-flight de-dup promises. Instantiate once per
  * Electron main process; tests can construct fresh instances per case to
  * avoid cross-test cache leakage.
+ *
+ * Required `logger: Logger` per PAI-168 C7: every public entry point in
+ * `@felafel/tailscale` takes a logger. No no-op default — silent log
+ * loss is a worse failure mode than a compile-time error. The manager
+ * threads the logger into every internal flow (`runUpFlow`,
+ * `runServeMutation`, `readServePublished`).
  */
 export class TailscaleManager {
   private cachedBinary: string | null | undefined;
@@ -30,6 +37,16 @@ export class TailscaleManager {
   private probeInflight: Promise<TailscaleStatus> | null = null;
   private upInflight: Promise<TailscaleConnectResult> | null = null;
   private readonly upFlowCache: UpFlowCache = makeUpFlowCache();
+  private readonly logger: Logger;
+
+  /**
+   * Construct a TailscaleManager.
+   * @param logger - service-bound logger, typically a `child({ component:
+   *   "tailscale" })` of the host service's main logger.
+   */
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
 
   /**
    * Resolve the `tailscale` binary on PATH. Falls back to the
@@ -128,7 +145,7 @@ export class TailscaleManager {
       if (!binary) {
         return { ok: false, kind: "error", message: "Tailscale binary not found on PATH" };
       }
-      return await runUpFlow(binary, authkey, this.upFlowCache);
+      return await runUpFlow(binary, authkey, this.upFlowCache, this.logger);
     } finally {
       this.upInflight = null;
     }
@@ -180,12 +197,16 @@ export class TailscaleManager {
    */
   async publishServe(opts: { tailnetPort: number; localPort: number }): Promise<void> {
     const binary = await this.requireBinary();
-    await runServeMutation(binary, [
-      "serve",
-      "--bg",
-      `--tcp=${String(opts.tailnetPort)}`,
-      `tcp://${LOCALHOST}:${String(opts.localPort)}`,
-    ]);
+    await runServeMutation(
+      binary,
+      [
+        "serve",
+        "--bg",
+        `--tcp=${String(opts.tailnetPort)}`,
+        `tcp://${LOCALHOST}:${String(opts.localPort)}`,
+      ],
+      this.logger,
+    );
   }
 
   /**
@@ -198,11 +219,11 @@ export class TailscaleManager {
    */
   async unpublishServe(opts: { tailnetPort: number }): Promise<void> {
     const binary = await this.requireBinary();
-    await runServeMutation(binary, [
-      "serve",
-      `--tcp=${String(opts.tailnetPort)}`,
-      "off",
-    ]);
+    await runServeMutation(
+      binary,
+      ["serve", `--tcp=${String(opts.tailnetPort)}`, "off"],
+      this.logger,
+    );
   }
 
   /**
@@ -225,7 +246,7 @@ export class TailscaleManager {
     opts: { tailnetPort: number },
   ): Promise<{ targetLocalPort: number } | null> {
     const binary = await this.requireBinary();
-    return readServePublished(binary, opts.tailnetPort);
+    return readServePublished(binary, opts.tailnetPort, this.logger);
   }
 }
 

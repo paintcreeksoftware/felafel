@@ -4,6 +4,7 @@
 // (PAI-140) and so the serve helpers can be tested without
 // instantiating the manager.
 import { execa } from "execa";
+import type { Logger } from "@felafel/logs";
 import {
   classifyServeError,
   type ServeFailureError,
@@ -23,9 +24,14 @@ const SERVE_READ_TIMEOUT_MS = 5_000;
  * able to inspect the failure mode via `isServeFailureError`.
  * @param binary - resolved path to the `tailscale` binary
  * @param args - argv to pass after the binary
+ * @param logger - service-bound logger, threaded to the failure classifier
  * @throws ServeFailureError when the CLI returns a classified failure
  */
-export async function runServeMutation(binary: string, args: string[]): Promise<void> {
+export async function runServeMutation(
+  binary: string,
+  args: string[],
+  logger: Logger,
+): Promise<void> {
   const result = await execa(binary, args, {
     cancelSignal: AbortSignal.timeout(SERVE_OUTER_TIMEOUT_MS),
     reject: false,
@@ -34,7 +40,7 @@ export async function runServeMutation(binary: string, args: string[]): Promise<
     return;
   }
   const combined = `${result.stdout}\n${result.stderr}`;
-  const cls = classifyServeError(combined, result.exitCode ?? null, result.isCanceled);
+  const cls = classifyServeError(combined, result.exitCode ?? null, result.isCanceled, logger);
   const error: ServeFailureError = Object.assign(
     new Error(`tailscale serve (${cls.kind}): ${cls.message}`),
     { classification: cls },
@@ -48,11 +54,13 @@ export async function runServeMutation(binary: string, args: string[]): Promise<
  * a stale mapping left by a prior crashed launch.
  * @param binary - resolved path to the `tailscale` binary
  * @param tailnetPort - the Tailnet-side port to look up
+ * @param logger - service-bound logger, threaded to the parse helper
  * @returns `{ targetLocalPort }` if a TCP forward exists, else null
  */
 export async function readServePublished(
   binary: string,
   tailnetPort: number,
+  logger: Logger,
 ): Promise<{ targetLocalPort: number } | null> {
   const result = await execa(binary, ["serve", "status", "--json"], {
     cancelSignal: AbortSignal.timeout(SERVE_READ_TIMEOUT_MS),
@@ -63,5 +71,5 @@ export async function readServePublished(
   if (result.stdout.trim().length === 0) {
     return null;
   }
-  return parseServeConfigJson(result.stdout, tailnetPort);
+  return parseServeConfigJson(result.stdout, tailnetPort, logger);
 }
