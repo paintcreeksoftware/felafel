@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server";
+import { shutdownBackend } from "@felafel/backend";
 import { createDb } from "@felafel/db";
 import { buildApp } from "@felafel/orchestrator/app";
 import { Defaults, EnvVars } from "@felafel/orchestrator/constants";
@@ -35,13 +36,7 @@ async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "shutdown.start");
   stopSweep();
   closeDb();
-  // 2s cap so a hung exporter can't pin the process open.
-  await Promise.race([
-    sdk.shutdown(),
-    new Promise<void>((resolve) => {
-      setTimeout(resolve, 2_000);
-    }),
-  ]);
+  await shutdownBackend(sdk, logger);
   process.exit(0);
 }
 
