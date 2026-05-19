@@ -55,6 +55,15 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   snapshots don't count. Check with
   `git diff --stat <merge-base> -- ':!*lock*' ':!**/snapshots/**'`.
   If over, the PR should split into stacked or sequential PRs.
+- **No 100-line cap workarounds.** The hard cap in
+  `.husky/pre-commit` has no escape — the prior `ALLOW_BIG_COMMIT`
+  env var was removed for being reached too readily. The only way
+  to land an over-cap commit is `--no-verify`, which is also
+  forbidden. Flag any commit/PR body suggesting the cap be raised
+  or re-bypassed, and any commit whose net reviewable churn would
+  have failed the hook (a sign of `--no-verify`). Split along the
+  smallest behavioral delta — one function across 4–6 commits is
+  normal in this repo.
 - **Test plan is PR-specific only.** The PR body's "Test plan"
   lists ONLY verification beyond pre-commit + CI. Usually empty /
   N/A. Flag bloated plans that re-state hook content.
