@@ -6,10 +6,10 @@
 # session JSONL files under ~/.claude/projects/ and emits per-file
 # offender lines.
 #
-# Exits non-zero if any record is missing a required binding so
-# the script can wire into CI as a contract-check on the log shape.
-# Stdout is the per-file offender list, suitable for the
-# observability-reviewer subagent's report.
+# Usage: `pnpm audit:log-shape`. Exits 0 if every Felafel-emitted
+# record (records carrying a `service` field) has all six
+# bindings, 1 with a per-record offender list otherwise. Consumed
+# by the `observability-reviewer` subagent.
 
 set -euo pipefail
 

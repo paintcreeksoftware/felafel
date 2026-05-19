@@ -2,13 +2,12 @@
 #
 # audit-console-leakage.sh — flag `console.*` calls in source that
 # the project's `no-console` lint rule SHOULD have caught. Tests +
-# scripts + dist + out are carved out via -P pcre exclusions to
+# scripts + dist + out are carved out via pathspec exclusions to
 # match the lint config.
 #
-# Exits non-zero if any offenders are found, so this script can
-# be wired into pre-commit or CI as an additional gate. Stdout is
-# the offender list, suitable for embedding in a PR comment via
-# the `observability-reviewer` subagent.
+# Usage: `pnpm audit:console`. Exits non-zero with the offender
+# list when something slips past lint, exit 0 otherwise. Consumed
+# by the `observability-reviewer` subagent.
 
 set -euo pipefail
 

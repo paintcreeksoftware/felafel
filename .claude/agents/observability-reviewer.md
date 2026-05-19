@@ -32,18 +32,18 @@ are independently runnable from the shell; you call them as bare
 commands. Cap effort at one run each — if a script fails, capture
 its stderr and continue with the next.
 
-| Script | Scope tag | What it checks |
+| pnpm script | Scope tag | What it checks |
 | --- | --- | --- |
-| `scripts/observability/audit-console-leakage.sh` | `console` | `console.*` outside test / script carve-outs |
-| `scripts/observability/audit-log-shape.sh` | `logs` | every JSONL record carries the 6 standard bindings |
-| `scripts/observability/cluster-warnings.sh` | `logs` | top-N warning clusters by service + msg prefix (when present) |
-| `scripts/observability/slow-spans.sh` | `traces` | slowest spans from the local collector (when present) |
-| `scripts/observability/audit-durations.sh` | `durations` | `*.complete` log lines missing `durationMs` (when present) |
+| `pnpm audit:console` | `console` | `console.*` outside test / script carve-outs |
+| `pnpm audit:log-shape` | `logs` | every JSONL record carries the 6 standard bindings |
+| `pnpm audit:cluster-warnings` | `logs` | top-N warning clusters by service + msg prefix (when present) |
+| `pnpm audit:slow-spans` | `traces` | slowest spans from the local collector (when present) |
+| `pnpm audit:durations` | `durations` | `*.complete` log lines missing `durationMs` (when present) |
 
-The latter three scripts are placeholders in v0 — only
-`audit-console-leakage.sh` and `audit-log-shape.sh` land in the
+The latter three pnpm scripts are placeholders in v0 — only
+`pnpm audit:console` and `pnpm audit:log-shape` are wired in the
 introducing PR. Surface a `SKIP` line for each not-yet-present
-script in the report's "Sections not yet implemented" footer.
+script in the report's tail list.
 
 ## Output
 
@@ -64,10 +64,10 @@ If every invoked script returns `✓`, end the report with a single
 
 ## Constraints
 
-- Invoke each script via `Bash` with the simplest possible
-  invocation — no pipes, no redirections, no process
-  substitution. Each script is self-contained and writes its own
-  report to stdout (per `[[feedback_subagent_permission_context]]`).
+- Invoke each script via `Bash` using its `pnpm audit:*` form
+  (no pipes, no redirections, no process substitution). Each
+  script is self-contained and writes its own report to stdout
+  (per `[[feedback_subagent_permission_context]]`).
 - Do not modify the scripts; if one is buggy, flag it in the
   report and let the human fix it.
 - Cap the verbatim stdout block at 50 lines per script; if longer,
