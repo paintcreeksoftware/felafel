@@ -12,6 +12,7 @@
     "./browser": "./src/browser.ts",
     "./logger": "./src/logger.ts",
     "./resource": "./src/resource.ts",
+    "./service": "./src/service.ts",
     "./tracing": "./src/tracing.ts"
   },
   "scripts": {

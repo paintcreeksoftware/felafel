@@ -4,7 +4,11 @@
 // banning bare ipcMain/ipcRenderer outside this file carves out this
 // path. ChannelName is sourced from the Channels const so a
 // string-literal channel name is a compile error.
-import { performance } from "node:perf_hooks";
+//
+// `performance` is the Web Performance API global — available on Node
+// 16+ and in every browser. Reaching for `node:perf_hooks.performance`
+// would force the renderer bundle to externalize a Node built-in and
+// the build would fail; the global version works in both contexts.
 
 import { context, propagation, SpanStatusCode, trace } from "@opentelemetry/api";
 import {
