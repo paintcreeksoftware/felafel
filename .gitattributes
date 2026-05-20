@@ -1,0 +1,5 @@
+# Storybook visual-snapshot baselines: binary so diffs don't blow up PR
+# review with thousands of lines of base64-shaped noise. Refresh via
+# `pnpm --filter @felafel/storybook test:storybook -- -u` after an
+# intentional visual change.
+apps/storybook/__snapshots__/*.png binary
