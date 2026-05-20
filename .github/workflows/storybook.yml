@@ -1,0 +1,56 @@
+name: storybook
+
+on:
+  pull_request:
+    # `ready_for_review` lets a draft→ready flip re-fire the workflow.
+    # Without it, GH only re-fires on push events to the branch; the
+    # if-guard then sees draft=true and skips, leaving CI marked
+    # "skipping" indefinitely after the flip.
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+# Minimum needed for actions/checkout + actions/upload-artifact on
+# failure (artifact API works with contents: read).
+permissions:
+  contents: read
+
+jobs:
+  storybook:
+    # Skip on draft PRs so CI minutes aren't burned on in-progress work.
+    # `pull_request.draft` is unset on push events, so pushes to main proceed.
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    # The official Playwright image bakes in browsers + every required
+    # system library; same pattern as e2e.yml. Pin the tag to the
+    # resolved playwright version in pnpm-lock.yaml — bump together
+    # when upgrading.
+    container:
+      image: mcr.microsoft.com/playwright:v1.59.1-jammy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Storybook static site
+        run: pnpm --filter @felafel/storybook build-storybook
+
+      - name: Run Storybook visual snapshots
+        run: pnpm --filter @felafel/storybook test:storybook:ci
+
+      - name: Upload diff PNGs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-snapshot-diffs
+          path: apps/storybook/__snapshots__/__diff_output__/
+          retention-days: 14
+          if-no-files-found: ignore
