@@ -232,6 +232,9 @@ importers:
 
   apps/storybook:
     dependencies:
+      '@felafel/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@felafel/tailscale':
         specifier: workspace:*
         version: link:../../packages/tailscale
