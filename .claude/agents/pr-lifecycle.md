@@ -375,6 +375,31 @@ echo "[drift-check]"
 - Stale-branch prune: ambient hygiene; not session-start critical but
   done at session-start by convention so the local view stays clean.
 
+## Monitor invariants
+
+These apply to every `Monitor` you tell the caller to arm. They
+override the more permissive defaults of the underlying tool.
+
+- **1-hour cap on merge-watch.** When the platform timeout fires
+  on a merge-watch monitor (1h), do NOT re-arm a second cycle.
+  Exit the chain and let the human drive — the merge gate is a
+  human decision, not a polling problem. Two-hour cumulative
+  polling on the same PR confirmed to be wasted work.
+- **CI-green is the cue to ship more.** When CI on an open PR
+  turns green and the merge is the only blocker, immediately
+  branch from latest main and ship any queued drift-promotion
+  PRs in parallel. Drift PRs touch `.claude/agents/*.md` and
+  `~/.claude/.../memory/`, which never overlap with feature PRs.
+  Sitting on a merge-watch alone, especially across hours, is
+  the failure mode. Combine with the 1h cap above.
+- **No parallel worktrees in the DevContainer.** When delegating
+  implementation work to spawned agents, default to sequential
+  dispatch (no `isolation: "worktree"`). The per-worktree `pnpm
+  install` and per-agent permission prompts make parallel
+  worktree dispatch net-slower than serial. For genuine
+  parallelism, use a second `claude` session in a separate
+  terminal instead.
+
 ## Constraints
 
 - One checklist per invocation, matched to the trigger.
