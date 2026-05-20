@@ -225,6 +225,17 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 - **Regression test in same PR** for behavior changes. If the PR's
   "Test plan" says "N/A — pure refactor / generated / config-only",
   verify that claim against the actual diff.
+- **Race-condition review for async + mutable state.** For every
+  `await` in a method that mutates shared state (DB rows,
+  in-memory caches, class fields, file handles) AND is invokable
+  from a concurrent surface (HTTP handler, IPC handler, event
+  subscription, `Promise.all` map fn), ask: could two concurrent
+  invocations interleave between the pre-await read and the
+  post-await write? If the post-await write depends on the
+  pre-await read, the DB update should be guarded by a
+  status-column `WHERE` clause (or equivalent) so a lost-write
+  surfaces as zero-row-affected. The PAI-110 comment in
+  `apps/orchestrator/src/app.ts` is the canonical example.
 - **Unfamiliar state — investigate before deleting.** Flag any
   deletion of files, branches, or config you can't trace to an
   explicit intent in the commit messages or PR body.
