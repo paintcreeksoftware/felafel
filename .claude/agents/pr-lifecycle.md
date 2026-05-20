@@ -346,6 +346,19 @@ A monitor watching `gh pr view <N> --json state` just reported
    Leave OPEN-PR or no-PR-yet branches alone. (See
    `scripts/prune-stale-branches.sh` if it exists.)
 
+**Monitor script must emit a `[drift-check]` event** at the very
+end of the chain, after `[cleanup] done`. The event is the
+caller's deterministic trigger to fire step 2 (memory-promoter
+dispatch via Agent tool) — without it the caller can silently
+skip the step, which is exactly the failure mode this rule
+prevents (see [[feedback_monitor_drift_check_event]]). Standard
+template:
+
+```bash
+echo "[cleanup] done"
+echo "[drift-check]"
+```
+
 **Why each step:**
 
 - Cleanup: removes the manual "82 is merged" / "83 is merged" handoff
@@ -355,6 +368,10 @@ A monitor watching `gh pr view <N> --json state` just reported
   and loses the just-merged PR's context. The Agent tool runs the
   same prompt in-session. Reserve the script-spawned form for
   out-of-session fallback (cron, teammate's merge while idle).
+- The `[drift-check]` tail event: closes the silent-skip
+  failure mode. The caller sees a deterministic notification
+  and dispatches memory-promoter; without it the post-merge
+  drift work is on caller-memory, which fails.
 - Stale-branch prune: ambient hygiene; not session-start critical but
   done at session-start by convention so the local view stays clean.
 
