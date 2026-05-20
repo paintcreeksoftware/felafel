@@ -24,7 +24,8 @@ export interface ServeDegradation {
   remediation?: string;
 }
 
-interface StatusBadgeProps {
+/** Props for {@link StatusBadge}. Exported so consumers outside this package (e.g. Storybook stories) can name the prop shape. */
+export interface StatusBadgeProps {
   status: TailscaleStatus;
   busy: PillBusy;
   serveDegradation: ServeDegradation | null;
