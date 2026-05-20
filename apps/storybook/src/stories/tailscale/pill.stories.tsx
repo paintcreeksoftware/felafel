@@ -71,5 +71,56 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+const FAKE_TAILNET = "felafel.ts.net" as const;
+const FAKE_HOST = "felafel-laptop" as const;
+
 /** Initial-probe state — no `tailscaleStatus()` resolution yet. */
 export const Checking: Story = {};
+
+/** Daemon connected to a tailnet; happy path. */
+export const Connected: Story = {
+  parameters: {
+    tailscaleStatus: { kind: "connected", tailnet: FAKE_TAILNET, selfName: FAKE_HOST },
+  },
+};
+
+/** Daemon connected, but orchestrator's `tailscale serve` failed — amber pill via prop. */
+export const ConnectedServeDegraded: Story = {
+  args: {
+    tailnetServeDegradation: {
+      reason: "tailscale serve returned non-zero on bring-up",
+      remediation: "tailscale serve --bg --https=443 http://127.0.0.1:9090",
+    },
+  },
+  parameters: {
+    tailscaleStatus: { kind: "connected", tailnet: FAKE_TAILNET, selfName: FAKE_HOST },
+  },
+};
+
+/** Tailscale daemon isn't running. */
+export const DisconnectedNoDaemon: Story = {
+  parameters: {
+    tailscaleStatus: { kind: "disconnected", reason: "no-daemon" },
+  },
+};
+
+/** Daemon up, user signed out — pill click opens the paste-in dialog. */
+export const DisconnectedNeedsLogin: Story = {
+  parameters: {
+    tailscaleStatus: { kind: "disconnected", reason: "needs-login" },
+  },
+};
+
+/** Daemon errored — typically EACCES on the daemon socket. */
+export const ErrorState: Story = {
+  parameters: {
+    tailscaleStatus: { kind: "error", message: "EACCES on /var/run/tailscale/tailscaled.sock" },
+  },
+};
+
+/** `tailscale` not on PATH — pill greys out, wrapped in install-hint tooltip. */
+export const MissingBinary: Story = {
+  parameters: {
+    tailscaleStatus: { kind: "missing-binary", path: null },
+  },
+};
