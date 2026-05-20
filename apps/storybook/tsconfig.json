@@ -1,0 +1,15 @@
+// Renderer-shaped TypeScript for the Storybook workspace. Mirrors
+// apps/desktop/tsconfig.web.json — DOM lib, `react-jsx`, Vite client types —
+// because every story is a React component and Storybook drives them through
+// a Vite renderer under the hood.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": { "@felafel/storybook/*": ["./src/*"] }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", ".storybook/**/*.ts", ".storybook/**/*.tsx"]
+}
