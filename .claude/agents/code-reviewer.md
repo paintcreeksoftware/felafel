@@ -200,6 +200,16 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   trace in the PR body or commit messages, unless the change is
   trivially obvious (renaming a step name, bumping an action's
   `@v3` → `@v4` tag, etc.).
+- **CI job duration caps.** PR-triggered GitHub Actions jobs
+  must finish within 5 minutes (hard cap), with a 3-minute warn
+  flag. Every `jobs.<id>` must declare an explicit
+  `timeout-minutes: 5` (or less) — GitHub's default of 360 min
+  hides hangs behind multi-hour timeouts. Test frameworks
+  inside the job get matching shorter timeouts (Playwright's
+  `globalTimeout: 240000` for a 5-min job cap). Flag any new or
+  modified workflow job without an explicit `timeout-minutes`.
+  If a job genuinely can't fit, the answer is split / optimize
+  / replace — never "let it run longer".
 - **SQL migration filenames are descriptive snake_case.** Reject
   any new file under `packages/db/migrations/` or
   `apps/orchestrator/migrations/` named with drizzle-kit's default
