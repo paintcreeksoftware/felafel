@@ -12,7 +12,6 @@
       ],
       "project": ["src/**/*.{ts,tsx}", ".storybook/**/*.{ts,tsx}"],
       "ignoreDependencies": [
-        "@felafel/tailscale",
         "tailwindcss"
       ]
     },
