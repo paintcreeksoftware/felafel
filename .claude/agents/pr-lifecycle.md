@@ -321,6 +321,16 @@ A monitor watching `gh pr view <N> --json state` just reported
    subagent inline via the Agent tool (not via `claude -p`), passing
    the just-merged ticket as context. Skip if the user explicitly
    said "skip the drift check" or if the PR closed without merge.
+
+   If the drift snapshot returns any rule in state `new` with a
+   non-empty `target agent file` column, the drift-promotion PR
+   is the **immediate next action** — open it autonomously, do
+   not ask the caller "should we open a drift PR?" The PR body
+   lists the per-rule routing (memory file → agent file →
+   section) inline so the routing review happens as part of PR
+   review, not a separate ask. Use the next available
+   `PAI-167_M` branch suffix per
+   [[feedback_agent_followup_on_original_ticket]].
 3. **Session-start branch prune** — at the start of the NEXT session,
    delete `PAI-*` branches where remote is gone AND PR is
    MERGED/CLOSED:
