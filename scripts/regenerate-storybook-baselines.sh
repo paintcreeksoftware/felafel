@@ -24,13 +24,24 @@ repo_root="$(git rev-parse --show-toplevel)"
 image="mcr.microsoft.com/playwright:v1.59.1-jammy"
 
 cd "$repo_root"
+
+# Any stale container-owned artefacts from a previous run need a
+# chown via root-in-container before the host can remove them.
+if [ -d apps/storybook/storybook-static ] || [ -d apps/storybook/__snapshots__ ]; then
+  docker run --rm -v "$repo_root:/workspace" -w /workspace "$image" \
+    chown -R 1000:1000 apps/storybook/__snapshots__ apps/storybook/storybook-static 2>/dev/null || true
+fi
 rm -rf apps/storybook/__snapshots__ apps/storybook/storybook-static
 
-docker run --rm -v "$repo_root:/workspace" -w /workspace -e CI=true "$image" bash -c '
+docker run --rm -v "$repo_root:/workspace" -w /workspace "$image" bash -c '
+  # CI=true keeps pnpm from prompting about clearing node_modules,
+  # but jest-image-snapshot reads it as "do not write missing
+  # baselines". Set per-step: on for install/build, OFF for the
+  # test run so first-time baselines actually get written.
   corepack enable >/dev/null
-  pnpm install --frozen-lockfile
-  pnpm --filter @felafel/storybook build-storybook
-  pnpm --filter @felafel/storybook test:storybook:ci
+  CI=true pnpm install --frozen-lockfile
+  CI=true pnpm --filter @felafel/storybook build-storybook
+  env -u CI pnpm --filter @felafel/storybook test:storybook:ci
 '
 
 # Container ran as root; chown back so git sees the changes as
