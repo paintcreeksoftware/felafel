@@ -72,6 +72,19 @@ flag that fires (omit silent ones).
   a successor `v2` plan with a retrospective on what shipped and
   a fresh next-iteration scope, keeping the current file as
   historical v1.
+- **Parallelization layer per deliverable.** Annotate each
+  Pending / Missing deliverable with its dependency layer.
+  Layer-1 deliverables touch disjoint files / packages and have
+  no consumed-symbol dependency on another deliverable in the
+  same plan — they can dispatch as parallel work. Layer-2
+  depends on at least one layer-1 deliverable's merged state.
+  Flag plans whose deliverables ALL collapse to layer-1
+  (suggests over-decomposition) OR all collapse to a single
+  serial chain (suggests under-extraction — lift more helpers
+  into layer-1). Plans with a healthy mix of layer-1 +
+  layer-2 deliverables parallelize cleanly across multiple
+  agents or sessions per
+  [[feedback_parallelizable_pr_structure]].
 
 ## Output
 

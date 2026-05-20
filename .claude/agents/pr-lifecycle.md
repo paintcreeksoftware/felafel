@@ -200,6 +200,12 @@ amend adds no new logic path.
    green" / "passed CI" until the CI monitor reports all checks
    passing. If any check fails, fix and re-push; arm a fresh
    monitor on the new commit.
+4. **Red CI = same-PR fix.** When CI fails, the fix lands on the
+   SAME PR. Do NOT offer the caller a "same PR or follow-up?"
+   choice — the user won't approve a red PR, so a follow-up
+   doesn't move the original closer to merge; it just creates a
+   second PR that itself stacks on the broken original. The only
+   legitimate branching is HOW to fix (design choice), not WHERE.
 
 **Why each step:**
 
@@ -315,6 +321,16 @@ A monitor watching `gh pr view <N> --json state` just reported
    subagent inline via the Agent tool (not via `claude -p`), passing
    the just-merged ticket as context. Skip if the user explicitly
    said "skip the drift check" or if the PR closed without merge.
+
+   If the drift snapshot returns any rule in state `new` with a
+   non-empty `target agent file` column, the drift-promotion PR
+   is the **immediate next action** — open it autonomously, do
+   not ask the caller "should we open a drift PR?" The PR body
+   lists the per-rule routing (memory file → agent file →
+   section) inline so the routing review happens as part of PR
+   review, not a separate ask. Use the next available
+   `PAI-167_M` branch suffix per
+   [[feedback_agent_followup_on_original_ticket]].
 3. **Session-start branch prune** — at the start of the NEXT session,
    delete `PAI-*` branches where remote is gone AND PR is
    MERGED/CLOSED:
@@ -330,6 +346,19 @@ A monitor watching `gh pr view <N> --json state` just reported
    Leave OPEN-PR or no-PR-yet branches alone. (See
    `scripts/prune-stale-branches.sh` if it exists.)
 
+**Monitor script must emit a `[drift-check]` event** at the very
+end of the chain, after `[cleanup] done`. The event is the
+caller's deterministic trigger to fire step 2 (memory-promoter
+dispatch via Agent tool) — without it the caller can silently
+skip the step, which is exactly the failure mode this rule
+prevents (see [[feedback_monitor_drift_check_event]]). Standard
+template:
+
+```bash
+echo "[cleanup] done"
+echo "[drift-check]"
+```
+
 **Why each step:**
 
 - Cleanup: removes the manual "82 is merged" / "83 is merged" handoff
@@ -339,6 +368,10 @@ A monitor watching `gh pr view <N> --json state` just reported
   and loses the just-merged PR's context. The Agent tool runs the
   same prompt in-session. Reserve the script-spawned form for
   out-of-session fallback (cron, teammate's merge while idle).
+- The `[drift-check]` tail event: closes the silent-skip
+  failure mode. The caller sees a deterministic notification
+  and dispatches memory-promoter; without it the post-merge
+  drift work is on caller-memory, which fails.
 - Stale-branch prune: ambient hygiene; not session-start critical but
   done at session-start by convention so the local view stays clean.
 

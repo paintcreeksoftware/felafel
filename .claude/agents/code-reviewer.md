@@ -200,6 +200,16 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   trace in the PR body or commit messages, unless the change is
   trivially obvious (renaming a step name, bumping an action's
   `@v3` → `@v4` tag, etc.).
+- **CI job duration caps.** PR-triggered GitHub Actions jobs
+  must finish within 5 minutes (hard cap), with a 3-minute warn
+  flag. Every `jobs.<id>` must declare an explicit
+  `timeout-minutes: 5` (or less) — GitHub's default of 360 min
+  hides hangs behind multi-hour timeouts. Test frameworks
+  inside the job get matching shorter timeouts (Playwright's
+  `globalTimeout: 240000` for a 5-min job cap). Flag any new or
+  modified workflow job without an explicit `timeout-minutes`.
+  If a job genuinely can't fit, the answer is split / optimize
+  / replace — never "let it run longer".
 - **SQL migration filenames are descriptive snake_case.** Reject
   any new file under `packages/db/migrations/` or
   `apps/orchestrator/migrations/` named with drizzle-kit's default
@@ -215,6 +225,17 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 - **Regression test in same PR** for behavior changes. If the PR's
   "Test plan" says "N/A — pure refactor / generated / config-only",
   verify that claim against the actual diff.
+- **Race-condition review for async + mutable state.** For every
+  `await` in a method that mutates shared state (DB rows,
+  in-memory caches, class fields, file handles) AND is invokable
+  from a concurrent surface (HTTP handler, IPC handler, event
+  subscription, `Promise.all` map fn), ask: could two concurrent
+  invocations interleave between the pre-await read and the
+  post-await write? If the post-await write depends on the
+  pre-await read, the DB update should be guarded by a
+  status-column `WHERE` clause (or equivalent) so a lost-write
+  surfaces as zero-row-affected. The PAI-110 comment in
+  `apps/orchestrator/src/app.ts` is the canonical example.
 - **Unfamiliar state — investigate before deleting.** Flag any
   deletion of files, branches, or config you can't trace to an
   explicit intent in the commit messages or PR body.
