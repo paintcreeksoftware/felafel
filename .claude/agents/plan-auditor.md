@@ -81,8 +81,9 @@ flag that fires (omit silent ones).
   Flag plans whose deliverables ALL collapse to layer-1
   (suggests over-decomposition) OR all collapse to a single
   serial chain (suggests under-extraction — lift more helpers
-  into layer-1). Plans with a healthy 2–5 / 1–3 layer ratio
-  parallelize cleanly across multiple agents or sessions per
+  into layer-1). Plans with a healthy mix of layer-1 +
+  layer-2 deliverables parallelize cleanly across multiple
+  agents or sessions per
   [[feedback_parallelizable_pr_structure]].
 
 ## Output
