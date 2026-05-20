@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  makeClient,
-  type OrchestratorStatus,
-  type Worker,
-} from "@felafel/desktop/orchestrator";
+import { OrchestratorLabel, type Status } from "@felafel/desktop/components/orchestrator-label";
+import { makeClient, type Worker } from "@felafel/desktop/orchestrator";
 import { TailscalePill } from "@felafel/tailscale/ui";
 import {
   AlertDialog,
@@ -15,8 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@felafel/ui/components/ui/alert-dialog";
-
-type Status = OrchestratorStatus["kind"] | "unknown";
 
 /**
  * Cadence for re-polling `GET /workers`. The orchestrator's heartbeat sweep
@@ -34,40 +29,6 @@ const STATUS_CONFLICT = 409;
 interface TailnetServeDegradation {
   reason: string;
   remediation?: string;
-}
-
-/**
- * Resolve which label to render for the orchestrator state.
- * @param props - orchestrator status props
- * @param props.statusError - error message from the last status probe, or null
- * @param props.status - the current orchestrator lifecycle state
- * @param props.orchUrl - origin (e.g. `http://127.0.0.1:9090`) when ready, else null
- * @returns the label JSX
- */
-function OrchestratorLabel(props: {
-  statusError: string | null;
-  status: Status;
-  orchUrl: string | null;
-}) {
-  if (props.statusError) {
-    return <span className="text-destructive">{props.statusError}</span>;
-  }
-  if (props.status === "ready" && props.orchUrl) {
-    return (
-      <span>
-        <span className="font-mono">ready</span>{" "}
-        <span className="font-mono text-sm text-muted-foreground/70">{props.orchUrl}</span>
-      </span>
-    );
-  }
-  if (props.status === "starting") {
-    return <span>starting...</span>;
-  }
-  // No `status === "error"` branch: the IPC handler sets statusError
-  // alongside status, so the statusError check above always fires first
-  // when status is "error". Leaving an unreachable branch here would be
-  // a bug magnet for anyone refactoring the prop contract later.
-  return <span>connecting...</span>;
 }
 
 /**
