@@ -232,6 +232,9 @@ importers:
 
   apps/storybook:
     dependencies:
+      '@felafel/desktop':
+        specifier: workspace:*
+        version: link:../desktop
       '@felafel/shared':
         specifier: workspace:*
         version: link:../../packages/shared
