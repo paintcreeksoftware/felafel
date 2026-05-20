@@ -13,6 +13,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4 content scanning defaults to {base: cwd, pattern: "**\/*"},
+   which means each app's bundler (apps/desktop, apps/storybook) only
+   sees its own src/. Workspace packages imported via @felafel/* are
+   silently skipped, so every utility class in packages/ui/components
+   or packages/tailscale/src/ui never reaches the bundled CSS.
+   Explicit @source paths below (relative to this file) add them. */
+@source "../components";
+@source "../../../tailscale/src";
+@source "../../../../apps/desktop/src/renderer";
+
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *), @media (prefers-color-scheme: dark));
 
 @theme inline {
