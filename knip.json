@@ -29,7 +29,6 @@
         "tests/**/*.{test,spec}.ts"
       ],
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-      "ignore": ["src/renderer/src/components/workers-list.tsx"],
       "ignoreDependencies": [
         "@felafel/ui",
         "tailwindcss"
