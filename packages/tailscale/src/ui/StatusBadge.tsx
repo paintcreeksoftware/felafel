@@ -77,11 +77,11 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge
-                  variant="default"
+                  variant="outline"
                   className="
-                    gap-1.5 border-amber-500/40 bg-amber-500/15 text-amber-700
-                    hover:bg-amber-500/15
-                    dark:text-amber-300
+                    gap-1.5
+                    border-amber-600/50 bg-amber-100 text-amber-900
+                    dark:border-amber-400/50 dark:bg-amber-950 dark:text-amber-200
                   "
                   data-testid="ts-pill-degraded"
                 >
@@ -102,11 +102,11 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
       }
       return (
         <Badge
-          variant="default"
+          variant="outline"
           className="
-            gap-1.5 border-green-500/30 bg-green-500/15 text-green-700
-            hover:bg-green-500/15
-            dark:text-green-300
+            gap-1.5
+            border-green-600/50 bg-green-100 text-green-900
+            dark:border-green-400/50 dark:bg-green-950 dark:text-green-200
           "
         >
           <WifiHigh className="size-3" /> Connected to {status.tailnet}
