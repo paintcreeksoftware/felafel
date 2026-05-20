@@ -4,6 +4,17 @@
     "shellcheck"
   ],
   "workspaces": {
+    "apps/storybook": {
+      "entry": [
+        ".storybook/main.ts",
+        ".storybook/preview.tsx",
+        "src/stories/**/*.stories.{ts,tsx}"
+      ],
+      "project": ["src/**/*.{ts,tsx}", ".storybook/**/*.{ts,tsx}"],
+      "ignoreDependencies": [
+        "tailwindcss"
+      ]
+    },
     "apps/desktop": {
       "entry": [
         "electron.vite.config.ts",

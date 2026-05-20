@@ -1,0 +1,31 @@
+{
+  "name": "@felafel/storybook",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Storybook workspace for visual usage-drift tracking of @felafel/ui primitives and @felafel/tailscale/ui components (PAI-148). Catches the axis the shadcn-drift workflow can't: how our composed components diverge from the primitives they wrap.",
+  "type": "module",
+  "scripts": {
+    "storybook": "storybook dev --port 6006",
+    "build-storybook": "storybook build",
+    "lint": "eslint . --max-warnings=0",
+    "format": "oxfmt",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@felafel/tailscale": "workspace:*",
+    "@felafel/ui": "workspace:*",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "^10.4.0",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.4.0",
+    "storybook": "^10.4.0",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.2"
+  }
+}
