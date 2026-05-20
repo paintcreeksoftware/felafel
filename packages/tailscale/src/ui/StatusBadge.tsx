@@ -45,14 +45,14 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
   if (busy === "connecting") {
     return (
       <Badge variant="secondary" className="gap-1.5">
-        <LoaderCircle className="size-3 animate-spin" /> Connecting…
+        <LoaderCircle className="size-3.5 animate-spin" /> Connecting…
       </Badge>
     );
   }
   if (busy === "refreshing") {
     return (
       <Badge variant="secondary" className="gap-1.5">
-        <LoaderCircle className="size-3 animate-spin" /> Refreshing…
+        <LoaderCircle className="size-3.5 animate-spin" /> Refreshing…
       </Badge>
     );
   }
@@ -61,7 +61,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
     case "probing": {
       return (
         <Badge variant="secondary" className="gap-1.5">
-          <LoaderCircle className="size-3 animate-spin" /> Checking…
+          <LoaderCircle className="size-3.5 animate-spin" /> Checking…
         </Badge>
       );
     }
@@ -85,7 +85,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
                   "
                   data-testid="ts-pill-degraded"
                 >
-                  <WifiHigh className="size-3" /> {status.tailnet} (serve degraded)
+                  <WifiHigh className="size-3.5" /> {status.tailnet} (serve degraded)
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm space-y-2 text-xs">
@@ -109,14 +109,14 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
             dark:border-green-400/50 dark:bg-green-950 dark:text-green-200
           "
         >
-          <WifiHigh className="size-3" /> Connected to {status.tailnet}
+          <WifiHigh className="size-3.5" /> Connected to {status.tailnet}
         </Badge>
       );
     }
     case "disconnected": {
       return (
         <Badge variant="outline" className="gap-1.5">
-          <WifiOff className="size-3" />
+          <WifiOff className="size-3.5" />
           {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
         </Badge>
       );
@@ -126,14 +126,14 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
         <Badge variant="outline" className="
           gap-1.5 border-destructive/40 text-destructive
         ">
-          <CircleX className="size-3" /> Tailscale error
+          <CircleX className="size-3.5" /> Tailscale error
         </Badge>
       );
     }
     case "missing-binary": {
       return (
         <Badge variant="outline" className="gap-1.5 opacity-60">
-          <WifiOff className="size-3" /> Tailscale not installed
+          <WifiOff className="size-3.5" /> Tailscale not installed
         </Badge>
       );
     }
