@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { OrchestratorLabel, type Status } from "@felafel/desktop/components/orchestrator-label";
+import { StatusPill } from "@felafel/desktop/components/status-pill";
 import { makeClient, type Worker } from "@felafel/desktop/orchestrator";
 import { TailscalePill } from "@felafel/tailscale/ui";
 import {
@@ -29,33 +30,6 @@ const STATUS_CONFLICT = 409;
 interface TailnetServeDegradation {
   reason: string;
   remediation?: string;
-}
-
-/**
- * Inline pill rendering a worker's liveness status. `active` is green —
- * worker is heartbeating; the orchestrator can dispatch to it. `stale`
- * is amber — worker stopped heartbeating past the sweep threshold; the
- * row is still in the DB but the worker is presumed gone.
- * @param root0 - props
- * @param root0.status - the worker's liveness status
- * @returns the pill JSX
- */
-function StatusPill({ status }: { status: Worker["status"] }) {
-  const color =
-    status === "active"
-      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-      : "bg-amber-500/15 text-amber-700 dark:text-amber-400";
-  return (
-    <span
-      className={`
-        inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs
-        font-medium
-        ${color}
-      `}
-    >
-      {status}
-    </span>
-  );
 }
 
 /**
