@@ -200,6 +200,12 @@ amend adds no new logic path.
    green" / "passed CI" until the CI monitor reports all checks
    passing. If any check fails, fix and re-push; arm a fresh
    monitor on the new commit.
+4. **Red CI = same-PR fix.** When CI fails, the fix lands on the
+   SAME PR. Do NOT offer the caller a "same PR or follow-up?"
+   choice — the user won't approve a red PR, so a follow-up
+   doesn't move the original closer to merge; it just creates a
+   second PR that itself stacks on the broken original. The only
+   legitimate branching is HOW to fix (design choice), not WHERE.
 
 **Why each step:**
 
