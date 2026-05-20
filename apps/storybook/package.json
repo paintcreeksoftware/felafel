@@ -7,6 +7,8 @@
   "scripts": {
     "storybook": "storybook dev --port 6006",
     "build-storybook": "storybook build",
+    "test:storybook": "test-storybook --url http://127.0.0.1:6006",
+    "test:storybook:ci": "concurrently -k -s first -n SB,TEST -c magenta,blue \"http-server storybook-static --port 6006 --silent\" \"wait-on tcp:127.0.0.1:6006 && pnpm test:storybook\"",
     "lint": "eslint . --max-warnings=0",
     "format": "oxfmt",
     "check-types": "tsc --noEmit"
@@ -20,13 +22,19 @@
   },
   "devDependencies": {
     "@storybook/react-vite": "^10.4.0",
+    "@storybook/test-runner": "^0.24.4",
     "@tailwindcss/postcss": "^4.2.1",
+    "@types/jest-image-snapshot": "^6.4.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
+    "http-server": "^14.1.1",
+    "jest-image-snapshot": "^6.5.2",
     "postcss": "^8.4.0",
     "storybook": "^10.4.0",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
-    "vite": "^7.3.2"
+    "vite": "^7.3.2",
+    "wait-on": "^9.0.10"
   }
 }
