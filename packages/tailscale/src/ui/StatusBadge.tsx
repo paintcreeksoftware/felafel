@@ -108,8 +108,9 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
             border-green-600/50 bg-green-100 text-green-900
             dark:border-green-400/50 dark:bg-green-950 dark:text-green-200
           "
+          aria-label={`Connected to ${status.tailnet}`}
         >
-          <WifiHigh className="size-3.5" /> Connected to {status.tailnet}
+          <WifiHigh className="size-3.5" /> {status.tailnet}
         </Badge>
       );
     }

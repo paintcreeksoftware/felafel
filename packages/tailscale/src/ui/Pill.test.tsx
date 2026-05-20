@@ -74,7 +74,13 @@ describe("TailscalePill — status updates", () => {
       const cb = api.onTailscaleStatus.mock.calls[0]?.[0];
       cb?.(pushed);
     });
-    expect(await screen.findByText(/Connected to my-net/u)).toBeDefined();
+    // findByLabelText (not getByLabelText) — Pill.tsx's mount-time
+    // tailscaleStatus() promise resolves after the push and can race
+    // the state back to `unknown`, so the assertion has to poll for
+    // the connected render window. The aria-label is the load-bearing
+    // contract (visible text == tailnet only; verbose phrase lives
+    // entirely in the label).
+    expect(await screen.findByLabelText("Connected to my-net")).toBeDefined();
   });
 
   it("wraps a missing-binary status in the install-hint tooltip", async () => {

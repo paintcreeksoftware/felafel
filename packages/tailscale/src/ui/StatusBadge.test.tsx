@@ -34,7 +34,7 @@ describe("StatusBadge busy states (win over status)", () => {
 });
 
 describe("StatusBadge status mapping (busy=null)", () => {
-  it("connected → shows the tailnet name", () => {
+  it("connected → shows tailnet name as visible text + 'Connected to …' aria-label", () => {
     render(
       <StatusBadge
         status={{ kind: "connected", tailnet: "my-net", selfName: "host" }}
@@ -42,7 +42,11 @@ describe("StatusBadge status mapping (busy=null)", () => {
         serveDegradation={null}
       />,
     );
-    expect(screen.getByText(/Connected to my-net/u)).toBeDefined();
+    // Visible text trims to just the tailnet; the green chip + wifi icon
+    // already communicate "connected" to sighted users.
+    expect(screen.getByText("my-net")).toBeDefined();
+    // Screen readers get the full phrase via aria-label.
+    expect(screen.getByLabelText("Connected to my-net")).toBeDefined();
   });
 
   it("connected + serveDegradation → amber 'serve degraded' badge with the testid", () => {
