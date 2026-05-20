@@ -88,6 +88,20 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 
 ### Code style (judgement, not auto-enforced)
 
+- **Debug framework internals, don't guess.** After 1–2 failed
+  attempts to tweak a third-party framework via config keys, grep
+  the framework's installed `dist/` for the actual knob rather
+  than guessing more keys. Flag commits that show repeated
+  config trial-and-error in the body without a `dist/` citation
+  for the verified knob.
+- **`CI=true` is a snapshot-tool trip-wire.** When a regen script
+  sets `CI=true` for a container invocation (typically to silence
+  pnpm's no-TTY prompt), it must scope that env per-step.
+  jest-image-snapshot and similar tools read `CI=true` as "do not
+  write missing baselines, fail instead" — breaking first-run
+  baseline generation. Pattern: `CI=true pnpm install ...;
+  env -u CI pnpm test:storybook:ci`.
+
 - **No magic strings.** Repeated string literals should be lifted
   to typed const objects (`Platform`, `EnvVars`, `Tables`, …).
   Grep the diff for repeated quoted literals.
@@ -164,6 +178,11 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 - **Prefer mature libraries** for solved problems (`execa`,
   `p-retry`, `pathe`, …) over hand-rolling. Flag any new helper
   that re-implements a known library's capability.
+- **Shutdown helper consolidation.** At the third site of
+  `Promise.race([sdk.shutdown(), setTimeout(...)])`, flag for
+  promotion into a `shutdownBackend()` helper in
+  `@felafel/backend`. The first two copies are fine; the third is
+  the consolidation trigger.
 - **Adapt to library conventions.** When a mature library has a
   canonical way, default to their pattern; deviate only for real
   correctness gaps documented in the PR body.
@@ -239,6 +258,16 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
 - **Unfamiliar state — investigate before deleting.** Flag any
   deletion of files, branches, or config you can't trace to an
   explicit intent in the commit messages or PR body.
+- **Visual-snapshot baseline parity.** PRs that introduce or modify
+  committed PNG/snapshot baselines (jest-image-snapshot,
+  Playwright `toHaveScreenshot`, percy-style PNG checks) must
+  regenerate them inside the same container the CI job runs in.
+  If the relevant workflow has a `container:` key, flag baselines
+  committed from a host shell — local devcontainer fonts produce
+  sub-1% pixel diffs that fail strict matchers. Require a
+  `pnpm <pkg>:regen-baselines` script or equivalent that mounts
+  the repo into the pinned image. Originating evidence:
+  `scripts/regenerate-storybook-baselines.sh`.
 
 ## Constraints
 
