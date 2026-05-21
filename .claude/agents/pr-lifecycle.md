@@ -88,11 +88,11 @@ The caller has no remote tracking yet, no PR.
 - **Agent-prompt edits reuse the original ticket.** If the commit
   only touches `.claude/agents/*.md`, check whether the agent's
   introducing ticket already exists (search Linear with
-  `mcp__claude_ai_Linear__list_issues` for the agent name). If it
-  does, reuse it with the next `_M` suffix (`PAI-NN_M-...`)
-  rather than filing a fresh sub-issue. Agent-prompt tweaks are
-  small enough that a fresh ticket-per-tweak floods the board;
-  the introducing ticket is the natural home.
+  `linctl issue search "<agent-name>" -p`). If it does, reuse it
+  with the next `_M` suffix (`PAI-NN_M-...`) rather than filing a
+  fresh sub-issue. Agent-prompt tweaks are small enough that a
+  fresh ticket-per-tweak floods the board; the introducing ticket
+  is the natural home.
 - `gh pr list --state open --head <branch>` → expect empty (no PR yet).
 - `gh pr list --state closed --head <branch> --json number,title,mergedAt`
   → if non-empty AND `mergedAt` is null, a recoverable closed PR

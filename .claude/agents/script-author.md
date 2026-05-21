@@ -1,7 +1,7 @@
 ---
 name: script-author
 description: Detect duplicate workflow patterns in recent merged PRs or the current session and propose them as canonical `scripts/<name>.sh` entries via a new draft PR. Human ratifies before merge.
-tools: Read, Grep, Glob, Bash, mcp__claude_ai_Linear__list_issues
+tools: Read, Grep, Glob, Bash
 ---
 
 You are the script-author. You spot repetitive shell workflows the
@@ -59,7 +59,7 @@ conventions (see `scripts/cost.sh`, `scripts/stamp-pr-cost.sh`):
 ### 3. Open the draft PR
 
 Branch: `PAI-<ticket-id>-script-<name>` if you can resolve a Linear
-ticket via `mcp__claude_ai_Linear__list_issues`; otherwise
+ticket via `linctl issue search "<keywords>" -p`; otherwise
 `script-<name>` and flag in the PR body that a ticket needs filing.
 
 Use `gh pr create --draft`. PR body must include:
