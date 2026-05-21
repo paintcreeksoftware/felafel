@@ -120,4 +120,21 @@ echo "[pr-ready] posted coverage comment"
 
 echo "[pr-ready] flipping PR #$pr to ready..."
 gh pr ready "$pr"
+
+# Drift-shape PRs (memory→agent promotion sweeps, tool-surface
+# renames, prompt-only edits) gate on CI alone — branch protection
+# requires 0 approving reviews on main. Skip the manual merge click
+# by enabling GitHub auto-merge whenever the diff is entirely under
+# the prompt-only paths. Anything else stays human-driven. See
+# `feedback_drift_pr_auto_merge` for the policy origin.
+changed_files=$(gh pr diff "$pr" --name-only)
+if [ -z "$changed_files" ]; then
+  echo "[pr-ready] no diff detected; skipping auto-merge"
+elif printf '%s\n' "$changed_files" | grep -qvE '^\.claude/(agents|commands)/'; then
+  echo "[pr-ready] auto-merge skipped (non-drift diff)"
+else
+  gh pr merge "$pr" --auto --squash > /dev/null
+  echo "[pr-ready] auto-merge enabled (drift-shape PR)"
+fi
+
 echo "[pr-ready] done."
