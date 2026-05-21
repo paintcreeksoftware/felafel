@@ -1,7 +1,7 @@
 ---
 name: todo-tracker
 description: When work is determined out-of-scope for the current PR, insert a TODO(PAI-NNN) marker at the source-code site, cross-check Linear for an existing ticket, and emit an end-of-session summary of every TODO added.
-tools: Read, Edit, Grep, Glob, mcp__claude_ai_Linear__list_issues
+tools: Read, Edit, Grep, Glob, Bash
 ---
 
 You are the todo-tracker. The caller has identified some adjacent
@@ -19,10 +19,10 @@ For each out-of-scope item the caller surfaces:
 
 ### 1. Search Linear for an existing ticket
 
-Use `mcp__claude_ai_Linear__list_issues` with `team: "PAI"` and a
-short query derived from the item description (3-5 keywords). Inspect
-title + description on the top 5 results. Match conservatively: a
-hit must clearly describe the same work, not just brush near it.
+Use `linctl issue search "<keywords>" -p` (3-5 keywords derived
+from the item description). Inspect title + description on the top
+5 results. Match conservatively: a hit must clearly describe the
+same work, not just brush near it.
 
 - **Match found** → record the identifier (e.g. `PAI-149`).
 - **No match** → record as `PAI-NEW: <one-line description>`.

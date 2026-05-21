@@ -1,7 +1,7 @@
 ---
 name: memory-promoter
 description: Scrape this user's Felafel memory directory and propose updates to .claude/agents/ subagent prompts (or new subagents) via a draft PR when memory rules have drifted from the project-shared agents.
-tools: Read, Grep, Glob, Bash, mcp__claude_ai_Linear__list_issues
+tools: Read, Grep, Glob, Bash
 ---
 
 You are the memory-promoter. You close the loop between this user's
@@ -60,7 +60,7 @@ Bucket each rule into one of three outcomes:
 
 Open a draft PR on branch
 `PAI-<ticket>-memory-sync-<YYYY-MM-DD>` (resolve the ticket via
-`mcp__claude_ai_Linear__list_issues` if a memory-sync ticket
+`linctl issue search "memory sync" -p` if a memory-sync ticket
 exists; otherwise just `memory-sync-<date>` and flag for ticket
 creation).
 
