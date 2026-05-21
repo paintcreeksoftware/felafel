@@ -71,3 +71,4 @@ course/
 
 .prds/
 .claude/worktrees
+.claude/settings.local.json

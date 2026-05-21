@@ -26,4 +26,10 @@ sudo apt-get update
 sudo apt-get install -y --no-install-recommends shellcheck
 sudo rm -rf /var/lib/apt/lists/*
 
+brew tap dorkitude/linctl
+brew install linctl
+
+# NOTE: May need to authenticate using linctl auth.
+linctl auth status
+
 popd || exit 1

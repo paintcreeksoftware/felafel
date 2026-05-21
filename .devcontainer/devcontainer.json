@@ -11,7 +11,8 @@
     "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.linear/.linctl-auth.json,target=/home/vscode/.linctl-auth.json,type=bind,consistency=cached"
   ],
   "postCreateCommand": "bash setup.sh",
   "customizations": {
@@ -124,6 +125,9 @@
         "ghcr.io/devcontainers/features/github-cli:1": {},
         // uv / uvx is important for Claude Code to install Anthropic
         // time/git/etc. MCP servers.
-        "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {}
+        "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {},
+        // Homebrew is important for installing the Linear CLI, important for
+        // working around Linear MCP issues.
+        "ghcr.io/stu-bell/devcontainer-features/homebrew:1": {}
     }
 }
