@@ -44,15 +44,21 @@ export interface StatusBadgeProps {
 export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps) {
   if (busy === "connecting") {
     return (
-      <Badge variant="secondary" className="gap-1.5">
-        <LoaderCircle className="size-3.5 animate-spin" /> Connecting…
+      <Badge variant="secondary">
+        <div className="flex w-fit items-center">
+          <LoaderCircle data-icon="inline-start" className="mr-1 size-5 animate-spin pb-1" />
+          <div>Connecting…</div>
+        </div>
       </Badge>
     );
   }
   if (busy === "refreshing") {
     return (
-      <Badge variant="secondary" className="gap-1.5">
-        <LoaderCircle className="size-3.5 animate-spin" /> Refreshing…
+      <Badge variant="secondary">
+        <div className="flex w-fit items-center">
+          <LoaderCircle data-icon="inline-start" className="mr-1 size-5 animate-spin pb-1" />
+          <div>Refreshing…</div>
+        </div>
       </Badge>
     );
   }
@@ -60,8 +66,11 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
     case "unknown":
     case "probing": {
       return (
-        <Badge variant="secondary" className="gap-1.5">
-          <LoaderCircle className="size-3.5 animate-spin" /> Checking…
+        <Badge variant="secondary">
+          <div className="flex w-fit items-center">
+            <LoaderCircle data-icon="inline-start" className="mr-1 size-5 animate-spin pb-1" />
+            <div>Checking…</div>
+          </div>
         </Badge>
       );
     }
@@ -79,13 +88,15 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
                 <Badge
                   variant="outline"
                   className="
-                    gap-1.5
                     border-amber-600/50 bg-amber-100 text-amber-900
                     dark:border-amber-400/50 dark:bg-amber-950 dark:text-amber-200
                   "
                   data-testid="ts-pill-degraded"
                 >
-                  <WifiHigh className="size-3.5" /> {status.tailnet} (serve degraded)
+                  <div className="flex w-fit items-center">
+                    <WifiHigh data-icon="inline-start" className="mr-1 size-5 pb-1" />
+                    <div>{status.tailnet} (serve degraded)</div>
+                  </div>
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm space-y-2 text-xs">
@@ -104,37 +115,47 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
         <Badge
           variant="outline"
           className="
-            gap-1.5
             border-green-600/50 bg-green-100 text-green-900
             dark:border-green-400/50 dark:bg-green-950 dark:text-green-200
           "
           aria-label={`Connected to ${status.tailnet}`}
         >
-          <WifiHigh className="size-3.5" /> {status.tailnet}
+          <div className="flex w-fit items-center">
+            <WifiHigh data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <div>Connected to {status.tailnet}</div>
+          </div>
         </Badge>
       );
     }
     case "disconnected": {
       return (
-        <Badge variant="outline" className="gap-1.5">
-          <WifiOff className="size-3.5" />
-          {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
+        <Badge variant="outline">
+          <div className="flex w-fit items-center">
+            <WifiOff data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <div>
+              {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
+            </div>
+          </div>
         </Badge>
       );
     }
     case "error": {
       return (
-        <Badge variant="outline" className="
-          gap-1.5 border-destructive/40 text-destructive
-        ">
-          <CircleX className="size-3.5" /> Tailscale error
+        <Badge variant="outline" className="border-destructive/40 text-destructive">
+          <div className="flex w-fit items-center">
+            <CircleX data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <div>Tailscale error</div>
+          </div>
         </Badge>
       );
     }
     case "missing-binary": {
       return (
-        <Badge variant="outline" className="gap-1.5 opacity-60">
-          <WifiOff className="size-3.5" /> Tailscale not installed
+        <Badge variant="outline" className="opacity-60">
+          <div className="flex w-fit items-center">
+            <WifiOff data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <div>Tailscale not installed</div>
+          </div>
         </Badge>
       );
     }
