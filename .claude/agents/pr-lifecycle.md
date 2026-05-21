@@ -317,7 +317,19 @@ A monitor watching `gh pr view <N> --json state` just reported
    The if-current check matters: if the caller started a new feature
    branch while the merge-state monitor was waiting, an unconditional
    `git checkout main` would yank them off mid-edit.
-2. **Memory-promoter drift check** — invoke the `memory-promoter`
+2. **Archive the source plan if all sub-PRs are merged.** If the
+   just-merged PR was the last open sub-PR of a plan tracked under
+   `~/.claude/plans/<slug>.md`, rename the plan file to
+   `~/.claude/plans/ARCHIVED_DONOTTOUCH_<slug>.md` as part of the
+   same cleanup beat — do not ask first. The `DONOTTOUCH` prefix
+   is load-bearing: it signals the doc is frozen reference, not
+   live work. Detect candidates by reading the plan's PR list
+   (typically a checklist near the top) and confirming every
+   sub-PR is MERGED/CLOSED via `gh pr view <N> --json state`. If
+   only part of a plan shipped and a successor doc replaces it,
+   follow [[feedback_plan_retrospective_pattern]] instead (v2 +
+   v1 archive). Skip when no plan file maps to the branch.
+3. **Memory-promoter drift check** — invoke the `memory-promoter`
    subagent inline via the Agent tool (not via `claude -p`), passing
    the just-merged ticket as context. Skip if the user explicitly
    said "skip the drift check" or if the PR closed without merge.
@@ -331,7 +343,7 @@ A monitor watching `gh pr view <N> --json state` just reported
    review, not a separate ask. Use the next available
    `PAI-167_M` branch suffix per
    [[feedback_agent_followup_on_original_ticket]].
-3. **Session-start branch prune** — at the start of the NEXT session,
+4. **Session-start branch prune** — at the start of the NEXT session,
    delete `PAI-*` branches where remote is gone AND PR is
    MERGED/CLOSED:
 
