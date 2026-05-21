@@ -30,7 +30,7 @@
     "@opentelemetry/sdk-trace-web": "^2.7.1",
     "execa": "^9.6.1",
     "get-port": "^7.2.0",
-    "hono": "^4.10.0",
+    "hono": "^4.12.18",
     "p-retry": "^8.0.0",
     "pathe": "^2.0.0",
     "pino-roll": "^4.0.0"
