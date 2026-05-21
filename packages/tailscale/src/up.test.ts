@@ -133,3 +133,66 @@ describe("runUpFlow — keyed (paste-in) path", () => {
     );
   });
 });
+
+describe("runUpFlow — classified failures", () => {
+  it("returns kind:error with remediation when stderr is permission-denied", async () => {
+    stubExeca({ stderr: "permission denied on tailscaled.sock", exitCode: 1 });
+    const result = await runUpFlow(stubBinary, undefined, makeUpFlowCache(), testLogger);
+    expect(result).toEqual({
+      ok: false,
+      kind: "error",
+      message: expect.stringContaining("permission"),
+      remediation: "sudo tailscale set --operator=$USER",
+    });
+  });
+
+  it("returns kind:needs-key with the parsed auth URL when stderr advertises one", async () => {
+    stubExeca({
+      stderr: "To authenticate, visit:\n\n  https://login.tailscale.com/a/abc123def456\n\n",
+      exitCode: 1,
+    });
+    const result = await runUpFlow(stubBinary, undefined, makeUpFlowCache(), testLogger);
+    expect(result).toEqual({
+      ok: false,
+      kind: "needs-key",
+      authUrl: "https://login.tailscale.com/a/abc123def456",
+      message: expect.any(String),
+    });
+  });
+
+  it("returns kind:error with the classified message for an unknown failure", async () => {
+    stubExeca({ stderr: "tailscale: something inscrutable went wrong", exitCode: 2 });
+    const result = await runUpFlow(stubBinary, undefined, makeUpFlowCache(), testLogger);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.kind).toBe("error");
+      expect(result.message).toMatch(/inscrutable/u);
+    }
+  });
+
+  it("returns kind:error when the spawn cancels (outer timeout)", async () => {
+    stubExeca({ exitCode: null, isCanceled: true });
+    const result = await runUpFlow(stubBinary, undefined, makeUpFlowCache(), testLogger);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.kind).toBe("error");
+      expect(result.message).toMatch(/network|respond/iu);
+    }
+  });
+
+  it("returns kind:error with the thrown message when execa rejects (e.g. ENOENT)", async () => {
+    vi.mocked(execa).mockRejectedValueOnce(new Error("spawn ENOENT"));
+    const result = await runUpFlow(stubBinary, undefined, makeUpFlowCache(), testLogger);
+    expect(result).toEqual({ ok: false, kind: "error", message: "spawn ENOENT" });
+  });
+
+  it("stringifies non-Error throws from execa", async () => {
+    vi.mocked(execa).mockRejectedValueOnce("not-an-Error-instance");
+    const result = await runUpFlow(stubBinary, undefined, makeUpFlowCache(), testLogger);
+    expect(result).toEqual({
+      ok: false,
+      kind: "error",
+      message: "not-an-Error-instance",
+    });
+  });
+});
