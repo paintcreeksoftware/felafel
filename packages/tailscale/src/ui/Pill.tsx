@@ -73,6 +73,22 @@ async function withMinVisibleBusy<T>(work: Promise<T>): Promise<T> {
 }
 
 /**
+ * Tailwind className for the refresh button. Hidden by default;
+ * revealed on row hover or keyboard focus-within so the affordance
+ * stays discoverable without polluting the resting state. Pins
+ * opacity-100 while a refresh is in flight so the user's own click
+ * doesn't visually retract the button mid-spin.
+ * @param pillBusy - the current PillBusy state
+ * @returns the className string for the refresh button
+ */
+function refreshButtonClassName(pillBusy: PillBusy): string {
+  if (pillBusy === "refreshing") {
+    return "size-6 opacity-100";
+  }
+  return "size-6 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100";
+}
+
+/**
  * Top-level Tailscale connection pill. Subscribes to the
  * TailscaleStatus push channel, renders the right colored badge, and
  * surfaces the paste-in pre-auth-key flow when the daemon is not yet
@@ -204,7 +220,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
     status.kind !== "missing-binary" && status.kind !== "connected" && !pillBusy;
 
   return (
-    <div className="flex items-center gap-2 p-2" data-testid="ts-pill">
+    <div className="group flex items-center gap-2 p-2" data-testid="ts-pill">
       {isClickable ? (
         <button
           type="button"
@@ -227,7 +243,7 @@ export function TailscalePill({ tailnetServeDegradation = null }: TailscalePillP
         }}
         disabled={pillBusy !== null || status.kind === "missing-binary"}
         aria-label="Refresh Tailscale status"
-        className="size-7"
+        className={refreshButtonClassName(pillBusy)}
       >
         <RefreshCw
           className={pillBusy === "refreshing" ? "size-3.5 animate-spin" : "size-3.5"}
