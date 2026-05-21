@@ -1,0 +1,13 @@
+// Tools-side TypeScript: the root-level config files that need to be parsed
+// by tsserver + the @typescript-eslint type-aware tier but live OUTSIDE
+// `src/` (so neither tsconfig.node.json nor tsconfig.ui.json can include
+// them without violating their `rootDir: "src"` constraint). No rootDir
+// here, so file location is free.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "types": ["node"]
+  },
+  "include": ["vitest.config.ts"]
+}
