@@ -23,7 +23,28 @@
 
 set -euo pipefail
 
-pr="${1:?usage: pr-ready.sh <pr-number>}"
+# Usage: pr-ready.sh <pr-number> [--auto-merge]
+#
+# The optional `--auto-merge` flag opts the PR into GitHub auto-merge
+# (squash). Pass it only when the caller (human or agent) has judged
+# the PR is a mechanical sweep with no behavioral or DX change to
+# review — e.g. memory→agent promotion, tool-surface renames after a
+# dependency swap. Anything that materially changes how an agent
+# behaves (new prose, rewritten section, new tool entry) should not
+# get auto-merge even if the diff is prompt-only. See the
+# `feedback_drift_pr_auto_merge` memory rule.
+pr=""
+auto_merge=false
+for arg in "$@"; do
+  case "$arg" in
+    --auto-merge) auto_merge=true ;;
+    *) pr="${pr:-$arg}" ;;
+  esac
+done
+if [ -z "$pr" ]; then
+  echo "usage: pr-ready.sh <pr-number> [--auto-merge]" >&2
+  exit 1
+fi
 
 for bin in git gh claude; do
   if ! command -v "$bin" >/dev/null 2>&1; then
@@ -120,4 +141,10 @@ echo "[pr-ready] posted coverage comment"
 
 echo "[pr-ready] flipping PR #$pr to ready..."
 gh pr ready "$pr"
+
+if [ "$auto_merge" = true ]; then
+  gh pr merge "$pr" --auto --squash > /dev/null
+  echo "[pr-ready] auto-merge enabled (--auto-merge)"
+fi
+
 echo "[pr-ready] done."
