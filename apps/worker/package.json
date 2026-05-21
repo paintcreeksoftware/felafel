@@ -35,7 +35,7 @@
     "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/sdk-node": "^0.218.0",
-    "hono": "^4.10.0",
+    "hono": "^4.12.21",
     "p-retry": "^8.0.0",
     "pathe": "^2.0.0",
     "pino": "^10.3.1",
