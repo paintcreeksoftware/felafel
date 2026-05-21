@@ -268,6 +268,48 @@ judgement-level rules), `CLAUDE.md` for the project's framing.
   `pnpm <pkg>:regen-baselines` script or equivalent that mounts
   the repo into the pinned image. Originating evidence:
   `scripts/regenerate-storybook-baselines.sh`.
+- **Visual-snapshot theme coverage.** Stories that exercise
+  theme-aware Tailwind variants (`dark:bg-*`, `dark:text-*`,
+  `dark:border-*`) must render in BOTH light and dark modes —
+  single-mode coverage silently misses regressions that only
+  manifest in the other mode. Storybook's default render supplies
+  neither `prefers-color-scheme: dark` nor an ancestor
+  `data-theme="dark"`, so the `@custom-variant dark` selector in
+  `packages/ui/src/styles/globals.css` never fires unless
+  explicitly arranged. Treat any PR introducing or modifying
+  `dark:*` classes without corresponding dark-mode snapshot
+  coverage as a red flag — per-story decorator that toggles
+  `data-theme="dark"`, separate dark-variant stories, or a
+  test-runner config that captures each story twice. Ask "what
+  catches a dark-mode regression?" before approving. Originating
+  evidence: PAI-142_3 (Tailscale pill rendered a faint green chip
+  in light mode, a dark chip with no green in dark mode — the
+  regression had no detector).
+- **Tailwind v4 workspace `@source` directives.** When a workspace
+  package under `packages/*` (or any path outside the bundler's
+  cwd) exposes JSX/TSX with Tailwind utility classes, the CSS
+  entry point that hosts `@import "tailwindcss";` MUST list that
+  package via `@source "<path>"` relative to the CSS file.
+  Tailwind v4's default content scanning is
+  `{ base: cwd, pattern: "**/*" }` — it scans below the bundler's
+  working directory only, so workspace-package classes imported
+  via `@felafel/*` are silently dropped from the generated CSS
+  even though JSX renders the class strings. The visible failure
+  mode is "the component looks unstyled" — the diagnosis loop
+  typically detours through opacity / dark-mode / `cn()` before
+  landing on bundle content-scanning. Flag any PR that (a) adds a
+  new workspace package with UI components but does not extend the
+  `@source` list in the shared globals CSS, or (b) adds Tailwind
+  utilities to an existing workspace package whose path is not
+  already listed. Verifying a fix: a bundle-size jump from tens of
+  kB to >100 kB on the affected app's CSS is a quick signal that
+  scanning is now reaching the right files
+  (`grep <class> apps/<app>/{out,storybook-static}/assets/*.css`).
+  Originating evidence: PAI-142_3 (Tailscale pill's `bg-green-100`
+  missing from both storybook and desktop CSS bundles until
+  `@source` directives for `packages/ui`, `packages/tailscale`,
+  and `apps/desktop/src/renderer` were added to
+  `packages/ui/src/styles/globals.css`).
 
 ## Constraints
 
