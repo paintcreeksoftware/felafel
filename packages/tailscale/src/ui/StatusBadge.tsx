@@ -46,7 +46,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
     return (
       <Badge variant="secondary">
         <div className="flex w-fit items-center">
-          <LoaderCircle data-icon="inline-start" className="mr-1 size-5 animate-spin pb-1" />
+          <LoaderCircle data-icon="inline-start" className="size-5 animate-spin" />
           <div>Connecting…</div>
         </div>
       </Badge>
@@ -56,7 +56,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
     return (
       <Badge variant="secondary">
         <div className="flex w-fit items-center">
-          <LoaderCircle data-icon="inline-start" className="mr-1 size-5 animate-spin pb-1" />
+          <LoaderCircle data-icon="inline-start" className="size-5 animate-spin" />
           <div>Refreshing…</div>
         </div>
       </Badge>
@@ -68,7 +68,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
       return (
         <Badge variant="secondary">
           <div className="flex w-fit items-center">
-            <LoaderCircle data-icon="inline-start" className="mr-1 size-5 animate-spin pb-1" />
+            <LoaderCircle data-icon="inline-start" className="size-5 animate-spin" />
             <div>Checking…</div>
           </div>
         </Badge>
@@ -131,7 +131,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
       return (
         <Badge variant="outline">
           <div className="flex w-fit items-center">
-            <WifiOff data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <WifiOff data-icon="inline-start" className="mr-1 size-5" />
             <div>
               {status.reason === "no-daemon" ? "Tailscale daemon not running" : "Connect to Tailscale"}
             </div>
@@ -143,7 +143,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
       return (
         <Badge variant="outline" className="border-destructive/40 text-destructive">
           <div className="flex w-fit items-center">
-            <CircleX data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <CircleX data-icon="inline-start" className="mr-1 size-5" />
             <div>Tailscale error</div>
           </div>
         </Badge>
@@ -153,7 +153,7 @@ export function StatusBadge({ status, busy, serveDegradation }: StatusBadgeProps
       return (
         <Badge variant="outline" className="opacity-60">
           <div className="flex w-fit items-center">
-            <WifiOff data-icon="inline-start" className="mr-1 size-5 pb-1" />
+            <WifiOff data-icon="inline-start" className="mr-1 size-5" />
             <div>Tailscale not installed</div>
           </div>
         </Badge>
